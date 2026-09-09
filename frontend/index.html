@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NIRIKSHAK — Government Project Monitoring &amp; Accountability Platform</title>
+    <meta name="description" content="NIRIKSHAK — Transparent Projects • Stronger India. Government project monitoring and accountability platform." />
+    <link rel="icon" type="image/png" href="/logo/nirikshak-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+      rel="stylesheet"
+    />
+    <script>
+      // Apply theme, contrast and text-size before first paint (no flash).
+      ;(function () {
+        try {
+          var g = function (k, d) { try { return localStorage.getItem(k) || d } catch (e) { return d } }
+          var theme = g('nirikshak.theme', 'light')
+          if (theme === 'system') {
+            theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          }
+          if (theme === 'dark') document.documentElement.classList.add('dark')
+          if (g('nirikshak.contrast', 'standard') === 'high') document.documentElement.classList.add('high-contrast')
+          var size = g('nirikshak.textSize', 'standard')
+          if (size === 'large') document.documentElement.classList.add('text-lg-size')
+          else if (size === 'xlarge') document.documentElement.classList.add('text-xl-size')
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

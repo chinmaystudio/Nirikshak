@@ -1,0 +1,125 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  darkMode: 'class',
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    // NIRIKSHAK uses CSS-variable tokens (src/styles/tokens.css) so themes can be
+    // swapped at runtime; Tailwind utilities reference the same variables.
+    extend: {
+      colors: {
+        canvas: 'var(--color-canvas)',
+        surface: {
+          DEFAULT: 'var(--color-surface)',
+          2: 'var(--color-surface-2)',
+          3: 'var(--color-surface-3)',
+        },
+        border: 'var(--color-border)',
+        'border-strong': 'var(--color-border-strong)',
+        fg: {
+          DEFAULT: 'var(--color-fg)',
+          muted: 'var(--color-fg-muted)',
+          subtle: 'var(--color-fg-subtle)',
+          inverted: 'var(--color-fg-inverted)',
+        },
+        primary: {
+          DEFAULT: 'var(--color-primary)',
+          strong: 'var(--color-primary-strong)',
+          soft: 'var(--color-primary-soft)',
+          border: 'var(--color-primary-border)',
+          on: 'var(--color-on-primary)',
+        },
+        secondary: {
+          DEFAULT: 'var(--color-secondary)',
+          soft: 'var(--color-secondary-soft)',
+        },
+        success: {
+          DEFAULT: 'var(--color-success)',
+          strong: 'var(--color-success-strong)',
+          tint: 'var(--color-success-tint)',
+          border: 'var(--color-success-border)',
+        },
+        warning: {
+          DEFAULT: 'var(--color-warning)',
+          strong: 'var(--color-warning-strong)',
+          tint: 'var(--color-warning-tint)',
+          border: 'var(--color-warning-border)',
+        },
+        danger: {
+          DEFAULT: 'var(--color-danger)',
+          strong: 'var(--color-danger-strong)',
+          tint: 'var(--color-danger-tint)',
+          border: 'var(--color-danger-border)',
+        },
+        info: {
+          DEFAULT: 'var(--color-info)',
+          strong: 'var(--color-info-strong)',
+          tint: 'var(--color-info-tint)',
+          border: 'var(--color-info-border)',
+        },
+        saffron: 'var(--color-saffron)',
+        'india-green': 'var(--color-india-green)',
+      },
+      fontFamily: {
+        sans: ['Noto Sans', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Cascadia Mono', 'Consolas', 'monospace'],
+      },
+      fontSize: {
+        display: ['1.75rem', { lineHeight: '2.25rem', fontWeight: '700' }],
+        'heading-1': ['1.5rem', { lineHeight: '2rem', fontWeight: '700' }],
+        'heading-2': ['1.25rem', { lineHeight: '1.75rem', fontWeight: '600' }],
+        'heading-3': ['1rem', { lineHeight: '1.5rem', fontWeight: '600' }],
+        'body-lg': ['1rem', { lineHeight: '1.6rem' }],
+        body: ['0.875rem', { lineHeight: '1.25rem' }],
+        'body-small': ['0.8125rem', { lineHeight: '1.125rem' }],
+        caption: ['0.75rem', { lineHeight: '1rem', fontWeight: '600' }],
+        label: ['0.875rem', { lineHeight: '1.25rem', fontWeight: '600' }],
+        button: ['0.875rem', { lineHeight: '1.25rem', fontWeight: '600' }],
+      },
+      spacing: {
+        1: 'var(--space-1)',
+        2: 'var(--space-2)',
+        3: 'var(--space-3)',
+        4: 'var(--space-4)',
+        5: 'var(--space-5)',
+        6: 'var(--space-6)',
+        8: 'var(--space-8)',
+        10: 'var(--space-10)',
+        12: 'var(--space-12)',
+        16: 'var(--space-16)',
+        header: 'var(--header-height)',
+        sidebar: 'var(--sidebar-width)',
+        'sidebar-collapsed': 'var(--sidebar-width-collapsed)',
+      },
+      maxWidth: {
+        content: 'var(--max-width-content)',
+      },
+      borderRadius: {
+        control: 'var(--radius-control)',
+        badge: 'var(--radius-badge)',
+        card: 'var(--radius-card)',
+        panel: 'var(--radius-panel)',
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        raised: 'var(--shadow-raised)',
+        modal: 'var(--shadow-modal)',
+      },
+      zIndex: {
+        base: 'var(--z-base)',
+        sticky: 'var(--z-sticky)',
+        sidebar: 'var(--z-sidebar)',
+        header: 'var(--z-header)',
+        drawer: 'var(--z-drawer)',
+        modal: 'var(--z-modal)',
+        toast: 'var(--z-toast)',
+        skip: 'var(--z-skip)',
+      },
+      transitionDuration: {
+        fast: 'var(--duration-fast)',
+        base: 'var(--duration-base)',
+        slow: 'var(--duration-slow)',
+      },
+    },
+  },
+  plugins: [],
+}
