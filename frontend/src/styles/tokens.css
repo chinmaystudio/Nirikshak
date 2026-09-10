@@ -15,6 +15,8 @@
   --color-surface-3: #e2e8f0;
   --color-border: #e2e8f0;
   --color-border-strong: #cbd5e1;
+  /* Hover surface for nav rows (dark theme swaps to translucent lime) */
+  --color-hover: #f1f5f9;
 
   /* ---- Text ---- */
   --color-fg: #0f172a;
@@ -121,7 +123,8 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   /* ---- Layout ---- */
-  --header-height: 64px;
+  --header-height: 64px;   /* utility row of the header */
+  --header-total: 108px;   /* full header (utility row + module nav row) */
   --sidebar-width: 288px;
   --sidebar-width-collapsed: 72px;
   --max-width-content: 1600px;

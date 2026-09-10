@@ -28,7 +28,7 @@ export function SelectRolePage() {
     setBusy(true)
     const officer = await authApi.signIn('demo', 'demo')
     login({ ...officer, roles: [...officer.roles, `role:${role}`] })
-    navigate('/dashboard')
+    navigate('/government/dashboard')
   }
 
   return (

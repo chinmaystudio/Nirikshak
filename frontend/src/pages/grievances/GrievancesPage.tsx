@@ -83,7 +83,7 @@ export function GrievancesPage() {
               { key: 'subject', header: 'Subject', render: (g) => <span className="block max-w-56 truncate" title={g.subject}>{g.subject}</span> },
               { key: 'category', header: 'Category', render: (g) => <Badge tone="neutral">{g.category}</Badge> },
               { key: 'project', header: t('common.project'), render: (g) => g.projectId
-                ? <Link to={`/projects/${encodeURIComponent(g.projectId)}`} className="nk-mono-id text-primary-strong hover:underline">{g.projectId}</Link>
+                ? <Link to={`/government/projects/${encodeURIComponent(g.projectId)}`} className="nk-mono-id text-primary-strong hover:underline">{g.projectId}</Link>
                 : '—' },
               { key: 'status', header: t('common.status'), render: (g) => <StatusBadge descriptor={GRIEVANCE_STATUS[g.status]} size="sm" /> },
               { key: 'sla', header: 'SLA', render: (g) => <span className="text-caption tabular-nums">{formatSlaCountdown(g.slaDeadline)}</span> },

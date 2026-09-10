@@ -69,7 +69,7 @@ export function AiInsightsPage() {
             <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
               <span className="text-caption text-fg-subtle">Related:</span>
               {i.relatedProjectIds.map((pid) => (
-                <Link key={pid} to={`/projects/${encodeURIComponent(pid)}`} className="nk-mono-id text-caption text-primary-strong hover:underline">
+                <Link key={pid} to={`/government/projects/${encodeURIComponent(pid)}`} className="nk-mono-id text-caption text-primary-strong hover:underline">
                   {pid}
                 </Link>
               ))}

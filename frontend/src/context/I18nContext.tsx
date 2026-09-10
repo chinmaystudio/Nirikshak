@@ -1,7 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Locale } from '@/locales/config'
-import { DEFAULT_LOCALE, DICTIONARIES, LOCALE_STORAGE_KEY } from '@/locales/config'
+import { DEFAULT_LOCALE, BASE_DICTIONARY, LOCALE_STORAGE_KEY, loadDictionary } from '@/locales/config'
+
+type Dictionaries = Partial<Record<Locale, Record<string, string>>>
 
 interface I18nContextValue {
   locale: Locale
@@ -24,9 +26,29 @@ function readStoredLocale(): Locale {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(readStoredLocale)
+  const [dictionaries, setDictionaries] = useState<Dictionaries>({ en: BASE_DICTIONARY })
+  /** Locales already fetched or currently in flight — dedupes effect runs. */
+  const loadingRef = useRef<Set<Locale>>(new Set(['en']))
 
   useEffect(() => {
     document.documentElement.lang = locale
+  }, [locale])
+
+  useEffect(() => {
+    if (loadingRef.current.has(locale)) return
+    loadingRef.current.add(locale)
+    let cancelled = false
+    loadDictionary(locale)
+      .then((dict) => {
+        if (!cancelled) setDictionaries((prev) => ({ ...prev, [locale]: dict }))
+      })
+      .catch(() => {
+        // Allow a retry on the next switch back to this locale.
+        loadingRef.current.delete(locale)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [locale])
 
   const setLocale = useCallback((l: Locale) => {
@@ -40,8 +62,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) => {
-      const dict = DICTIONARIES[locale] ?? DICTIONARIES.en
-      let value = dict[key] ?? DICTIONARIES.en[key] ?? key
+      const dict = dictionaries[locale]
+      let value = dict?.[key] ?? BASE_DICTIONARY[key] ?? key
       if (params) {
         for (const [k, v] of Object.entries(params)) {
           value = value.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
@@ -49,7 +71,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
       return value
     },
-    [locale],
+    [locale, dictionaries],
   )
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t])

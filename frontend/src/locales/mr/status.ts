@@ -61,4 +61,11 @@ export const status: Record<string, string> = {
   'priority.medium': 'मध्यम',
   'priority.high': 'जास्त',
   'priority.urgent': 'अत्यावश्यक',
+  'bill.status.submitted': 'सादर केले',
+  'bill.status.verified': 'सत्यापित',
+  'bill.status.approved': 'पेमेंटसाठी मंजूर',
+  'bill.status.paid': 'पेमेंट झाले',
+  'bill.status.returned': 'परत केले',
+  'bill.flag.duplicate': 'डुप्लिकेट फ्लॅग',
+  'bill.flag.abnormal': 'असामान्य फ्लॅग',
 }

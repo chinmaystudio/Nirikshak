@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '@/context/I18nContext'
 import { Panel, Card } from '@/components/ui/Card'
 import { TextField, TextArea, Select, Checkbox } from '@/components/ui/Fields'
@@ -30,7 +30,14 @@ export function PlanningPage() {
   const { t } = useI18n()
   const { showToast } = useToast()
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
+
+  // Active wizard step mirrors the ?step= query param so the sidebar's
+  // "Project Creation" outline can deep-link into a specific step.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const stepParam = Number(searchParams.get('step'))
+  const step =
+    Number.isInteger(stepParam) && stepParam >= 0 && stepParam < STEPS.length ? stepParam : 0
+  const setStep = (s: number) => setSearchParams(s === 0 ? {} : { step: String(s) })
   const [form, setForm] = useState({
     name: '',
     department: '',
@@ -172,13 +179,13 @@ export function PlanningPage() {
         )}
 
         <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-          <Button variant="outline" icon="arrow_back" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
+          <Button variant="outline" icon="arrow_back" disabled={step === 0} onClick={() => setStep(Math.max(0, step - 1))}>
             {t('common.back')}
           </Button>
           <div className="flex items-center gap-2">
             <Badge tone="neutral">Step {step + 1}/{STEPS.length}</Badge>
             {step < STEPS.length - 1 ? (
-              <Button icon="arrow_forward" disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
+              <Button icon="arrow_forward" disabled={!canNext} onClick={() => setStep(step + 1)}>
                 {t('common.next')}
               </Button>
             ) : (
@@ -187,7 +194,7 @@ export function PlanningPage() {
                 disabled={!canNext}
                 onClick={() => {
                   showToast('Demo only — project record not persisted.', 'info')
-                  navigate('/projects')
+                  navigate('/government/projects')
                 }}
               >
                 Submit for sanction

@@ -4,6 +4,7 @@ import { I18nProvider } from '@/context/I18nContext'
 import { AuthProvider } from '@/context/AuthContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { NotificationsProvider } from '@/context/NotificationsContext'
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary'
 import { AppRoutes } from '@/routes'
 
 /**

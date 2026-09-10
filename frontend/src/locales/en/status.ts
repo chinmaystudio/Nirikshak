@@ -61,4 +61,11 @@ export const status: Record<string, string> = {
   'priority.medium': 'Medium',
   'priority.high': 'High',
   'priority.urgent': 'Urgent',
+  'bill.status.submitted': 'Submitted',
+  'bill.status.verified': 'Verified',
+  'bill.status.approved': 'Approved for Payment',
+  'bill.status.paid': 'Paid',
+  'bill.status.returned': 'Returned',
+  'bill.flag.duplicate': 'Duplicate Flag',
+  'bill.flag.abnormal': 'Abnormal Flag',
 }

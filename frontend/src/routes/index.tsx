@@ -1,103 +1,193 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { Navigate, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { GovernmentLayout } from '@/layouts/GovernmentLayout'
 import { CitizenLayout } from '@/layouts/CitizenLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { NotFoundPage, ErrorPage } from '@/pages/errors/ErrorPages'
+import { LoadingBlock } from '@/components/feedback/Feedback'
 
-/* ---------- Auth screens ---------- */
-import { LoginPage } from '@/pages/auth/LoginPage'
-import { OtpVerificationPage } from '@/pages/auth/OtpVerificationPage'
-import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
-import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
-import { TwoFactorPage } from '@/pages/auth/TwoFactorPage'
-import { SelectDepartmentPage } from '@/pages/auth/SelectDepartmentPage'
-import { SelectRolePage } from '@/pages/auth/SelectRolePage'
+/* ---------- Auth screens (code-split) ---------- */
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const OtpVerificationPage = lazy(() => import('@/pages/auth/OtpVerificationPage').then((m) => ({ default: m.OtpVerificationPage })))
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
+const TwoFactorPage = lazy(() => import('@/pages/auth/TwoFactorPage').then((m) => ({ default: m.TwoFactorPage })))
+const SelectDepartmentPage = lazy(() => import('@/pages/auth/SelectDepartmentPage').then((m) => ({ default: m.SelectDepartmentPage })))
+const SelectRolePage = lazy(() => import('@/pages/auth/SelectRolePage').then((m) => ({ default: m.SelectRolePage })))
 
-/* ---------- Government screens ---------- */
-import { DashboardPage } from '@/pages/dashboard/DashboardPage'
-import { ProjectsListPage } from '@/pages/projects/ProjectsListPage'
-import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
-import { PlanningPage } from '@/pages/planning/PlanningPage'
-import { FinancePage } from '@/pages/finance/FinancePage'
-import { TendersPage } from '@/pages/tenders/TendersPage'
-import { TenderEvaluationPage } from '@/pages/tenders/TenderEvaluationPage'
-import { ContractorsPage } from '@/pages/contractors/ContractorsPage'
-import { WorkOrdersPage } from '@/pages/work/WorkOrdersPage'
-import { MilestonesPage } from '@/pages/work/MilestonesPage'
-import { ApprovalsPage } from '@/pages/approvals/ApprovalsPage'
-import { GrievancesPage } from '@/pages/grievances/GrievancesPage'
-import { LitigationPage } from '@/pages/litigation/LitigationPage'
-import { DocumentsPage } from '@/pages/documents/DocumentsPage'
-import { AlertsPage } from '@/pages/alerts/AlertsPage'
-import { AuditPage } from '@/pages/audit/AuditPage'
-import { AiInsightsPage } from '@/pages/ai-insights/AiInsightsPage'
-import { ReportsPage } from '@/pages/reports/ReportsPage'
-import { SettingsPage } from '@/pages/settings/SettingsPage'
+/* ---------- Government global screens (code-split) ---------- */
+const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const ProjectsListPage = lazy(() => import('@/pages/projects/ProjectsListPage').then((m) => ({ default: m.ProjectsListPage })))
+const PlanningPage = lazy(() => import('@/pages/planning/PlanningPage').then((m) => ({ default: m.PlanningPage })))
+const GrievancesPage = lazy(() => import('@/pages/grievances/GrievancesPage').then((m) => ({ default: m.GrievancesPage })))
+const ApprovalsPage = lazy(() => import('@/pages/approvals/ApprovalsPage').then((m) => ({ default: m.ApprovalsPage })))
+const AlertsPage = lazy(() => import('@/pages/alerts/AlertsPage').then((m) => ({ default: m.AlertsPage })))
+const DocumentsPage = lazy(() => import('@/pages/documents/DocumentsPage').then((m) => ({ default: m.DocumentsPage })))
+const AuditPage = lazy(() => import('@/pages/audit/AuditPage').then((m) => ({ default: m.AuditPage })))
+const AiInsightsPage = lazy(() => import('@/pages/ai-insights/AiInsightsPage').then((m) => ({ default: m.AiInsightsPage })))
+const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
+const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 
-/* ---------- Citizen screens ---------- */
-import { CitizenHomePage } from '@/pages/citizen/CitizenHomePage'
-import { CitizenProjectsPage } from '@/pages/citizen/CitizenProjectsPage'
-import { CitizenProjectDetailPage } from '@/pages/citizen/CitizenProjectDetailPage'
-import { CitizenNearbyPage } from '@/pages/citizen/CitizenNearbyPage'
-import { CitizenGrievancePage } from '@/pages/citizen/CitizenGrievancePage'
-import { CitizenTrackPage } from '@/pages/citizen/CitizenTrackPage'
+/* ---------- Approval workspace (code-split; all modules request-scoped) ---------- */
+const ApprovalWorkspaceLayout = lazy(() => import('@/pages/approval/ApprovalWorkspaceLayout').then((m) => ({ default: m.ApprovalWorkspaceLayout })))
+const ApprovalOverviewPage = lazy(() => import('@/pages/approval/ApprovalOverviewPage').then((m) => ({ default: m.ApprovalOverviewPage })))
+const ApprovalWorkflowPage = lazy(() => import('@/pages/approval/ApprovalWorkflowPage').then((m) => ({ default: m.ApprovalWorkflowPage })))
+const ApprovalHistoryPage = lazy(() => import('@/pages/approval/ApprovalHistoryPage').then((m) => ({ default: m.ApprovalHistoryPage })))
+const ApprovalProjectPage = lazy(() => import('@/pages/approval/ApprovalProjectPage').then((m) => ({ default: m.ApprovalProjectPage })))
+
+/* ---------- Citizen screens (code-split) ---------- */
+const CitizenHomePage = lazy(() => import('@/pages/citizen/CitizenHomePage').then((m) => ({ default: m.CitizenHomePage })))
+const CitizenProjectsPage = lazy(() => import('@/pages/citizen/CitizenProjectsPage').then((m) => ({ default: m.CitizenProjectsPage })))
+const CitizenProjectDetailPage = lazy(() => import('@/pages/citizen/CitizenProjectDetailPage').then((m) => ({ default: m.CitizenProjectDetailPage })))
+const CitizenNearbyPage = lazy(() => import('@/pages/citizen/CitizenNearbyPage').then((m) => ({ default: m.CitizenNearbyPage })))
+const CitizenGrievancePage = lazy(() => import('@/pages/citizen/CitizenGrievancePage').then((m) => ({ default: m.CitizenGrievancePage })))
+const CitizenTrackPage = lazy(() => import('@/pages/citizen/CitizenTrackPage').then((m) => ({ default: m.CitizenTrackPage })))
+
+/* ---------- Project workspace (code-split; all modules project-scoped) ---------- */
+const ProjectWorkspaceLayout = lazy(() => import('@/pages/project/ProjectWorkspaceLayout').then((m) => ({ default: m.ProjectWorkspaceLayout })))
+const WorkspaceOverviewPage = lazy(() => import('@/pages/project/WorkspaceOverviewPage').then((m) => ({ default: m.WorkspaceOverviewPage })))
+const WorkspaceBudgetPage = lazy(() => import('@/pages/project/WorkspaceBudgetPage').then((m) => ({ default: m.WorkspaceBudgetPage })))
+const WorkspaceTendersPage = lazy(() => import('@/pages/project/WorkspaceTendersPage').then((m) => ({ default: m.WorkspaceTendersPage })))
+const WorkspaceContractorEvalPage = lazy(() => import('@/pages/project/WorkspaceContractorEvalPage').then((m) => ({ default: m.WorkspaceContractorEvalPage })))
+const WorkspaceContractorsPage = lazy(() => import('@/pages/project/WorkspaceContractorsPage').then((m) => ({ default: m.WorkspaceContractorsPage })))
+const WorkspaceExecutionPage = lazy(() => import('@/pages/project/WorkspaceExecutionPage').then((m) => ({ default: m.WorkspaceExecutionPage })))
+const WorkspaceMilestonesPage = lazy(() => import('@/pages/project/WorkspaceMilestonesPage').then((m) => ({ default: m.WorkspaceMilestonesPage })))
+const WorkspaceComplaintsPage = lazy(() => import('@/pages/project/WorkspaceComplaintsPage').then((m) => ({ default: m.WorkspaceComplaintsPage })))
+const WorkspaceApprovalsPage = lazy(() => import('@/pages/project/WorkspaceApprovalsPage').then((m) => ({ default: m.WorkspaceApprovalsPage })))
+const WorkspaceAlertsPage = lazy(() => import('@/pages/project/WorkspaceAlertsPage').then((m) => ({ default: m.WorkspaceAlertsPage })))
+const WorkspaceDocumentsPage = lazy(() => import('@/pages/project/WorkspaceDocumentsPage').then((m) => ({ default: m.WorkspaceDocumentsPage })))
+const WorkspaceAuditPage = lazy(() => import('@/pages/project/WorkspaceAuditPage').then((m) => ({ default: m.WorkspaceAuditPage })))
+const WorkspaceAiInsightsPage = lazy(() => import('@/pages/project/WorkspaceAiInsightsPage').then((m) => ({ default: m.WorkspaceAiInsightsPage })))
+
+/** Old /projects/:id?tab=… bookmarks land on the matching workspace module. */
+const TAB_TO_SUFFIX: Record<string, string> = {
+  overview: '',
+  timeline: '',
+  financials: '/budget',
+  milestones: '/milestones',
+  workOrder: '/execution',
+  inspections: '/execution',
+  litigation: '/execution#litigation',
+  contractor: '/contractors',
+  grievances: '/complaints',
+  approvals: '/approvals',
+  documents: '/documents',
+  aiInsights: '/ai-insights',
+  auditTrail: '/audit',
+}
+
+function LegacyProjectRedirect() {
+  const { id = '' } = useParams()
+  const { search, hash } = useLocation()
+  const tab = new URLSearchParams(search).get('tab') ?? ''
+  const suffix = TAB_TO_SUFFIX[tab]
+  return <Navigate to={`/government/projects/${id}${suffix ?? ''}${hash}`} replace />
+}
 
 /**
- * Full route map (spec). Government routes live under the officer shell;
- * citizen routes are public; auth screens are standalone.
+ * Route map. Government routes live under /government; the project workspace
+ * is nested under /government/projects/:id with one path per module so the
+ * selected project stays in the URL. Citizen routes are public; auth screens
+ * are standalone.
  */
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <Suspense fallback={<LoadingBlock />}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/government/dashboard" replace />} />
 
-      {/* Auth suite */}
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/otp-verification" element={<OtpVerificationPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/2fa" element={<TwoFactorPage />} />
-        <Route path="/select-department" element={<SelectDepartmentPage />} />
-        <Route path="/select-role" element={<SelectRolePage />} />
-      </Route>
+        {/* Auth suite */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/otp-verification" element={<OtpVerificationPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/2fa" element={<TwoFactorPage />} />
+          <Route path="/select-department" element={<SelectDepartmentPage />} />
+          <Route path="/select-role" element={<SelectRolePage />} />
+        </Route>
 
-      {/* Government (officer) suite */}
-      <Route element={<GovernmentLayout />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/projects" element={<ProjectsListPage />} />
-        <Route path="/projects/create" element={<PlanningPage />} />
-        <Route path="/projects/:id" element={<ProjectDetailPage />} />
-        <Route path="/planning" element={<PlanningPage />} />
-        <Route path="/finance" element={<FinancePage />} />
-        <Route path="/tenders" element={<TendersPage />} />
-        <Route path="/tenders/:id" element={<TenderEvaluationPage />} />
-        <Route path="/contractors" element={<ContractorsPage />} />
-        <Route path="/work-orders" element={<WorkOrdersPage />} />
-        <Route path="/milestones" element={<MilestonesPage />} />
-        <Route path="/approvals" element={<ApprovalsPage />} />
-        <Route path="/grievances" element={<GrievancesPage />} />
-        <Route path="/litigation" element={<LitigationPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/audit" element={<AuditPage />} />
-        <Route path="/ai-insights" element={<AiInsightsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
+        {/* Government (officer) suite */}
+        <Route path="/government" element={<GovernmentLayout />}>
+          <Route index element={<Navigate to="/government/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
 
-      {/* Citizen (public) suite */}
-      <Route path="/citizen" element={<CitizenLayout />}>
-        <Route index element={<CitizenHomePage />} />
-        <Route path="projects" element={<CitizenProjectsPage />} />
-        <Route path="projects/:id" element={<CitizenProjectDetailPage />} />
-        <Route path="nearby" element={<CitizenNearbyPage />} />
-        <Route path="grievance" element={<CitizenGrievancePage />} />
-        <Route path="track" element={<CitizenTrackPage />} />
-      </Route>
+          {/* Project register + creation (global) */}
+          <Route path="projects" element={<ProjectsListPage />} />
+          <Route path="projects/create" element={<PlanningPage />} />
 
-      <Route path="*" element={<NotFoundPage />} />
-      <Route path="/error" element={<ErrorPage />} />
-    </Routes>
+          {/* Project workspace — every module scoped to :id */}
+          <Route path="projects/:id" element={<ProjectWorkspaceLayout />}>
+            <Route index element={<WorkspaceOverviewPage />} />
+            <Route path="budget" element={<WorkspaceBudgetPage />} />
+            <Route path="tenders" element={<WorkspaceTendersPage />} />
+            <Route path="contractor-evaluation" element={<WorkspaceContractorEvalPage />} />
+            <Route path="contractors" element={<WorkspaceContractorsPage />} />
+            <Route path="execution" element={<WorkspaceExecutionPage />} />
+            <Route path="milestones" element={<WorkspaceMilestonesPage />} />
+            <Route path="complaints" element={<WorkspaceComplaintsPage />} />
+            <Route path="approvals" element={<WorkspaceApprovalsPage />} />
+            <Route path="alerts" element={<WorkspaceAlertsPage />} />
+            <Route path="documents" element={<WorkspaceDocumentsPage />} />
+            <Route path="audit" element={<WorkspaceAuditPage />} />
+            <Route path="ai-insights" element={<WorkspaceAiInsightsPage />} />
+          </Route>
+
+          {/* Cross-project oversight modules (global) */}
+          <Route path="complaints" element={<GrievancesPage />} />
+          <Route path="approvals" element={<ApprovalsPage />} />
+
+          {/* Approval workspace — every module scoped to the selected request */}
+          <Route path="approvals/:id" element={<ApprovalWorkspaceLayout />}>
+            <Route index element={<ApprovalOverviewPage />} />
+            <Route path="workflow" element={<ApprovalWorkflowPage />} />
+            <Route path="history" element={<ApprovalHistoryPage />} />
+            <Route path="project" element={<ApprovalProjectPage />} />
+          </Route>
+
+          <Route path="alerts" element={<AlertsPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="audit" element={<AuditPage />} />
+          <Route path="ai-insights" element={<AiInsightsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+
+        {/* Legacy (pre-workspace) paths → new prefixed / workspace routes */}
+        <Route path="/dashboard" element={<Navigate to="/government/dashboard" replace />} />
+        <Route path="/projects" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/projects/create" element={<Navigate to="/government/projects/create" replace />} />
+        <Route path="/projects/:id" element={<LegacyProjectRedirect />} />
+        <Route path="/planning" element={<Navigate to="/government/projects/create" replace />} />
+        <Route path="/finance" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/tenders" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/tenders/:id" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/contractors" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/work-orders" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/milestones" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/approvals" element={<Navigate to="/government/approvals" replace />} />
+        <Route path="/grievances" element={<Navigate to="/government/complaints" replace />} />
+        <Route path="/litigation" element={<Navigate to="/government/projects" replace />} />
+        <Route path="/documents" element={<Navigate to="/government/documents" replace />} />
+        <Route path="/alerts" element={<Navigate to="/government/alerts" replace />} />
+        <Route path="/audit" element={<Navigate to="/government/audit" replace />} />
+        <Route path="/ai-insights" element={<Navigate to="/government/ai-insights" replace />} />
+        <Route path="/reports" element={<Navigate to="/government/reports" replace />} />
+        <Route path="/settings" element={<Navigate to="/government/settings" replace />} />
+
+        {/* Citizen (public) suite */}
+        <Route path="/citizen" element={<CitizenLayout />}>
+          <Route index element={<CitizenHomePage />} />
+          <Route path="projects" element={<CitizenProjectsPage />} />
+          <Route path="projects/:id" element={<CitizenProjectDetailPage />} />
+          <Route path="nearby" element={<CitizenNearbyPage />} />
+          <Route path="grievance" element={<CitizenGrievancePage />} />
+          <Route path="track" element={<CitizenTrackPage />} />
+        </Route>
+
+        <Route path="*" element={<NotFoundPage />} />
+        <Route path="/error" element={<ErrorPage />} />
+      </Routes>
+    </Suspense>
   )
 }

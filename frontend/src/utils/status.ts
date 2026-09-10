@@ -118,6 +118,23 @@ export const FUND_FLOW_STATUS: Record<'allocated' | 'released' | 'pending', Stat
   pending: { key: 'status.pending', tone: 'warning', icon: 'hourglass_top' },
 }
 
+/* ---------- Bills & payments (Payment & Bill Management) ---------- */
+export const BILL_STATUS: Record<
+  'submitted' | 'verified' | 'approved' | 'paid' | 'returned',
+  StatusDescriptor
+> = {
+  submitted: { key: 'bill.status.submitted', tone: 'info', icon: 'schedule_send' },
+  verified: { key: 'bill.status.verified', tone: 'neutral', icon: 'fact_check' },
+  approved: { key: 'bill.status.approved', tone: 'warning', icon: 'task_alt' },
+  paid: { key: 'bill.status.paid', tone: 'success', icon: 'payments' },
+  returned: { key: 'bill.status.returned', tone: 'danger', icon: 'keyboard_return' },
+}
+
+export const BILL_FLAG: Record<'duplicate' | 'abnormal', StatusDescriptor> = {
+  duplicate: { key: 'bill.flag.duplicate', tone: 'danger', icon: 'content_copy' },
+  abnormal: { key: 'bill.flag.abnormal', tone: 'warning', icon: 'warning' },
+}
+
 /* ---------- Document access levels ---------- */
 export const ACCESS_LEVEL: Record<'Public' | 'Internal' | 'Restricted', StatusDescriptor> = {
   Public: { key: 'access.public', tone: 'success', icon: 'public' },

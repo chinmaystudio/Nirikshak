@@ -5,15 +5,17 @@ import { useTheme } from '@/context/ThemeContext'
 import { Dropdown, MenuItem, MenuDivider } from '@/components/navigation/Dropdown'
 import { AccessibilityMenuContent } from '@/components/accessibility/AccessibilityMenu'
 import { Logo } from '@/components/ui/Logo'
+import { TopNav } from '@/components/layout/TopNav'
 import { LOCALES } from '@/locales/config'
 import type { Locale } from '@/locales/config'
 import { cn } from '@/utils/cn'
 import { DEMO_BANNER_KEY } from '@/constants'
 
 /**
- * GovernmentHeader — fixed 64px top bar (Stitch skeleton): logo, global search
- * with "/" hint, A- A A+ steppers, high-contrast toggle, a11y menu, language
- * select, dark-mode toggle, notifications bell, profile dropdown.
+ * GovernmentHeader — two-row fixed header (Stitch skeleton extended):
+ * row 1: logo, global search with "/" hint, A- A A+ steppers, high-contrast
+ * toggle, a11y menu, language select, dark-mode toggle, notifications, profile.
+ * row 2: TopNav — the global module navigation bar (config-driven).
  */
 export function GovernmentHeader({
   officerName,
@@ -21,12 +23,17 @@ export function GovernmentHeader({
   onLogout,
   onOpenNotifications,
   onSearch,
+  showProjectNavToggle,
+  onOpenProjectNav,
 }: {
   officerName?: string
   officerRole?: string
   onLogout: () => void
   onOpenNotifications: () => void
   onSearch?: (q: string) => void
+  /** Contextual project/approval sidebar available (mobile toggle in nav row). */
+  showProjectNavToggle?: boolean
+  onOpenProjectNav?: () => void
 }) {
   const { t, locale, setLocale } = useI18n()
   const { textSize, setTextSize, toggleHighContrast, contrast } = useAccessibility()
@@ -35,10 +42,10 @@ export function GovernmentHeader({
   void DEMO_BANNER_KEY
 
   return (
-    <header className="fixed inset-x-0 top-0 z-header flex h-header items-center gap-3 border-b border-border bg-surface px-3 md:px-4">
-      {/* Logo */}
-      <Logo variant="full" to="/dashboard" className="hidden h-8 sm:block" alt={t('common.appName')} />
-      <Logo variant="icon" to="/dashboard" className="h-8 sm:hidden" alt={t('common.appName')} />
+    <header className="fixed inset-x-0 top-0 z-header border-b border-border bg-surface">
+      <div className="flex h-header items-center gap-3 px-3 md:px-4">
+      <Logo variant="full" to="/government/dashboard" className="hidden h-8 sm:block" alt={t('common.appName')} />
+      <Logo variant="icon" to="/government/dashboard" className="h-8 sm:hidden" alt={t('common.appName')} />
 
       {/* Global search */}
       <div className="relative ml-2 hidden min-w-0 flex-1 md:block">
@@ -214,6 +221,10 @@ export function GovernmentHeader({
           )}
         </Dropdown>
       </div>
+      </div>
+
+      {/* Row 2 — global module navigation */}
+      <TopNav showProjectNavToggle={showProjectNavToggle} onOpenProjectNav={onOpenProjectNav ?? (() => undefined)} />
     </header>
   )
 }

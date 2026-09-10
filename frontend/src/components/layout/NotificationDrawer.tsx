@@ -69,7 +69,7 @@ export function NotificationDrawer({ open, onClose }: { open: boolean; onClose: 
                 <span className="nk-mono-id">{a.id}</span>
                 {a.projectId && (
                   <Link
-                    to={`/projects/${a.projectId}`}
+                    to={`/government/projects/${a.projectId}`}
                     onClick={onClose}
                     className="inline-flex items-center gap-0.5 rounded-[2px] text-primary-strong hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   >

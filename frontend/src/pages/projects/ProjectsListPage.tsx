@@ -35,7 +35,15 @@ export function ProjectsListPage() {
   const rows = useMemo(() => {
     let r = projects ?? []
     const s = debounced.trim().toLowerCase()
-    if (s) r = r.filter((p) => p.name.toLowerCase().includes(s) || p.id.toLowerCase().includes(s))
+    // Search matches Project ID, project name, location (district) and category.
+    if (s)
+      r = r.filter(
+        (p) =>
+          p.id.toLowerCase().includes(s) ||
+          p.name.toLowerCase().includes(s) ||
+          p.district.toLowerCase().includes(s) ||
+          p.category.toLowerCase().includes(s),
+      )
     if (dept) r = r.filter((p) => p.department === dept)
     if (district) r = r.filter((p) => p.district === district)
     if (category) r = r.filter((p) => p.category === category)
@@ -75,7 +83,7 @@ export function ProjectsListPage() {
               </button>
             ))}
           </div>
-          <Button variant="primary" icon="add" onClick={() => navigate('/planning')}>
+          <Button variant="primary" icon="add" onClick={() => navigate('/government/projects/create')}>
             {t('dash.sanctionNewProject')}
           </Button>
         </div>
@@ -135,7 +143,7 @@ export function ProjectsListPage() {
                 { key: 'eoc', header: 'Completion', render: (p) => formatDate(p.expectedCompletion) },
               ]}
               rowActions={(p) => (
-                <Button variant="primary" size="sm" onClick={() => navigate(`/projects/${p.id}`)}>
+                <Button variant="primary" size="sm" onClick={() => navigate(`/government/projects/${p.id}`)}>
                   {t('common.viewProject')}
                 </Button>
               )}
@@ -159,7 +167,7 @@ export function ProjectsListPage() {
             <button
               key={p.id}
               type="button"
-              onClick={() => navigate(`/projects/${p.id}`)}
+              onClick={() => navigate(`/government/projects/${p.id}`)}
               className="nk-card flex flex-col gap-3 p-4 text-left transition-colors duration-fast hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             >
               <div className="flex items-start justify-between gap-2">

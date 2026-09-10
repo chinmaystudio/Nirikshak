@@ -177,6 +177,28 @@ export interface Tender {
   awardedAmountCr?: number
   category: string
   mode: 'e-Tender' | 'Manually' | 'Global'
+  /** Project workspace linkage — undefined for department-wide tenders. */
+  projectId?: string
+}
+
+export interface BillItem {
+  id: string // BILL-2026-0342
+  projectId: string
+  contractor: string
+  /** Contractor's own invoice number */
+  billNo: string
+  type: 'RA Bill' | 'Final Bill' | 'Material Bill' | 'Labour Bill'
+  amountCr: number
+  submittedOn: string
+  /** e-MB entry the bill claims against */
+  mbEntry: string
+  status: 'submitted' | 'verified' | 'approved' | 'paid' | 'returned'
+  verifiedBy?: string
+  approvedBy?: string
+  paidOn?: string
+  /** Duplicate/abnormal detection flag (AI-assisted, officer reviews) */
+  flag?: 'duplicate' | 'abnormal'
+  flagNote?: string
 }
 
 export interface Grievance {

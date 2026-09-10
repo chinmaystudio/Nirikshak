@@ -11,9 +11,22 @@ export const LOCALES: { code: Locale; label: string; nativeLabel: string }[] = [
 export const DEFAULT_LOCALE: Locale =
   (import.meta.env.VITE_DEFAULT_LOCALE as Locale | undefined) ?? 'en'
 
-/** English is the complete base dictionary; hi/mr fall back to it per key. */
+/**
+ * English is the complete base dictionary and ships with the initial bundle;
+ * hi/mr are code-split and fetched on first use, falling back to English per
+ * key until loaded.
+ */
 import { en } from './en'
-import { hi } from './hi'
-import { mr } from './mr'
 
-export const DICTIONARIES: Record<Locale, Record<string, string>> = { en, hi, mr }
+export const BASE_DICTIONARY: Record<string, string> = en
+
+const DICTIONARY_LOADERS: Record<Locale, () => Promise<Record<string, string>>> = {
+  en: () => Promise.resolve(en),
+  hi: () => import('./hi').then((m) => m.hi),
+  mr: () => import('./mr').then((m) => m.mr),
+}
+
+/** Fetch a locale dictionary on demand (resolved immediately for English). */
+export function loadDictionary(locale: Locale): Promise<Record<string, string>> {
+  return DICTIONARY_LOADERS[locale]()
+}

@@ -31,7 +31,9 @@ export default {
         secondary: {
           DEFAULT: 'var(--color-secondary)',
           soft: 'var(--color-secondary-soft)',
+          fg: 'var(--color-secondary-fg)',
         },
+        hover: 'var(--color-hover)',
         success: {
           DEFAULT: 'var(--color-success)',
           strong: 'var(--color-success-strong)',
@@ -87,6 +89,7 @@ export default {
         12: 'var(--space-12)',
         16: 'var(--space-16)',
         header: 'var(--header-height)',
+        'header-total': 'var(--header-total)',
         sidebar: 'var(--sidebar-width)',
         'sidebar-collapsed': 'var(--sidebar-width-collapsed)',
       },

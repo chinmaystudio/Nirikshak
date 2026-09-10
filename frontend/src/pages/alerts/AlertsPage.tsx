@@ -88,7 +88,7 @@ export function AlertsPage() {
                 <p className="text-label text-fg">{a.title}</p>
                 <p className="text-body-small text-fg-muted">{a.body}</p>
                 {a.projectId && (
-                  <Link to={`/projects/${encodeURIComponent(a.projectId)}`} className="nk-mono-id text-caption text-primary-strong hover:underline">
+                  <Link to={`/government/projects/${encodeURIComponent(a.projectId)}`} className="nk-mono-id text-caption text-primary-strong hover:underline">
                     {a.projectId}
                   </Link>
                 )}

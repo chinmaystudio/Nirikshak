@@ -10,8 +10,13 @@ import { DEMO_BANNER_KEY } from '@/constants'
 import { cn } from '@/utils/cn'
 
 /**
- * GovernmentLayout — the Stitch shell preserved: fixed h-16 header + fixed
- * w-72 sidebar + pl-72 main. Mobile: header stays, sidebar becomes a drawer.
+ * GovernmentLayout — two-row fixed header (module bar + utility bar) with a
+ * route-based contextual sidebar: the sidebar exists ONLY on project
+ * workspace routes (/government/projects/:id/*) and approval workspace routes
+ * (/government/approvals/:id/*). Global pages render full-width under the top
+ * navigation. The contextual sidebar derives from the current route — never a
+ * manually toggled boolean — so back/forward, refresh and direct URLs always
+ * agree with the visible layout.
  */
 export function GovernmentLayout() {
   const { officer, logout } = useAuth()
@@ -20,7 +25,12 @@ export function GovernmentLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const location = useLocation()
 
-  // Close mobile drawer on navigation.
+  /** Context rule (route-derived): project/approval workspace ⇒ sidebar. */
+  const projectId = /^\/government\/projects\/([^/]+)$/.exec(location.pathname)?.[1]
+  const approvalId = /^\/government\/approvals\/([^/]+)$/.exec(location.pathname)?.[1]
+  const contextualNav = (!!projectId && projectId !== 'create') || !!approvalId
+
+  // Close the mobile contextual drawer on navigation (incl. leaving context).
   useEffect(() => {
     setSidebarOpen(false)
   }, [location.pathname])
@@ -58,28 +68,17 @@ export function GovernmentLayout() {
           officerRole={officer?.designation}
           onLogout={logout}
           onOpenNotifications={() => setNotifOpen(true)}
+          showProjectNavToggle={contextualNav}
+          onOpenProjectNav={() => setSidebarOpen(true)}
         />
 
-        {/* Mobile menu button (visually below fixed header) */}
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open navigation menu"
-          className={cn(
-            'fixed left-3 top-[calc(var(--header-height)+var(--banner-offset,1.75rem))] z-sticky inline-flex h-10 w-10 items-center justify-center rounded-control border border-border bg-surface text-fg-muted shadow-card lg:hidden',
-          )}
-        >
-          <span className="material-symbols-outlined" aria-hidden="true">
-            menu
-          </span>
-        </button>
-
+        {/* Contextual sidebar — renders nothing outside project/approval context */}
         <GovernmentSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={() => setSidebarOpen(false)} />
 
-        <div className="lg:pl-sidebar">
+        <div className={cn(contextualNav && 'lg:pl-sidebar')}>
           <main
             id="main-content"
-            className="mx-auto min-h-[calc(100vh-var(--header-height))] w-full max-w-content p-4 md:p-6"
+            className="mx-auto min-h-[calc(100vh-var(--header-total))] w-full max-w-content p-4 md:p-6"
             tabIndex={-1}
           >
             <Outlet />

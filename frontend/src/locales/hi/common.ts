@@ -1,4 +1,4 @@
-/** Common strings (Hindi). Demo translations for the functional language selector. */
+﻿/** Common strings (Hindi). Demo translations for the functional language selector. */
 export const common: Record<string, string> = {
   'common.appName': 'निरीक्षक',
   'common.tagline': 'पारदर्शी परियोजनाएँ • सशक्त भारत',
@@ -32,6 +32,20 @@ export const common: Record<string, string> = {
   'common.filters': 'फ़िल्टर',
   'common.apply': 'लागू करें',
   'common.reset': 'रीसेट',
+  'common.clear': 'फ़िल्टर हटाएँ',
+  'common.export': 'निर्यात',
+  'common.confirm': 'पुष्टि करें',
+  'common.verify': 'सत्यापित करें',
+  'common.approve': 'स्वीकृत करें',
+  'common.reject': 'अस्वीकार करें',
+  'common.acknowledge': 'स्वीकृति दें',
+  'common.assign': 'सौंपें',
+  'common.resolve': 'निस्तारित करें',
+  'common.escalate': 'एस्कलेट करें',
+  'common.return': 'वापस करें',
+  'common.forward': 'अग्रेषित करें',
+  'common.due': 'देय',
+  'common.risk': 'जोखिम',
   'common.all': 'सभी',
   'common.select': 'चुनें',
   'common.selectAll': 'सभी चुनें',

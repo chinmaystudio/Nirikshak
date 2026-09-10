@@ -1,4 +1,4 @@
-import type { Contractor, ApprovalItem, Tender, Grievance, FundFlow, AuditFinding, DocumentItem, LitigationCase, WorkOrder, InspectionRecord, AiInsight, CitizenProjectSummary, Officer } from '@/types'
+﻿import type { Contractor, Tender, Grievance, FundFlow, AuditFinding, DocumentItem, LitigationCase, WorkOrder, InspectionRecord, AiInsight, CitizenProjectSummary, Officer, BillItem } from '@/types'
 import { PROJECTS } from './projects'
 
 /**
@@ -117,125 +117,8 @@ export const CONTRACTORS: Contractor[] = [
 ]
 
 /* ---------- Approvals (audit trail on every action per spec) ---------- */
-export const APPROVALS: ApprovalItem[] = [
-  {
-    id: 'APR-2026-0411',
-    type: 'Technical Sanction (Amended)',
-    projectId: 'NIR-PWD-2026-0142',
-    projectName: 'Widening of Pune–Solapur Section (NH-9) — Package C-4',
-    submittedBy: 'Executive Engineer, Pune (Rural)',
-    submittedOn: '2026-02-03',
-    amountCr: 52.0,
-    status: 'pending',
-    slaDueDate: '2026-02-13',
-    assignedTo: 'Shri R. K. Verma, IAS',
-    priority: 'urgent',
-    auditTrail: [
-      { timestamp: '2026-02-03T11:20:00+05:30', actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Submitted', remarks: 'Amended TS for VUP at Ch 44+100 (railway crossing).' },
-      { timestamp: '2026-02-04T09:05:00+05:30', actor: 'Er. M. P. Joshi', role: 'Superintending Engineer', action: 'Forwarded', remarks: 'Checked against SSR 2025-26 rates.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0412',
-    type: 'Fund Release (Tranche 4)',
-    projectId: 'NIR-WRD-2026-0089',
-    projectName: 'Bhima Basin Lift Irrigation Scheme — Phase II',
-    submittedBy: 'Controller of Accounts, WRD',
-    submittedOn: '2026-02-05',
-    amountCr: 88.0,
-    status: 'pending',
-    slaDueDate: '2026-02-15',
-    assignedTo: 'Smt. A. N. Deshmukh, IAS',
-    priority: 'high',
-    auditTrail: [
-      { timestamp: '2026-02-05T14:45:00+05:30', actor: 'Shri P. V. Rane', role: 'Controller of Accounts', action: 'Submitted', remarks: 'UC for Tranche 3 accepted by PAO.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0413',
-    type: 'Administrative Approval',
-    projectId: 'NIR-UID-2026-0071',
-    projectName: 'Solid Waste Processing Facility, Aurangabad',
-    submittedBy: 'Municipal Commissioner, C. Sambhajinagar',
-    submittedOn: '2026-01-28',
-    amountCr: 48.0,
-    status: 'approved',
-    slaDueDate: '2026-02-07',
-    assignedTo: 'Shri R. K. Verma, IAS',
-    priority: 'medium',
-    auditTrail: [
-      { timestamp: '2026-01-28T10:10:00+05:30', actor: 'Shri D. M. Kale', role: 'Municipal Commissioner', action: 'Submitted', remarks: 'SBM 2.0 sanctioned component.' },
-      { timestamp: '2026-02-02T16:30:00+05:30', actor: 'Smt. A. N. Deshmukh, IAS', role: 'Secretary, UDD', action: 'Approved', remarks: 'AA granted. Technical sanction to follow.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0414',
-    type: 'Extension of Time (EOT) — Level 2',
-    projectId: 'NIR-PWD-2026-0205',
-    projectName: 'Reconstruction of Wardha Bridge on SH-248',
-    submittedBy: 'Executive Engineer, Wardha',
-    submittedOn: '2026-02-01',
-    status: 'clarification',
-    slaDueDate: '2026-02-11',
-    assignedTo: 'Er. M. P. Joshi',
-    priority: 'high',
-    auditTrail: [
-      { timestamp: '2026-02-01T12:00:00+05:30', actor: 'Er. V. B. Wagh', role: 'Executive Engineer', action: 'Submitted', remarks: '41-day slippage, flood events cited.' },
-      { timestamp: '2026-02-06T09:40:00+05:30', actor: 'Er. M. P. Joshi', role: 'Superintending Engineer', action: 'Clarification Sought', remarks: 'Submit revised hydrology note & bar chart.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0415',
-    type: 'Contractor Settlement (Final Bill)',
-    projectId: 'NIR-RHD-2025-0930',
-    projectName: 'PMGSY — Amravati Batch III',
-    submittedBy: 'Executive Engineer, Amravati (Rural)',
-    submittedOn: '2026-01-22',
-    amountCr: 3.62,
-    status: 'returned',
-    slaDueDate: '2026-02-12',
-    assignedTo: 'Er. S. D. Kulkarni',
-    priority: 'medium',
-    auditTrail: [
-      { timestamp: '2026-01-22T15:15:00+05:30', actor: 'Er. H. T. More', role: 'Executive Engineer', action: 'Submitted', remarks: 'Final bill with MB entries 214–229.' },
-      { timestamp: '2026-01-30T11:25:00+05:30', actor: 'Shri P. V. Rane', role: 'Controller of Accounts', action: 'Returned', remarks: 'Deduct DBW cost for chainage 3+400 as per DL conditions.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0416',
-    type: 'Work Order Acceptance',
-    projectId: 'NIR-UID-2026-0311',
-    projectName: 'Integrated Command & Control Centre, Nashik',
-    submittedBy: 'Apex Constr. Consortium',
-    submittedOn: '2026-01-12',
-    amountCr: 142.2,
-    status: 'approved',
-    slaDueDate: '2026-01-22',
-    assignedTo: 'Smt. A. N. Deshmukh, IAS',
-    priority: 'low',
-    auditTrail: [
-      { timestamp: '2026-01-12T09:00:00+05:30', actor: 'Apex Constr. Consortium', role: 'Contractor', action: 'Submitted', remarks: 'Acceptance of WO conditions.' },
-      { timestamp: '2026-01-14T17:05:00+05:30', actor: 'Smt. A. N. Deshmukh, IAS', role: 'Secretary, UDD', action: 'Approved', remarks: 'Recorded. Mobilization advance as per clause.' },
-    ],
-  },
-  {
-    id: 'APR-2026-0417',
-    type: 'Rejected — Rate Re-validation',
-    projectId: 'NIR-MED-2025-0455',
-    projectName: 'Fed-Grid Substation & Feeder Augmentation, Nanded',
-    submittedBy: 'Executive Engineer, Nanded (O&M)',
-    submittedOn: '2026-01-18',
-    amountCr: 9.6,
-    status: 'rejected',
-    slaDueDate: '2026-01-28',
-    assignedTo: 'Shri R. K. Verma, IAS',
-    priority: 'low',
-    auditTrail: [
-      { timestamp: '2026-01-18T13:30:00+05:30', actor: 'Er. K. B. Pawar', role: 'Executive Engineer', action: 'Submitted', remarks: 'Re-validation of market rates post-COVID escalation.' },
-      { timestamp: '2026-01-25T10:50:00+05:30', actor: 'Shri R. K. Verma, IAS', role: 'Chief Engineer', action: 'Rejected', remarks: 'Resubmit with current-quarter NSS rate analysis.' },
-    ],
-  },
-]
+/* Defined in ./approvals — kept as a separate light module for nav lookups. */
+export { APPROVALS } from './approvals'
 
 /* ---------- Tenders ---------- */
 export const TENDERS: Tender[] = [
@@ -272,6 +155,7 @@ export const TENDERS: Tender[] = [
     bidsReceived: 0,
     category: 'Irrigation',
     mode: 'e-Tender',
+    projectId: 'NIR-WRD-2026-0089',
   },
   {
     id: 'eNIT/UDD/2026/0027',
@@ -288,6 +172,7 @@ export const TENDERS: Tender[] = [
     mode: 'Global',
     awardedTo: 'Apex Constr. Consortium',
     awardedAmountCr: 34.85,
+    projectId: 'NIR-UID-2026-0311',
   },
   {
     id: 'eNIT/PHED/2026/0051',
@@ -302,6 +187,7 @@ export const TENDERS: Tender[] = [
     bidsReceived: 2,
     category: 'Water Supply',
     mode: 'e-Tender',
+    projectId: 'NIR-PHED-2026-0117',
   },
   {
     id: 'NIT/PWD/2025/0407',
@@ -398,6 +284,22 @@ export const GRIEVANCES: Grievance[] = [
     timeline: [{ timestamp: '2026-02-09T13:22:00+05:30', actor: 'Citizen portal', action: 'Submitted', note: '1 photograph attached.' }],
     attachments: 1,
   },
+]
+
+/* ---------- Bills & payments (per project; duplicate/abnormal flags are AI-assisted) ---------- */
+export const BILLS: BillItem[] = [
+  { id: 'BILL-2026-0311', projectId: 'NIR-PWD-2026-0142', contractor: 'ABC Infrastructure Pvt. Ltd.', billNo: 'ABC/C4/RA-11', type: 'RA Bill', amountCr: 3.84, submittedOn: '2026-01-28', mbEntry: 'MB-PUN-C4-2025-118 / 196–203', status: 'paid', verifiedBy: 'Er. S. D. Kulkarni', approvedBy: 'SE, Pune Circle', paidOn: '2026-02-06' },
+  { id: 'BILL-2026-0328', projectId: 'NIR-PWD-2026-0142', contractor: 'ABC Infrastructure Pvt. Ltd.', billNo: 'ABC/C4/RA-12', type: 'RA Bill', amountCr: 4.12, submittedOn: '2026-02-04', mbEntry: 'MB-PUN-C4-2025-118 / 204–212', status: 'verified', verifiedBy: 'Er. S. D. Kulkarni' },
+  { id: 'BILL-2026-0339', projectId: 'NIR-PWD-2026-0142', contractor: 'ABC Infrastructure Pvt. Ltd.', billNo: 'ABC/C4/MAT-03', type: 'Material Bill', amountCr: 1.26, submittedOn: '2026-02-08', mbEntry: 'MB-PUN-C4-2025-118 / 213', status: 'submitted' },
+  { id: 'BILL-2026-0341', projectId: 'NIR-PWD-2026-0142', contractor: 'ABC Infrastructure Pvt. Ltd.', billNo: 'ABC/C4/LAB-07', type: 'Labour Bill', amountCr: 0.42, submittedOn: '2026-02-09', mbEntry: 'Wage register W-2026-02', status: 'verified', verifiedBy: 'Dy. Engineer (Maintenance)' },
+  { id: 'BILL-2026-0342', projectId: 'NIR-PWD-2026-0142', contractor: 'ABC Infrastructure Pvt. Ltd.', billNo: 'ABC/C4/RA-11-DUP', type: 'RA Bill', amountCr: 3.84, submittedOn: '2026-02-09', mbEntry: 'MB-PUN-C4-2025-118 / 196–203', status: 'returned', flag: 'duplicate', flagNote: 'Matches BILL-2026-0311 (same e-MB entries, same amount). Returned to contractor; reconsideration window open.' },
+  { id: 'BILL-2026-0344', projectId: 'NIR-WRD-2026-0089', contractor: 'Shivaay Watertech Ltd.', billNo: 'SWT/LI2/RA-18', type: 'RA Bill', amountCr: 22.6, submittedOn: '2026-02-02', mbEntry: 'MB-SOL-LI2-2025-042 / 88–96', status: 'approved', verifiedBy: 'Er. M. P. Joshi', approvedBy: 'Chief Engineer, WRD' },
+  { id: 'BILL-2026-0351', projectId: 'NIR-WRD-2026-0089', contractor: 'Shivaay Watertech Ltd.', billNo: 'SWT/LI2/MAT-09', type: 'Material Bill', amountCr: 14.85, submittedOn: '2026-02-07', mbEntry: 'MB-SOL-LI2-2025-042 / 97', status: 'verified', verifiedBy: 'Er. M. P. Joshi', flag: 'abnormal', flagNote: 'Unit rate for pump spares 34% above SSR 2025-26 schedule. Verification with rate analysis requested before approval.' },
+  { id: 'BILL-2026-0355', projectId: 'NIR-WRD-2026-0089', contractor: 'Shivaay Watertech Ltd.', billNo: 'SWT/LI2/LAB-12', type: 'Labour Bill', amountCr: 1.94, submittedOn: '2026-02-09', mbEntry: 'Wage register W-2026-02 (Solapur)', status: 'submitted' },
+  { id: 'BILL-2026-0347', projectId: 'NIR-UID-2026-0311', contractor: 'Apex Constr. Consortium', billNo: 'ACC/ICCC/RA-06', type: 'RA Bill', amountCr: 9.7, submittedOn: '2026-02-05', mbEntry: 'MB-NSK-ICCC-2025-011 / 41–48', status: 'paid', verifiedBy: 'Er. A. R. Bhosale', approvedBy: 'Secretary, UDD', paidOn: '2026-02-09' },
+  { id: 'BILL-2026-0352', projectId: 'NIR-UID-2026-0311', contractor: 'Apex Constr. Consortium', billNo: 'ACC/ICCC/RA-07', type: 'RA Bill', amountCr: 8.35, submittedOn: '2026-02-09', mbEntry: 'MB-NSK-ICCC-2025-011 / 49–55', status: 'submitted' },
+  { id: 'BILL-2026-0349', projectId: 'NIR-PHED-2026-0117', contractor: 'M/s Sahyadri Infra', billNo: 'SI/YAV/RA-14', type: 'RA Bill', amountCr: 5.18, submittedOn: '2026-02-03', mbEntry: 'MB-YAV-JJM-2025-021 / 120–128', status: 'paid', verifiedBy: 'Er. H. T. More', approvedBy: 'SE, Amravati Circle', paidOn: '2026-02-08' },
+  { id: 'BILL-2026-0353', projectId: 'NIR-PHED-2026-0117', contractor: 'M/s Sahyadri Infra', billNo: 'SI/YAV/LAB-05', type: 'Labour Bill', amountCr: 0.68, submittedOn: '2026-02-08', mbEntry: 'Wage register W-2026-02 (Yavatmal)', status: 'approved', verifiedBy: 'Er. H. T. More', approvedBy: 'EE, PHED Yavatmal' },
 ]
 
 /* ---------- Fund flow (Budget & Disbursals) ---------- */

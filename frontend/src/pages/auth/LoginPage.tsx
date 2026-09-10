@@ -29,7 +29,7 @@ export function LoginPage() {
     login(officer)
     showToast('Signed in to demo session (mock).', 'success')
     setBusy(false)
-    navigate('/dashboard')
+    navigate('/government/dashboard')
   }
 
   return (

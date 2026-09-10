@@ -97,10 +97,10 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" icon="add_task" onClick={() => navigate('/planning')}>
+          <Button variant="outline" size="sm" icon="add_task" onClick={() => navigate('/government/projects/create')}>
             {t('dash.sanctionNewProject')}
           </Button>
-          <Button variant="outline" size="sm" icon="crisis_alert" onClick={() => navigate('/grievances')}>
+          <Button variant="outline" size="sm" icon="crisis_alert" onClick={() => navigate('/government/complaints')}>
             {t('dash.fieldEscalations')}
           </Button>
         </div>
@@ -113,8 +113,8 @@ export function DashboardPage() {
         <KpiCard label={t('dash.kpi.fundsUtilized')} value={loading ? '—' : formatCr(totals.utilized)} icon="payments" iconTone="success" delta={`${totals.outlay ? formatPct((totals.utilized / totals.outlay) * 100, 1) : '—'} of outlay`} deltaTone="neutral" />
         <KpiCard label={t('dash.kpi.avgPhysical')} value={loading ? '—' : formatPct(totals.avgPhys)} icon="trending_up" iconTone="neutral" />
         <KpiCard label={t('dash.kpi.delayedWorks')} value={loading ? '—' : totals.delayed} icon="timer_off" iconTone="danger" delta="3 critical" deltaTone="danger" />
-        <KpiCard label={t('dash.kpi.pendingApprovals')} value="7" icon="rule" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/approvals">{t('common.viewAll')}</Link>} />
-        <KpiCard label={t('dash.kpi.openGrievances')} value="4" icon="report_problem" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/grievances">{t('common.viewAll')}</Link>} />
+        <KpiCard label={t('dash.kpi.pendingApprovals')} value="7" icon="rule" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/approvals">{t('common.viewAll')}</Link>} />
+        <KpiCard label={t('dash.kpi.openGrievances')} value="4" icon="report_problem" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/complaints">{t('common.viewAll')}</Link>} />
       </div>
 
       {/* Executive summary + pipeline (5+7 split) */}
@@ -123,7 +123,7 @@ export function DashboardPage() {
           title={t('dash.executiveSummary')}
           icon="analytics"
           className="xl:col-span-5"
-          actions={<Link to="/reports" className="inline-flex items-center gap-1 text-caption text-primary-strong hover:underline">Pipeline Analytics <span className="material-symbols-outlined text-[14px]" aria-hidden="true">arrow_forward</span></Link>}
+          actions={<Link to="/government/reports" className="inline-flex items-center gap-1 text-caption text-primary-strong hover:underline">Pipeline Analytics <span className="material-symbols-outlined text-[14px]" aria-hidden="true">arrow_forward</span></Link>}
         >
           <div className="flex flex-col gap-4">
             <p className="text-body text-fg-muted">
@@ -182,7 +182,7 @@ export function DashboardPage() {
       <Panel
         title={t('dash.urgentQueue')}
         icon="crisis_alert"
-        actions={<Link to="/approvals" className="text-caption text-primary-strong hover:underline">{t('common.viewAll')}</Link>}
+        actions={<Link to="/government/approvals" className="text-caption text-primary-strong hover:underline">{t('common.viewAll')}</Link>}
         bodyClassName="p-0"
       >
         <div className="overflow-x-auto">
@@ -247,7 +247,7 @@ export function DashboardPage() {
                   <span className="nk-mono-id">{row.p}</span> • {row.id} • {row.when}
                 </p>
               </div>
-              <IconButton icon="arrow_forward" label="Open inspection" size="sm" onClick={() => navigate(`/projects/${row.p}`)} />
+              <IconButton icon="arrow_forward" label="Open inspection" size="sm" onClick={() => navigate(`/government/projects/${row.p}`)} />
             </li>
           ))}
         </ul>
@@ -315,7 +315,7 @@ export function DashboardPage() {
             { key: 'eoc', header: 'Completion', cellClassName: 'tabular-nums', render: (p) => formatDate(p.expectedCompletion) },
           ]}
           rowActions={(p) => (
-            <Button variant="primary" size="sm" onClick={() => navigate(`/projects/${p.id}`)}>
+            <Button variant="primary" size="sm" onClick={() => navigate(`/government/projects/${p.id}`)}>
               {t('common.viewProject')}
             </Button>
           )}

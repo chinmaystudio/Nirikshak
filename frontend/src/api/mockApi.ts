@@ -9,6 +9,7 @@ import type {
   Tender,
   Grievance,
   FundFlow,
+  BillItem,
   AuditFinding,
   AlertItem,
   DocumentItem,
@@ -29,6 +30,7 @@ import {
   TENDERS,
   GRIEVANCES,
   FUND_FLOWS,
+  BILLS,
   AUDIT_FINDINGS,
   DOCUMENTS,
   LITIGATION,
@@ -115,6 +117,10 @@ export const approvalsApi = {
     await delay(120)
     return APPROVALS
   },
+  async get(id: string): Promise<ApprovalItem | undefined> {
+    await delay()
+    return APPROVALS.find((a) => a.id === id)
+  },
 }
 
 /* ---------- Tenders ---------- */
@@ -169,6 +175,11 @@ export const financeApi = {
   async fundFlows(): Promise<FundFlow[]> {
     await delay()
     return FUND_FLOWS
+  },
+  /** Bills across projects — Payment & Bill Management (workspace scopes by project). */
+  async bills(): Promise<BillItem[]> {
+    await delay()
+    return BILLS
   },
 }
 

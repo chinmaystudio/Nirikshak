@@ -84,7 +84,7 @@ export function AuditPage() {
               { key: 'severity', header: 'Severity', render: (f) => <StatusBadge descriptor={AUDIT_SEVERITY[f.severity]} size="sm" /> },
               { key: 'category', header: 'Category', render: (f) => <Badge tone="neutral">{f.category}</Badge> },
               { key: 'project', header: t('common.project'), render: (f) => f.projectId
-                ? <Link to={`/projects/${encodeURIComponent(f.projectId)}`} className="nk-mono-id text-primary-strong hover:underline">{f.projectId}</Link>
+                ? <Link to={`/government/projects/${encodeURIComponent(f.projectId)}`} className="nk-mono-id text-primary-strong hover:underline">{f.projectId}</Link>
                 : '—' },
               { key: 'amount', header: 'Irregularity', cellClassName: 'tabular-nums', render: (f) => (f.irregularityAmountCr != null ? formatCr(f.irregularityAmountCr) : '—') },
               { key: 'status', header: t('common.status'), render: (f) => <Badge tone={FINDING_STATUS[f.status].tone} icon={f.status === 'closed' ? 'check_circle' : 'hourglass_top'}>{FINDING_STATUS[f.status].label}</Badge> },

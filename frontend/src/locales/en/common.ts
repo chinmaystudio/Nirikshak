@@ -1,4 +1,4 @@
-/** Common strings shared across the whole application (English). */
+﻿/** Common strings shared across the whole application (English). */
 export const common: Record<string, string> = {
   'common.appName': 'NIRIKSHAK',
   'common.tagline': 'Transparent Projects • Stronger India',
@@ -33,6 +33,20 @@ export const common: Record<string, string> = {
   'common.apply': 'Apply',
   'common.reset': 'Reset',
   'common.all': 'All',
+  'common.clear': 'Clear Filters',
+  'common.export': 'Export',
+  'common.confirm': 'Confirm',
+  'common.verify': 'Verify',
+  'common.approve': 'Approve',
+  'common.reject': 'Reject',
+  'common.acknowledge': 'Acknowledge',
+  'common.assign': 'Assign',
+  'common.resolve': 'Resolve',
+  'common.escalate': 'Escalate',
+  'common.return': 'Return',
+  'common.forward': 'Forward',
+  'common.due': 'Due',
+  'common.risk': 'Risk',
   'common.select': 'Select',
   'common.selectAll': 'Select all',
   'common.status': 'Status',

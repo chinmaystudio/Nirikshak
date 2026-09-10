@@ -37,7 +37,7 @@ export function OtpVerificationPage() {
         className="mt-5 flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault()
-          if (complete) navigate('/dashboard')
+          if (complete) navigate('/government/dashboard')
         }}
       >
         <div className="flex justify-between gap-2" role="group" aria-label="6-digit verification code">
