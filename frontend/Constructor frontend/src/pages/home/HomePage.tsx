@@ -52,26 +52,37 @@ export function HomePage(): JSX.Element {
   return (
     <div className="space-y-7">
       <section className="space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-primary-container/10 via-surface-container-low to-transparent p-6 rounded-2xl border border-outline-variant/50 shadow-xs">
           <div>
-            <h1 className="text-headline-lg font-headline-lg font-bold text-primary">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-secondary/15 text-secondary text-[11px] font-bold uppercase tracking-wider mb-2 border border-secondary/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+              Citizen Surveillance &amp; Audit Portal
+            </div>
+            <h1 className="text-headline-lg font-headline-lg font-extrabold text-primary">
               {greeting()}, {user ? user.name.split(" ")[0] : "Citizen"}
             </h1>
-            <p className="text-body-md text-on-surface-variant">What would you like to check today?</p>
+            <p className="text-body-md text-on-surface-variant mt-1">
+              Track active public works, inspect expenditures, and verify municipal infrastructure in real-time.
+            </p>
           </div>
-          <div className="text-label-sm text-outline md:text-right">
-            {user ? user.ward : "Pune"} • Public Audit Mode <span className="text-secondary font-semibold">Active (FY 2026-27)</span>
+          <div className="flex flex-col md:items-end text-label-sm text-outline gap-1.5 flex-shrink-0">
+            <span className="px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/60 font-semibold text-primary shadow-2xs">
+              📍 {user ? user.ward : "Pune Municipal Region"}
+            </span>
+            <span className="text-[11px] text-on-surface-variant">
+              Public Audit Mode: <strong className="text-secondary font-bold">Active (FY 2026-27)</strong>
+            </span>
           </div>
         </div>
         {critical[0] ? (
           <button
             onClick={() => navigate(`#/alerts/${critical[0].id}`)}
-            className="w-full text-left bg-red-50 border border-red-200 border-l-4 border-l-error p-3.5 rounded-lg flex items-start gap-2.5 hover:bg-red-50/70 transition-colors"
+            className="w-full text-left bg-red-50/80 border border-red-200 border-l-4 border-l-error p-3.5 rounded-xl flex items-start gap-3 hover:bg-red-50 transition-colors shadow-2xs"
           >
-            <Icon name="report" className="text-[20px] text-error flex-shrink-0" />
+            <Icon name="report" className="text-[20px] text-error flex-shrink-0 mt-0.5" />
             <span className="text-body-sm text-on-surface">
-              <strong className="text-error">CRITICAL ALERT:</strong> {critical[0].title}{" "}
-              <span className="text-secondary font-semibold whitespace-nowrap">View details →</span>
+              <strong className="text-error font-bold">CRITICAL ALERT:</strong> {critical[0].title}{" "}
+              <span className="text-secondary font-bold whitespace-nowrap ml-1 hover:underline">View details →</span>
             </span>
           </button>
         ) : null}
@@ -316,11 +327,15 @@ function SectionHead({ title, sub, link, linkLabel }: { title: string; sub: stri
   return (
     <div className="flex items-end justify-between gap-3">
       <div>
-        <h2 className="text-headline-md font-headline-md font-bold text-primary">{title}</h2>
-        <p className="text-body-sm text-on-surface-variant">{sub}</p>
+        <h2 className="text-headline-md font-headline-md font-extrabold text-primary">{title}</h2>
+        <p className="text-body-sm text-on-surface-variant mt-0.5">{sub}</p>
       </div>
-      <a href={link} className="text-secondary font-label-md text-label-md font-bold hover:underline whitespace-nowrap">
-        {linkLabel} →
+      <a
+        href={link}
+        className="inline-flex items-center gap-1 text-secondary font-label-md text-label-md font-bold hover:underline whitespace-nowrap group"
+      >
+        <span>{linkLabel}</span>
+        <span className="transition-transform group-hover:translate-x-1">→</span>
       </a>
     </div>
   );
@@ -331,16 +346,26 @@ function QuickAction({ label, sub, icon, route, warm = false }: { label: string;
   return (
     <button
       onClick={() => navigate(route)}
-      className={`text-left cursor-pointer p-5 rounded-lg border shadow-sm transition-all hover:shadow-md flex items-start gap-4 ${
-        warm ? "bg-[#FEF9EE] border-[#FDE68A] hover:border-secondary" : "bg-surface-container-lowest border-outline-variant/50 hover:border-primary/40"
+      className={`group text-left cursor-pointer p-5 rounded-2xl border shadow-2xs transition-all duration-200 hover:shadow-md hover:-translate-y-1 flex items-start gap-4 ${
+        warm
+          ? "bg-gradient-to-br from-[#FFFDF7] to-[#FEF7E6] border-amber-200/90 hover:border-secondary hover:ring-1 hover:ring-secondary/30"
+          : "bg-surface-container-lowest border-outline-variant/60 hover:border-primary/40 hover:bg-surface-container-low/40"
       }`}
     >
-      <div className={`p-2.5 rounded flex-shrink-0 ${warm ? "bg-secondary text-on-secondary" : "bg-primary-container text-on-primary"}`}>
-        <Icon name={icon} />
+      <div
+        className={`p-3 rounded-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-xs ${
+          warm
+            ? "bg-gradient-to-br from-secondary to-[#b36200] text-on-secondary"
+            : "bg-gradient-to-br from-primary-container to-primary text-on-primary"
+        }`}
+      >
+        <Icon name={icon} className="text-[22px]" />
       </div>
       <div>
-        <h3 className="text-label-md font-bold text-primary">{label}</h3>
-        <p className="text-body-sm text-on-surface-variant mt-0.5">{sub}</p>
+        <h3 className="text-label-md font-bold text-primary group-hover:text-secondary transition-colors leading-tight">
+          {label}
+        </h3>
+        <p className="text-body-sm text-on-surface-variant mt-1 leading-normal">{sub}</p>
       </div>
     </button>
   );

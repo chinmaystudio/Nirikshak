@@ -10,7 +10,7 @@ import { ProjectTimeline, DelayCallout } from "@/components/projects/ProjectTime
 import { FinancialSummary, ProgressPanel, MilestoneMiniList } from "@/components/projects/ProjectProgress";
 import { ContractorInfo } from "@/components/projects/ContractorInfo";
 import { DocumentsTable, PhotoLog, ImportantDates } from "@/components/projects/ProjectDocuments";
-import { useNavigate } from "@/app/router";
+import { useNavigate, useLocation, getRouteId } from "@/app/router";
 import { useAsync } from "@/hooks/useAsync";
 import { getProjectById } from "@/services/projects/projectsService";
 import { getMyComplaints } from "@/services/complaints/complaintsService";
@@ -29,9 +29,9 @@ const TABS = [
 
 export function ProjectDetailsPage(): JSX.Element {
   const navigate = useNavigate();
-  const urlId = window.location.hash.split("?")[0].split("/").pop() ?? "";
-  const queryTab = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("tab");
-  const [tab, setTab] = useState<string>(queryTab ?? "overview");
+  const { query } = useLocation();
+  const urlId = getRouteId();
+  const [tab, setTab] = useState<string>(query.tab ?? "overview");
   const state = useAsync(() => getProjectById(urlId), [urlId]);
   const complaintsState = useAsync(() => getMyComplaints(), []);
   const issuesState = useAsync(() => getCommunityFeed("recent"), []);

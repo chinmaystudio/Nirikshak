@@ -42,10 +42,10 @@ interface RouteDef {
 }
 
 const ROUTE_TABLE: RouteDef[] = [
-  { pattern: "/", auth: true, render: () => <HomePage /> },
+  { pattern: "/", render: () => <HomePage /> },
   { pattern: "/login", guestOnly: true, chrome: "auth", render: () => <LoginPage /> },
   { pattern: "/register", guestOnly: true, chrome: "auth", render: () => <RegisterPage /> },
-  { pattern: "/home", auth: true, render: () => <HomePage /> },
+  { pattern: "/home", render: () => <HomePage /> },
   { pattern: "/projects", render: () => <NearbyProjectsPage /> },
   { pattern: "/projects/:id", render: () => <ProjectDetailsPage /> },
   { pattern: "/report", auth: true, render: () => <ReportIssuePage /> },

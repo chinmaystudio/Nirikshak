@@ -165,8 +165,22 @@ button:focus-visible,
 a:focus-visible,
 [tabindex]:focus-visible,
 summary:focus-visible {
-  outline: 2px solid #102a4c;
+  outline: 2px solid #904d00;
   outline-offset: 2px;
+}
+
+.card-hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(13, 28, 46, 0.08), 0 8px 10px -6px rgba(13, 28, 46, 0.04);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -176,7 +190,10 @@ summary:focus-visible {
   .typing-dot {
     animation: none;
   }
-  .view-enter {
+  .view-enter,
+  .card-hover-lift {
     animation: none;
+    transform: none !important;
   }
 }
+

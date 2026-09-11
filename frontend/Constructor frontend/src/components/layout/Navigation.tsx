@@ -39,16 +39,26 @@ export function DesktopNav({ unreadAlerts }: { unreadAlerts: number }): JSX.Elem
             <a
               href={item.route}
               aria-current={active ? "page" : "false"}
-              className={`flex items-center gap-1.5 py-3 border-b-2 transition-colors ${
-                active ? "border-secondary text-primary font-bold" : "border-transparent text-on-surface-variant font-semibold hover:text-primary"
+              className={`relative flex items-center gap-2 px-3 py-2.5 my-1 rounded-lg text-[13.5px] tracking-wide transition-all duration-150 ${
+                active
+                  ? "bg-primary-container/10 text-primary font-bold shadow-xs border border-primary-container/20"
+                  : "text-on-surface-variant font-semibold hover:text-primary hover:bg-surface-container/60"
               }`}
             >
-              <Icon name={item.icon} className="text-[18px]" />
+              <Icon
+                name={item.icon}
+                className={`text-[19px] transition-transform duration-150 ${
+                  active ? "text-secondary scale-105" : "text-on-surface-variant"
+                }`}
+              />
               <span>{t(item.labelKey)}</span>
               {item.alertsBadge && unreadAlerts > 0 ? (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-error text-on-error text-[10px] font-bold align-top">
+                <span className="ml-1 inline-flex items-center justify-center min-w-[19px] h-[19px] px-1.5 rounded-full bg-error text-on-error text-[10px] font-extrabold shadow-xs">
                   {unreadAlerts}
                 </span>
+              ) : null}
+              {active ? (
+                <span className="absolute -bottom-1 inset-x-3 h-[2px] bg-secondary rounded-full" />
               ) : null}
             </a>
           </li>

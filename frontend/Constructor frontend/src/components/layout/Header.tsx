@@ -52,17 +52,21 @@ export function Header(): JSX.Element {
               <Icon name="menu" />
             </button>
             <a className="flex items-center gap-3 group min-w-0" href={ROUTES.HOME} aria-label="Nirikshan home">
-              <div className="w-11 h-11 rounded-lg bg-primary-container flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform flex-shrink-0">
-                <svg className="w-7 h-7 fill-current text-secondary-fixed" viewBox="0 0 24 24" aria-hidden="true">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-container to-primary flex items-center justify-center shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all flex-shrink-0 border border-white/10">
+                <svg className="w-6 h-6 fill-current text-secondary-fixed" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.41 0 8 3.59 8 8s-3.59 8-8 8-8-3.59-8-8 3.59-8 8-8zm-1 3v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
                 </svg>
               </div>
               <div className="min-w-0">
-                <div className="text-[21px] leading-none font-extrabold tracking-tight text-primary">NIRIKSHAN</div>
-                <div className="text-[11px] leading-tight mt-1 font-semibold text-secondary tracking-wide whitespace-nowrap">
-                  Public Infrastructure Transparency Portal
+                <div className="text-[20px] leading-none font-extrabold tracking-tight text-primary flex items-center gap-1.5">
+                  NIRIKSHAN
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/20">
+                    PORTAL
+                  </span>
                 </div>
-                <div className="hidden sm:block text-[10px] leading-tight text-outline tracking-[0.14em] uppercase">{t("tagline")}</div>
+                <div className="text-[11px] leading-tight mt-1 font-semibold text-on-surface-variant tracking-wide whitespace-nowrap">
+                  Public Infrastructure Transparency &amp; Monitoring
+                </div>
               </div>
             </a>
           </div>
@@ -75,12 +79,21 @@ export function Header(): JSX.Element {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") submitSearch();
                 }}
-                className="w-64 xl:w-80 pl-9 pr-4 py-2 rounded bg-surface border border-outline-variant text-body-sm focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all"
+                className="w-64 xl:w-80 pl-9 pr-8 py-2 rounded-lg bg-surface border border-outline-variant/70 text-body-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 focus:border-secondary transition-all shadow-2xs"
                 placeholder="Search projects by ID, city, or contractor…"
                 type="text"
                 aria-label="Search projects"
               />
-              <span className="material-symbols-outlined absolute left-2.5 top-2 text-on-surface-variant pointer-events-none">search</span>
+              <span className="material-symbols-outlined absolute left-2.5 top-2 text-on-surface-variant/70 pointer-events-none text-[18px]">search</span>
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 text-outline hover:text-primary text-[14px]"
+                >
+                  ✕
+                </button>
+              ) : null}
             </div>
 
             <LanguageMenu />
@@ -88,25 +101,25 @@ export function Header(): JSX.Element {
             {auth.user ? (
               <div className="relative" ref={menuRef}>
                 <button
-                  className="flex items-center gap-2 pl-1 pr-2 py-1 rounded hover:bg-surface-container transition-colors"
+                  className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg border border-outline-variant/40 hover:bg-surface-container transition-colors shadow-2xs"
                   aria-haspopup="true"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((o) => !o)}
                 >
-                  <span className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-label-md font-bold">
+                  <span className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-container to-primary text-on-primary flex items-center justify-center text-label-md font-bold shadow-xs">
                     {initials}
                   </span>
                   <span className="hidden xl:block text-left">
-                    <span className="block text-label-md font-label-md text-primary leading-tight">{auth.user.name}</span>
+                    <span className="block text-label-md font-label-md text-primary font-bold leading-tight">{auth.user.name}</span>
                     <span className="block text-label-sm font-label-sm text-outline leading-tight">{auth.user.ward}</span>
                   </span>
                   <Icon name="expand_more" className="text-[16px] text-on-surface-variant" />
                 </button>
                 {menuOpen ? (
-                  <div className="absolute right-0 top-full mt-1 bg-surface-container-lowest border border-outline-variant shadow-pop rounded-lg py-1.5 w-56 z-[60]">
-                    <div className="px-3.5 py-2 border-b border-outline-variant/30 mb-1">
+                  <div className="absolute right-0 top-full mt-1.5 bg-surface-container-lowest border border-outline-variant/80 shadow-pop rounded-xl py-1.5 w-60 z-[60]">
+                    <div className="px-4 py-2.5 border-b border-outline-variant/30 mb-1">
                       <div className="text-label-md font-label-md font-bold text-primary">{auth.user.name}</div>
-                      <div className="text-label-sm text-on-surface-variant font-mono">+91 {auth.user.mobile}</div>
+                      <div className="text-label-sm text-on-surface-variant font-mono mt-0.5">+91 {auth.user.mobile}</div>
                     </div>
                     <MenuLink icon="person" label="Profile" to={ROUTES.PROFILE} onGo={() => setMenuOpen(false)} />
                     <MenuLink icon="receipt_long" label="My Complaints" to={ROUTES.COMPLAINTS} onGo={() => setMenuOpen(false)} />
@@ -120,7 +133,7 @@ export function Header(): JSX.Element {
                           navigate(ROUTES.HOME);
                         });
                       }}
-                      className="w-full text-left flex items-center gap-2 px-3.5 py-2 text-body-sm text-error hover:bg-error-container/40 border-t border-outline-variant/30 mt-1"
+                      className="w-full text-left flex items-center gap-2.5 px-4 py-2 text-body-sm text-error hover:bg-error-container/40 border-t border-outline-variant/30 mt-1 transition-colors"
                     >
                       <Icon name="logout" className="text-[18px]" /> Logout
                     </button>
@@ -130,7 +143,11 @@ export function Header(): JSX.Element {
             ) : (
               <a
                 href={ROUTES.LOGIN}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded border border-primary-container text-primary-container font-label-md text-label-md hover:bg-surface-container-high transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(ROUTES.LOGIN);
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-primary-container text-primary-container font-label-md text-label-md font-bold hover:bg-surface-container transition-colors shadow-2xs"
               >
                 <Icon name="account_circle" className="text-[18px]" />
                 <span>{t("cta.login")}</span>
@@ -139,7 +156,7 @@ export function Header(): JSX.Element {
 
             <button
               onClick={() => navigate(ROUTES.REPORT)}
-              className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md shadow-sm transition-all duration-150 active:scale-95"
+              className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-secondary to-[#b36200] hover:from-[#7a4200] hover:to-secondary text-on-secondary font-label-md text-label-md font-bold shadow-sm transition-all duration-150 active:scale-95"
             >
               <Icon name="campaign" className="text-[18px]" />
               <span>{t("cta.lodge")}</span>
@@ -147,8 +164,8 @@ export function Header(): JSX.Element {
           </div>
         </div>
 
-        <nav className="hidden lg:block border-t border-outline-variant/50" aria-label="Primary navigation">
-          <ul className="flex items-center justify-center gap-10">
+        <nav className="hidden lg:block border-t border-outline-variant/40 py-1" aria-label="Primary navigation">
+          <ul className="flex items-center justify-center gap-2">
             <DesktopNav unreadAlerts={unreadCount} />
           </ul>
         </nav>
@@ -161,8 +178,12 @@ function MenuLink({ icon, label, to, onGo }: { icon: string; label: string; to: 
   return (
     <a
       href={to}
-      onClick={onGo}
-      className="flex items-center gap-2 px-3.5 py-2 text-body-sm text-on-surface hover:bg-surface-container-low"
+      onClick={(e) => {
+        e.preventDefault();
+        onGo();
+        navigate(to);
+      }}
+      className="flex items-center gap-2.5 px-4 py-2 text-body-sm text-on-surface hover:bg-surface-container-low transition-colors"
     >
       <Icon name={icon} className="text-[18px] text-primary" /> {label}
     </a>

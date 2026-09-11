@@ -9,7 +9,7 @@ import { ConfirmationMeter, ConfirmationList, CommunityIssueSummary, RelatedProj
 import { CommentsSection } from "@/components/community/CommunityComments";
 import { ProjectMap, MapLegend } from "@/components/projects/ProjectMap";
 import { Modal } from "@/components/common/Modal";
-import { useNavigate } from "@/app/router";
+import { useNavigate, getRouteId } from "@/app/router";
 import { useAsync } from "@/hooks/useAsync";
 import { useAppState } from "@/app/providers/store";
 import { toast } from "@/hooks/useToast";
@@ -28,7 +28,7 @@ const TONES: Record<string, string> = {
 
 export function CommunityIssueDetailsPage(): JSX.Element {
   const navigate = useNavigate();
-  const id = window.location.hash.split("?")[0].split("/").pop() ?? "";
+  const id = getRouteId();
   const created = useAppState((s) => s.created);
   const confirmedCount = useAppState((s) => s.confirmed.length);
   const state = useAsync(() => getCommunityIssue(id), [id, created.length, confirmedCount]);

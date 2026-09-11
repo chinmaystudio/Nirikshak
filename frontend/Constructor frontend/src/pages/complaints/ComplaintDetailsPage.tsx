@@ -8,7 +8,7 @@ import { ConfirmDialog, Modal } from "@/components/common/Modal";
 import { ComplaintStepper, ComplaintTimeline } from "@/components/complaints/ComplaintTimeline";
 import { SlaPanel, EscalationPath } from "@/components/complaints/SLAIndicator";
 import { EvidenceGallery, OfficerCard, ResolutionPanel, FeedbackPanel, PriorityChips, RelatedProjectLink } from "@/components/complaints/ComplaintCard";
-import { useNavigate, useLocation } from "@/app/router";
+import { useNavigate, useLocation, getRouteId } from "@/app/router";
 import { useAsync } from "@/hooks/useAsync";
 import { useAppState } from "@/app/providers/store";
 import { toast } from "@/hooks/useToast";
@@ -20,7 +20,7 @@ import { shortDate } from "@/utils/formatDate";
 export function ComplaintDetailsPage(): JSX.Element {
   const navigate = useNavigate();
   const { query } = useLocation();
-  const id = window.location.hash.split("?")[0].split("/").pop() ?? "";
+  const id = getRouteId();
   const justCreated = query.created === "1";
   const state = useAsync<Complaint>(() => getComplaint(id), [id]);
 

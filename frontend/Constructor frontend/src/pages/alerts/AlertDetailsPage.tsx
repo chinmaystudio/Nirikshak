@@ -3,17 +3,19 @@ import { Button } from "@/components/common/Button";
 import { SeverityBadge } from "@/components/common/StatusBadge";
 import { LoadingSkeleton } from "@/components/common/LoadingState";
 import { ErrorState } from "@/components/common/ErrorState";
+import { useNavigate, getRouteId } from "@/app/router";
+import { ROUTES } from "@/constants/routes";
 import { useAsync } from "@/hooks/useAsync";
 import { useAlertActions } from "@/hooks/useAlerts";
 import { toast } from "@/hooks/useToast";
 import { getAlertById } from "@/services/alerts/alertsService";
 import { severityMeta, ALERT_CATEGORY_META } from "@/constants/alertSeverities";
 import { formatDate } from "@/utils/formatDate";
-import { useNavigate } from "@/app/router";
+
 
 export function AlertDetailsPage(): JSX.Element {
   const navigate = useNavigate();
-  const id = window.location.hash.split("?")[0].split("/").pop() ?? "";
+  const id = getRouteId();
   const { markRead } = useAlertActions();
   const state = useAsync(() => getAlertById(id), [id]);
 
@@ -23,7 +25,7 @@ export function AlertDetailsPage(): JSX.Element {
       <div className="max-w-3xl mx-auto space-y-5">
         <ErrorState notFound={state.notFound} message={state.error ?? "Alert not found."} onRetry={undefined} />
         <div className="text-center">
-          <Button variant="outline" icon="arrow_back" onClick={() => navigate("/alerts")}>
+          <Button variant="outline" icon="arrow_back" onClick={() => navigate(ROUTES.ALERTS)}>
             Back to Alerts Centre
           </Button>
         </div>
