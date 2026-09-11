@@ -6,7 +6,6 @@ import { NotificationDrawer } from '@/components/layout/NotificationDrawer'
 import { AppFooter } from '@/components/layout/AppFooter'
 import { useAuth } from '@/context/AuthContext'
 import { useI18n } from '@/context/I18nContext'
-import { DEMO_BANNER_KEY } from '@/constants'
 import { cn } from '@/utils/cn'
 
 /**
@@ -25,9 +24,11 @@ export function GovernmentLayout() {
   const [notifOpen, setNotifOpen] = useState(false)
   const location = useLocation()
 
-  /** Context rule (route-derived): project/approval workspace ⇒ sidebar. */
-  const projectId = /^\/government\/projects\/([^/]+)$/.exec(location.pathname)?.[1]
-  const approvalId = /^\/government\/approvals\/([^/]+)$/.exec(location.pathname)?.[1]
+  /** Context rule (route-derived): any route under a project/approval
+   * workspace ⇒ sidebar. NOTE: no `$` anchor — the sidebar must persist on
+   * every module route (/budget, /tenders, …), not just the index route. */
+  const projectId = /^\/government\/projects\/([^/]+)/.exec(location.pathname)?.[1]
+  const approvalId = /^\/government\/approvals\/([^/]+)/.exec(location.pathname)?.[1]
   const contextualNav = (!!projectId && projectId !== 'create') || !!approvalId
 
   // Close the mobile contextual drawer on navigation (incl. leaving context).
@@ -57,34 +58,27 @@ export function GovernmentLayout() {
         {t('common.skipToContent')}
       </a>
 
-      {/* Demo banner */}
-      <div className="nk-demo-banner fixed inset-x-0 top-0 z-skip px-3 py-1 text-center" role="note">
-        {t(DEMO_BANNER_KEY)}
-      </div>
+      <GovernmentHeader
+        officerName={officer?.name}
+        officerRole={officer?.designation}
+        onLogout={logout}
+        onOpenNotifications={() => setNotifOpen(true)}
+        showProjectNavToggle={contextualNav}
+        onOpenProjectNav={() => setSidebarOpen(true)}
+      />
 
-      <div className="pt-7">
-        <GovernmentHeader
-          officerName={officer?.name}
-          officerRole={officer?.designation}
-          onLogout={logout}
-          onOpenNotifications={() => setNotifOpen(true)}
-          showProjectNavToggle={contextualNav}
-          onOpenProjectNav={() => setSidebarOpen(true)}
-        />
+      {/* Contextual sidebar — renders nothing outside project/approval context */}
+      <GovernmentSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={() => setSidebarOpen(false)} />
 
-        {/* Contextual sidebar — renders nothing outside project/approval context */}
-        <GovernmentSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onNavigate={() => setSidebarOpen(false)} />
-
-        <div className={cn(contextualNav && 'lg:pl-sidebar')}>
-          <main
-            id="main-content"
-            className="mx-auto min-h-[calc(100vh-var(--header-total))] w-full max-w-content p-4 md:p-6"
-            tabIndex={-1}
-          >
-            <Outlet />
-          </main>
-          <AppFooter />
-        </div>
+      <div className={cn(contextualNav && 'lg:pl-sidebar')}>
+        <main
+          id="main-content"
+          className="mx-auto min-h-[60vh] w-full max-w-content p-4 md:p-6"
+          tabIndex={-1}
+        >
+          <Outlet />
+        </main>
+        <AppFooter />
       </div>
 
       <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)} />

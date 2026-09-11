@@ -119,6 +119,8 @@ function leaves(prefix: string, to: string, labels: string[]): NavNode[] {
 export interface TopNavItem {
   id: string
   labelKey: string
+  /** Compact label for the top bar (falls back to labelKey). */
+  shortKey?: string
   icon: string
   to: string
   /** Pathname prefixes that mark this module active (incl. project workspaces). */
@@ -129,10 +131,11 @@ export interface TopNavItem {
 }
 
 export const TOP_NAV: TopNavItem[] = [
-  { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'dashboard', to: '/government/dashboard', match: ['/government/dashboard'] },
+  { id: 'dashboard', labelKey: 'nav.dashboard', shortKey: 'nav.top.dashboard', icon: 'dashboard', to: '/government/dashboard', match: ['/government/dashboard'] },
   {
     id: 'project-management',
     labelKey: 'nav.projectManagement',
+    shortKey: 'nav.top.projects',
     icon: 'map',
     to: '/government/projects',
     match: ['/government/projects'],
@@ -141,12 +144,12 @@ export const TOP_NAV: TopNavItem[] = [
       { id: 'project-creation', labelKey: 'nav.projectCreation', to: '/government/projects/create', icon: 'post_add', description: 'Sanction a new project — 8-step planning wizard' },
     ],
   },
-  { id: 'complaints', labelKey: 'nav.complaintsTracking', icon: 'report_problem', to: '/government/complaints', match: ['/government/complaints'], badge: 4 },
-  { id: 'approvals', labelKey: 'nav.approvalWorkflow', icon: 'rule', to: '/government/approvals', match: ['/government/approvals'], badge: 7 },
-  { id: 'alerts', labelKey: 'nav.alertsNotifications', icon: 'crisis_alert', to: '/government/alerts', match: ['/government/alerts'], badge: 5 },
-  { id: 'documents', labelKey: 'nav.documents', icon: 'folder_shared', to: '/government/documents', match: ['/government/documents'] },
-  { id: 'audit', labelKey: 'nav.audit', icon: 'content_paste_search', to: '/government/audit', match: ['/government/audit'] },
-  { id: 'ai-insights', labelKey: 'nav.aiInsights', icon: 'auto_awesome', to: '/government/ai-insights', match: ['/government/ai-insights'] },
+  { id: 'complaints', labelKey: 'nav.complaintsTracking', shortKey: 'nav.top.complaints', icon: 'report_problem', to: '/government/complaints', match: ['/government/complaints'], badge: 4 },
+  { id: 'approvals', labelKey: 'nav.approvalWorkflow', shortKey: 'nav.top.approvals', icon: 'rule', to: '/government/approvals', match: ['/government/approvals'], badge: 7 },
+  { id: 'alerts', labelKey: 'nav.alertsNotifications', shortKey: 'nav.top.alerts', icon: 'crisis_alert', to: '/government/alerts', match: ['/government/alerts'], badge: 5 },
+  { id: 'documents', labelKey: 'nav.documents', shortKey: 'nav.top.documents', icon: 'folder_shared', to: '/government/documents', match: ['/government/documents'] },
+  { id: 'audit', labelKey: 'nav.audit', shortKey: 'nav.top.audit', icon: 'content_paste_search', to: '/government/audit', match: ['/government/audit'] },
+  { id: 'ai-insights', labelKey: 'nav.aiInsights', shortKey: 'nav.top.ai', icon: 'auto_awesome', to: '/government/ai-insights', match: ['/government/ai-insights'] },
 ]
 
 /** Overflow group at the end of the top navigation. */

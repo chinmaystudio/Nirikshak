@@ -124,7 +124,7 @@
 
   /* ---- Layout ---- */
   --header-height: 64px;   /* utility row of the header */
-  --header-total: 108px;   /* full header (utility row + module nav row) */
+  --header-total: 112px;   /* full header (64 + 44 rows + border) + clearance */
   --sidebar-width: 288px;
   --sidebar-width-collapsed: 72px;
   --max-width-content: 1600px;

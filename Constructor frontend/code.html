@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Public Infrastructure Transparency Portal | Ministry of Housing &amp; Urban Affairs</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline-variant": "#c4c6cf",
+            "inverse-primary": "#b0c8f1",
+            "tertiary": "#000e42",
+            "on-background": "#0d1c2e",
+            "on-secondary-fixed-variant": "#6e3900",
+            "secondary-container": "#fe932c",
+            "inverse-on-surface": "#eaf1ff",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed": "#001453",
+            "surface-bright": "#f8f9ff",
+            "on-surface-variant": "#44474e",
+            "on-error": "#ffffff",
+            "on-primary": "#ffffff",
+            "on-secondary-container": "#663500",
+            "primary-fixed": "#d5e3ff",
+            "outline": "#74777f",
+            "tertiary-fixed-dim": "#b8c4ff",
+            "secondary": "#904d00",
+            "surface-tint": "#485f83",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#dde1ff",
+            "surface-container-high": "#dce9ff",
+            "surface-container-low": "#eff4ff",
+            "on-error-container": "#93000a",
+            "error": "#ba1a1a",
+            "surface-variant": "#d5e3fc",
+            "surface": "#f8f9ff",
+            "on-surface": "#0d1c2e",
+            "on-tertiary-fixed-variant": "#173bab",
+            "surface-dim": "#ccdbf3",
+            "secondary-fixed-dim": "#ffb77d",
+            "background": "#f8f9ff",
+            "tertiary-container": "#001f72",
+            "on-primary-fixed": "#001b3b",
+            "primary-container": "#0f294a",
+            "secondary-fixed": "#ffdcc3",
+            "primary": "#00142f",
+            "on-secondary": "#ffffff",
+            "inverse-surface": "#233144",
+            "surface-container-highest": "#d5e3fc",
+            "error-container": "#ffdad6",
+            "on-primary-fixed-variant": "#30476a",
+            "on-tertiary-container": "#6d88f9",
+            "surface-container": "#e6eeff",
+            "on-secondary-fixed": "#2f1500",
+            "on-primary-container": "#7a91b7",
+            "primary-fixed-dim": "#b0c8f1"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "space-xl": "2.5rem",
+            "gutter": "1.25rem",
+            "space-md": "1rem",
+            "space-lg": "1.5rem",
+            "margin": "1.5rem",
+            "space-xs": "0.25rem"
+          },
+          "fontFamily": {
+            "headline-sm": ["Inter"],
+            "utility-mono": ["JetBrains Mono"],
+            "headline-md": ["Inter"],
+            "body-md": ["Inter"],
+            "display-hero": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-lg": ["Inter"],
+            "body-sm": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "label-sm": ["Inter"],
+            "display-hero-mobile": ["Inter"]
+          },
+          "fontSize": {
+            "headline-sm": ["18px", { "lineHeight": "26px", "fontWeight": "600" }],
+            "utility-mono": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "headline-md": ["22px", { "lineHeight": "30px", "fontWeight": "600" }],
+            "body-md": ["14px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "display-hero": ["40px", { "lineHeight": "52px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["30px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "headline-lg-mobile": ["22px", { "lineHeight": "30px", "fontWeight": "700" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "600" }],
+            "display-hero-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-block;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #c4c6cf;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #eff4ff;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-secondary selection:text-on-secondary">
+<!-- ========================================================================= -->
+<!-- 1. OFFICIAL GOVERNMENT UTILITY RIBBON (GIGW 3.0 Compliance) -->
+<!-- ========================================================================= -->
+<aside aria-label="Official Federal Utility Bar" class="bg-surface-container-low text-on-surface-variant border-b border-outline-variant/30 py-1 px-4 text-label-sm font-label-sm">
+<div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center gap-1 font-semibold text-primary">
+<span class="material-symbols-outlined text-[15px]" data-icon="account_balance">account_balance</span>
+          GOVERNMENT OF INDIA | MINISTRY OF HOUSING &amp; URBAN AFFAIRS
+        </span>
+<span class="hidden md:inline text-outline-variant">|</span>
+<span class="hidden md:inline text-on-surface-variant">National Public Infrastructure Surveillance System</span>
+</div>
+<div class="flex items-center gap-4">
+<!-- Accessibility and Tools -->
+<a class="hover:text-primary transition-colors flex items-center gap-0.5" href="#main-content">
+<span class="material-symbols-outlined text-[14px]" data-icon="accessibility_new">accessibility_new</span> Skip to Main Content
+        </a>
+<div class="flex items-center gap-1 border-l border-outline-variant/40 pl-3">
+<button class="px-1 hover:bg-surface-variant rounded" id="font-decrease" title="Decrease Font Size">A-</button>
+<button class="px-1 hover:bg-surface-variant rounded font-bold" id="font-reset" title="Normal Font Size">A</button>
+<button class="px-1 hover:bg-surface-variant rounded" id="font-increase" title="Increase Font Size">A+</button>
+</div>
+<div class="flex items-center gap-2 border-l border-outline-variant/40 pl-3">
+<button class="hover:text-primary font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="translate">translate</span>
+<span id="current-lang">हिन्दी</span>
+</button>
+</div>
+<div class="hidden sm:flex items-center gap-1 border-l border-outline-variant/40 pl-3 text-secondary font-semibold">
+<span class="material-symbols-outlined text-[14px]" data-icon="call">call</span>
+<span>Toll-Free: 1800-11-2026</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- 2. MAIN HEADER & NAVIGATION SHELL (Shared Component: TopNavBar) -->
+<!-- ========================================================================= -->
+<header class="bg-surface-container-lowest sticky top-0 z-50 shadow-sm border-b border-outline-variant">
+<div class="max-w-7xl mx-auto px-4 lg:px-8 py-3 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-4">
+<!-- Brand / Emblem -->
+<a class="flex items-center gap-3 group" href="javascript:void(0)" onclick="switchView('home-view')">
+<!-- Ashoka Emblem SVG Emblem Graphic -->
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-secondary-container shadow-sm group-hover:scale-105 transition-transform flex-shrink-0">
+<svg class="w-6 h-6 fill-current text-secondary-fixed" viewbox="0 0 24 24">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.41 0 8 3.59 8 8s-3.59 8-8 8-8-3.59-8-8 3.59-8 8-8zm-1 3v6l5.25 3.15.75-1.23-4.5-2.67V7z"></path>
+</svg>
+</div>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm font-bold text-primary tracking-tight">
+              Public Infrastructure Transparency Portal
+            </span>
+<span class="text-label-sm font-label-sm text-secondary tracking-wider font-semibold">
+              Track. Understand. Report. Participate.
+            </span>
+</div>
+</a>
+<!-- Right Side Utility & Actions -->
+<div class="flex items-center gap-3">
+<!-- Search Bar (on_right) -->
+<div class="hidden lg:flex items-center relative">
+<input class="w-72 pl-9 pr-4 py-1.5 rounded bg-surface border border-outline-variant text-body-sm font-body-sm focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent transition-all" id="global-search" placeholder="Search projects by ID, city, or contractor..." type="text"/>
+<span class="material-symbols-outlined absolute left-2.5 text-on-surface-variant pointer-events-none" data-icon="search">search</span>
+</div>
+<!-- Secondary Action: Login / Register -->
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded border border-primary-container text-primary-container font-label-md text-label-md hover:bg-surface-container-high transition-colors" onclick="switchView('auth-view')">
+<span class="material-symbols-outlined text-[18px]" data-icon="account_circle">account_circle</span>
+<span>Login / Register</span>
+</button>
+<!-- Primary CTA: Lodge Grievance -->
+<button class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md shadow-sm transition-all duration-150 active:scale-95" onclick="openNewComplaintModal()">
+<span class="material-symbols-outlined text-[18px]" data-icon="campaign">campaign</span>
+<span>Lodge Grievance</span>
+</button>
+</div>
+</div>
+<!-- Navigation Links Cluster -->
+<nav class="flex items-center justify-between border-t border-outline-variant/30 pt-2 text-label-md font-label-md overflow-x-auto custom-scrollbar">
+<ul class="flex items-center gap-6 whitespace-nowrap">
+<li>
+<button class="border-b-2 border-secondary text-secondary font-label-md pb-1 flex items-center gap-1 transition-colors" id="nav-home" onclick="switchView('home-view')">
+<span class="material-symbols-outlined text-[18px]" data-icon="home">home</span> Home
+            </button>
+</li>
+<li>
+<button class="text-on-surface-variant font-label-md hover:text-primary transition-colors pb-1 flex items-center gap-1" id="nav-projects" onclick="switchView('projects-view')">
+<span class="material-symbols-outlined text-[18px]" data-icon="dashboard">dashboard</span> Projects Dashboard
+            </button>
+</li>
+<li>
+<button class="text-on-surface-variant font-label-md hover:text-primary transition-colors pb-1 flex items-center gap-1" id="nav-alerts" onclick="switchView('alerts-view')">
+<span class="material-symbols-outlined text-[18px]" data-icon="notifications_active">notifications_active</span> Alerts &amp; Warnings
+            </button>
+</li>
+<!-- Dropdown Navigation for Report Issue / Redressal -->
+<li class="relative group">
+<button class="text-on-surface-variant font-label-md hover:text-primary transition-colors pb-1 flex items-center gap-1 cursor-pointer">
+<span class="material-symbols-outlined text-[18px]" data-icon="report_problem">report_problem</span>
+<span>Report Issue</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="expand_more">expand_more</span>
+</button>
+<div class="absolute left-0 top-full hidden group-hover:block bg-surface-container-lowest border border-outline-variant shadow-md rounded p-1.5 w-52 z-50">
+<button class="w-full text-left px-3 py-2 rounded hover:bg-surface-container-low text-body-sm font-body-sm text-on-surface flex items-center gap-2" id="nav-complaints" onclick="switchView('complaints-view')">
+<span class="material-symbols-outlined text-secondary" data-icon="track_changes">track_changes</span>
+<span>Complaint Tracking</span>
+</button>
+<button class="w-full text-left px-3 py-2 rounded hover:bg-surface-container-low text-body-sm font-body-sm text-on-surface flex items-center gap-2" onclick="openNewComplaintModal()">
+<span class="material-symbols-outlined text-secondary" data-icon="add_circle">add_circle</span>
+<span>File Fresh Complaint</span>
+</button>
+</div>
+</li>
+<li>
+<button class="text-on-surface-variant font-label-md hover:text-primary transition-colors pb-1 flex items-center gap-1" id="nav-community" onclick="switchView('community-view')">
+<span class="material-symbols-outlined text-[18px]" data-icon="groups">groups</span> Community
+            </button>
+</li>
+</ul>
+<div class="text-label-sm font-label-sm text-outline hidden md:block">
+          Public Audit Mode: <span class="text-secondary font-semibold">Active (FY 2025-26)</span>
+</div>
+</nav>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- INFRASTRUCTURE NEWS TICKER / MARQUEE BANNER -->
+<!-- ========================================================================= -->
+<div class="bg-primary-container text-on-primary py-1.5 px-4 text-body-sm font-body-sm flex items-center gap-3">
+<div class="max-w-7xl mx-auto w-full flex items-center gap-3">
+<span class="bg-secondary text-on-secondary px-2 py-0.5 rounded text-label-sm font-label-sm font-bold uppercase tracking-wider flex-shrink-0">
+        Latest Alert
+      </span>
+<div class="overflow-hidden whitespace-nowrap w-full relative">
+<div class="inline-block animate-pulse text-surface-container-high">
+<span class="mr-6">⚠️ Pune Metro Line 3 Pier erection traffic detour in Hinjawadi Sector 2 active till 30-Apr-2026.</span>
+<span class="mr-6">📋 NHAI publishes quarterly audit report for Delhi-Dehradun Expressway.</span>
+<span class="mr-6">✅ 12,490 public grievances redressed under Smart Cities Mission this quarter.</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- MAIN CONTENT CONTAINER (View Routing Target) -->
+<!-- ========================================================================= -->
+<main class="flex-grow max-w-7xl mx-auto w-full px-4 lg:px-8 py-6" id="main-content">
+<!-- ===================================================================== -->
+<!-- VIEW 1: HOME PAGE (Public Landing) -->
+<!-- ===================================================================== -->
+<section class="view-panel space-y-10 block" id="home-view">
+<!-- Hero Banner -->
+<div class="relative bg-gradient-to-r from-primary-container via-primary to-primary-container rounded-xl overflow-hidden shadow-sm p-8 md:p-12 text-on-primary">
+<div class="relative z-10 max-w-2xl space-y-4">
+<div class="inline-flex items-center gap-2 bg-surface-container-lowest/15 backdrop-blur-md px-3 py-1 rounded text-label-sm font-label-sm text-secondary-fixed">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified_user">verified_user</span>
+            Direct Citizen Oversight Framework | GIGW 3.0 Standard
+          </div>
+<h1 class="text-display-hero font-display-hero tracking-tight text-surface-container-lowest">
+            Know Where Your Public Money Is Going.
+          </h1>
+<p class="text-body-lg font-body-lg text-surface-variant font-normal leading-relaxed">
+            Real-time public tracking of municipal and federal infrastructure assets across Indian states. Inspect budgets, monitor contractor milestones, and lodge verifiable grievances with institutional accountability.
+          </p>
+<div class="pt-3 flex flex-wrap items-center gap-3">
+<button class="px-6 py-3 rounded bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md flex items-center gap-2 shadow-sm transition-all duration-150" onclick="switchView('projects-view')">
+<span class="material-symbols-outlined" data-icon="travel_explore">travel_explore</span>
+<span>Explore Projects</span>
+</button>
+<button class="px-6 py-3 rounded bg-surface-container-lowest text-primary-container hover:bg-surface-container-high font-label-md text-label-md flex items-center gap-2 transition-all" onclick="openNewComplaintModal()">
+<span class="material-symbols-outlined text-secondary" data-icon="assignment_late">assignment_late</span>
+<span>Report an Issue</span>
+</button>
+</div>
+</div>
+<!-- Decorative subtle emblem silhouette overlay -->
+<div class="absolute right-4 -bottom-10 opacity-10 text-surface-container-lowest pointer-events-none hidden md:block">
+<span class="material-symbols-outlined text-[340px]" data-icon="account_balance">account_balance</span>
+</div>
+</div>
+<!-- At A Glance Stats Ribbon (Bento KPI Grid) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/50 shadow-sm flex items-center justify-between">
+<div>
+<div class="text-label-md font-label-md text-on-surface-variant">Active Projects</div>
+<div class="text-headline-lg font-headline-lg font-bold text-primary mt-1">1,428</div>
+<div class="text-label-sm font-label-sm text-secondary mt-0.5 font-semibold">Across 28 States &amp; 8 UTs</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="construction">construction</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/50 shadow-sm flex items-center justify-between">
+<div>
+<div class="text-label-md font-label-md text-on-surface-variant">Completed Projects</div>
+<div class="text-headline-lg font-headline-lg font-bold text-primary mt-1">892</div>
+<div class="text-label-sm font-label-sm text-secondary mt-0.5 font-semibold">Audited &amp; Dedicated</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="task_alt">task_alt</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/50 shadow-sm flex items-center justify-between">
+<div>
+<div class="text-label-md font-label-md text-on-surface-variant">Under Review</div>
+<div class="text-headline-lg font-headline-lg font-bold text-primary mt-1">215</div>
+<div class="text-label-sm font-label-sm text-error mt-0.5 font-semibold">Tender / Audit Stage</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-error-container/40 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="pending_actions">pending_actions</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/50 shadow-sm flex items-center justify-between">
+<div>
+<div class="text-label-md font-label-md text-on-surface-variant">Issues Resolved</div>
+<div class="text-headline-lg font-headline-lg font-bold text-primary mt-1">12,490</div>
+<div class="text-label-sm font-label-sm text-secondary font-semibold mt-0.5">Avg Redressal: 6.4 Days</div>
+</div>
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Quick Action Passport-Seva Pattern Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="cursor-pointer bg-[#FEF9EE] border border-[#FDE68A] p-5 rounded-lg shadow-sm hover:border-secondary transition-all flex items-start gap-4" onclick="switchView('projects-view')">
+<div class="p-2.5 bg-secondary text-on-secondary rounded">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-primary font-bold">Track Public Works</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">
+              Search by City, Ward number, or National Highway stretch to check progress and allocated funding.
+            </p>
+</div>
+</div>
+<div class="cursor-pointer bg-[#FEF9EE] border border-[#FDE68A] p-5 rounded-lg shadow-sm hover:border-secondary transition-all flex items-start gap-4" onclick="openNewComplaintModal()">
+<div class="p-2.5 bg-secondary text-on-secondary rounded">
+<span class="material-symbols-outlined" data-icon="report">report</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-primary font-bold">Lodge Citizen Grievance</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">
+              File geotagged complaints on sub-standard roads, flyover cracks, delayed bridges, or water mains.
+            </p>
+</div>
+</div>
+<div class="cursor-pointer bg-[#FEF9EE] border border-[#FDE68A] p-5 rounded-lg shadow-sm hover:border-secondary transition-all flex items-start gap-4" onclick="switchView('complaints-view')">
+<div class="p-2.5 bg-secondary text-on-secondary rounded">
+<span class="material-symbols-outlined" data-icon="troubleshoot">troubleshoot</span>
+</div>
+<div>
+<h3 class="text-headline-sm font-headline-sm text-primary font-bold">Check Status by Ticket</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant mt-1">
+              Enter your complaint reference token (e.g. CMP-2026-XXXXXX) for live stage-by-stage audit trail.
+            </p>
+</div>
+</div>
+</div>
+<!-- Featured Projects Section -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="text-headline-md font-headline-md text-primary font-bold">High-Impact National Projects</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Live audit updates and execution status of Tier-1 infrastructure</p>
+</div>
+<button class="text-secondary font-label-md text-label-md hover:underline flex items-center gap-1" onclick="switchView('projects-view')">
+            View All 1,428 Projects <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- Card 1: Pune Metro Line 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="relative h-44 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A modern light-rail elevated metro viaduct under active construction in an urban Indian city, featuring concrete piers, overhead gantry crane, deep navy civil engineering signboards, and bright morning light against a clear sky with strict architectural realism." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrjobV5ooc8Kd2pvNpizfWGm6M-CGpXVaidLTiWrqN5PL7lQbcMZhYSSp213iCGPk6OgDNj-8SIQVq_AsqPdX0JIXirucEjaUw2tYLNGFVKBUhLTfG2OusxNS7z4XxKd2PkrXzmDTxKCzJ46DbuAwiANMWkB4JZf_9fe6U9Z3KdfeHYep8_LkF8R1Rc__J4eUFPzk5q46czdv7dIyRxsSCRFhzKavnLNaOHT8z0aEYDUz291EbYwSXag"/>
+<span class="absolute top-2.5 left-2.5 bg-secondary text-on-secondary px-2 py-0.5 rounded text-label-sm font-label-sm font-bold">
+                  In Progress (74%)
+                </span>
+<span class="absolute top-2.5 right-2.5 bg-primary-container text-surface-container-lowest px-2 py-0.5 rounded text-label-sm font-label-sm font-mono">
+                  #PUN-MET-03
+                </span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-label-sm font-label-sm text-secondary font-semibold">Urban Transit • Pune, Maharashtra</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary">Pune Metro Line 3 (Hinjawadi - Shivajinagar)</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">23.2 km elevated transit corridor connecting Rajiv Gandhi Infotech Park to central business district.</p>
+<div class="space-y-1 pt-2">
+<div class="flex justify-between text-label-sm font-label-sm">
+<span class="text-on-surface-variant">Physical Progress</span>
+<span class="font-bold text-primary">74%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 74%"></div>
+</div>
+</div>
+<div class="pt-2 text-body-sm font-body-sm space-y-1 border-t border-outline-variant/30 mt-3">
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Sanctioned Budget:</span>
+<span class="font-bold text-primary">₹8,313 Cr</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Lead Contractor:</span>
+<span class="font-medium text-primary">TRIL Urban Transport &amp; Siemens</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 pt-0">
+<button class="w-full py-2 text-center rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="viewProjectDetails('pune-metro-3')">
+                Inspect Project Dossier
+              </button>
+</div>
+</div>
+<!-- Card 2: Mumbai Coastal Road -->
+<div class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="relative h-44 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A sweeping multi-lane coastal expressway bridge emerging from an undersea tunnel along a sprawling marine coastline in Mumbai, under radiant afternoon daylight with modern concrete barriers, institutional navy blue signage, and clean civic aesthetics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlhIcHLFoTGxhOxubWLCmxrwXjGageOUlxRQg63M4K5ylGhwYyqYDtGKCrp-kGPkhMI4qm5pkIHAhZ8d5KHgbxQtTNicBu7UzHRxWeUkefUDqcDXYVHlcTQoRlV1vrfyYFNHfBLvhMEcKbF3qNZDJGDGDnVApp-SZ5xEl9GiCxEFEgk11vztqEse_xOX7gHa823BQFz9Pq8Bg6pNvjHuRdp8E86KzNAqZyakziUeRP6RjX83C9vgmIdA"/>
+<span class="absolute top-2.5 left-2.5 bg-surface-container-low text-primary-container px-2 py-0.5 rounded text-label-sm font-label-sm font-bold border border-outline-variant">
+                  Phase 1 Dedicated
+                </span>
+<span class="absolute top-2.5 right-2.5 bg-primary-container text-surface-container-lowest px-2 py-0.5 rounded text-label-sm font-label-sm font-mono">
+                  #MUM-CST-01
+                </span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-label-sm font-label-sm text-secondary font-semibold">Highways &amp; Bridges • Mumbai, MH</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary">Mumbai Coastal Road (South Section)</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">10.58 km freeway connecting Marine Drive to Bandra-Worli Sea Link with India's first undersea road twin tunnel.</p>
+<div class="space-y-1 pt-2">
+<div class="flex justify-between text-label-sm font-label-sm">
+<span class="text-on-surface-variant">Physical Progress</span>
+<span class="font-bold text-primary">91%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 91%"></div>
+</div>
+</div>
+<div class="pt-2 text-body-sm font-body-sm space-y-1 border-t border-outline-variant/30 mt-3">
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Sanctioned Budget:</span>
+<span class="font-bold text-primary">₹12,721 Cr</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Lead Contractor:</span>
+<span class="font-medium text-primary">Larsen &amp; Toubro (L&amp;T)</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 pt-0">
+<button class="w-full py-2 text-center rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="viewProjectDetails('mumbai-coastal')">
+                Inspect Project Dossier
+              </button>
+</div>
+</div>
+<!-- Card 3: Bengaluru Peripheral Ring Road -->
+<div class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="relative h-44 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="An expansive peripheral ring road arterial construction corridor under bright Indian daylight, featuring heavy earthmovers, newly graded asphalt lanes, bridge culverts, and high-contrast civil warning boards in deep navy and gold tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCTBS-NzovbLBIeCpdjTSucHFq_tFRKOYwRLx3VJgQleneRr8_9pyBd_L6DrTNTthtdSN-Wx1s_Y-KoT_Jym1SWrSV9F_41e9XYHiCRh1oNKBOmxQL7Ev7OTKJhj5Bg-Ddijz_1c1ideLCynCirql8Bc47nExW9-EzcJl2Vrn-UJp5GJoN2N4NGROW-sG2G9nqXl-c3_7S_wPukbUefZkRteNByVLnVyZiRJA5Y8y01dj2OR8nibwXrw"/>
+<span class="absolute top-2.5 left-2.5 bg-error-container text-error px-2 py-0.5 rounded text-label-sm font-label-sm font-bold">
+                  Delayed / Review
+                </span>
+<span class="absolute top-2.5 right-2.5 bg-primary-container text-surface-container-lowest px-2 py-0.5 rounded text-label-sm font-label-sm font-mono">
+                  #BLR-PRR-08
+                </span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-label-sm font-label-sm text-secondary font-semibold">Expressways • Bengaluru, Karnataka</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary">Bengaluru Peripheral Ring Road (PRR)</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">73 km 8-lane expressway designed to de-congest inter-state vehicular movement across tech corridors.</p>
+<div class="space-y-1 pt-2">
+<div class="flex justify-between text-label-sm font-label-sm">
+<span class="text-on-surface-variant">Physical Progress</span>
+<span class="font-bold text-primary">32%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-error h-full rounded-full" style="width: 32%"></div>
+</div>
+</div>
+<div class="pt-2 text-body-sm font-body-sm space-y-1 border-t border-outline-variant/30 mt-3">
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Sanctioned Budget:</span>
+<span class="font-bold text-primary">₹21,091 Cr</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Lead Contractor:</span>
+<span class="font-medium text-primary">BDA / Joint Venture</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 pt-0">
+<button class="w-full py-2 text-center rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="viewProjectDetails('blr-ring-road')">
+                Inspect Project Dossier
+              </button>
+</div>
+</div>
+<!-- Card 4: Delhi-Meerut RRTS -->
+<div class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+<div>
+<div class="relative h-44 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="An ultra-modern aerodynamic semi-high-speed regional rapid train set on a sleek elevated viaduct track spanning across a northern Indian highway corridor during golden hour, characterized by pristine clean lines, institutional integrity, and modern infrastructure styling." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXtgw2IfcbIGNVreRFTRhGyc4upsjmxw8xweJGSa4UDaQAgz9qQ2mENonJS8ryBA9n0Q8dBkTSastDY87PZs3bs5oQ054UrByMLGstOjFtdRk4w0J5fJxBlBGvnmaxBUsF0CzeF3H1QziCLxtT_lOo4FTmjidtqa2Y303RSFfeUrWuVPvxcmhmCqZS3SmSJmeO1gDkC9ATpjULzSx5YOvDblgymacAkK_2iX50uEA_BpbA3YPH5IJ_qg"/>
+<span class="absolute top-2.5 left-2.5 bg-secondary text-on-secondary px-2 py-0.5 rounded text-label-sm font-label-sm font-bold">
+                  Operational (82%)
+                </span>
+<span class="absolute top-2.5 right-2.5 bg-primary-container text-surface-container-lowest px-2 py-0.5 rounded text-label-sm font-label-sm font-mono">
+                  #DEL-MRT-01
+                </span>
+</div>
+<div class="p-4 space-y-2">
+<div class="text-label-sm font-label-sm text-secondary font-semibold">Rapid Rail • Delhi - NCR - UP</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary">Delhi-Meerut RRTS (Namo Bharat)</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">82.15 km semi-high-speed rail corridor linking Sarai Kale Khan to Meerut Modipuram in under 55 minutes.</p>
+<div class="space-y-1 pt-2">
+<div class="flex justify-between text-label-sm font-label-sm">
+<span class="text-on-surface-variant">Physical Progress</span>
+<span class="font-bold text-primary">82%</span>
+</div>
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 82%"></div>
+</div>
+</div>
+<div class="pt-2 text-body-sm font-body-sm space-y-1 border-t border-outline-variant/30 mt-3">
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Sanctioned Budget:</span>
+<span class="font-bold text-primary">₹30,274 Cr</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Lead Contractor:</span>
+<span class="font-medium text-primary">NCRTC / Afcons &amp; Alstom</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 pt-0">
+<button class="w-full py-2 text-center rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container transition-colors" onclick="viewProjectDetails('delhi-meerut-rrts')">
+                Inspect Project Dossier
+              </button>
+</div>
+</div>
+</div>
+</div>
+<!-- How It Works 4-Step Workflow -->
+<div class="bg-surface-container-low p-8 rounded-xl border border-outline-variant/50 space-y-6">
+<div class="text-center max-w-xl mx-auto space-y-1">
+<span class="text-label-sm font-label-sm font-bold text-secondary uppercase tracking-widest">Public Accountability Architecture</span>
+<h2 class="text-headline-md font-headline-md text-primary font-bold">How Citizen Surveillance Works</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Four simple stages bridging citizen reporting with government engineers</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 relative">
+<div class="text-headline-sm font-headline-sm font-bold text-secondary mb-2">01. Track Project</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Locate public works in your ward, verify sanctioned budgets, contractor details, and committed completion deadlines.</p>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 relative">
+<div class="text-headline-sm font-headline-sm font-bold text-secondary mb-2">02. Capture Evidence</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Notice potholes, substandard materials, or unannounced road closures? Upload geotagged photos with timestamp verification.</p>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 relative">
+<div class="text-headline-sm font-headline-sm font-bold text-secondary mb-2">03. Automated Notice</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">The portal generates a legal tracking token and automatically routes the inquiry to the designated Executive Engineer.</p>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/40 relative">
+<div class="text-headline-sm font-headline-sm font-bold text-secondary mb-2">04. Redressal &amp; Audit</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Contractor is penalized or rectified under public audit scrutiny. Status updates are published transparently on your dashboard.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 2: AUTHENTICATION (Login & Register) -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden max-w-4xl mx-auto py-4" id="auth-view">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12">
+<!-- Left Brand / Info Pane -->
+<div class="md:col-span-5 bg-primary-container p-8 text-on-primary flex flex-col justify-between">
+<div class="space-y-4">
+<div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-on-secondary">
+<span class="material-symbols-outlined text-[28px]" data-icon="fingerprint">fingerprint</span>
+</div>
+<h2 class="text-headline-md font-headline-md font-bold text-surface-container-lowest">
+              Civic Oversight Identity Gateway
+            </h2>
+<p class="text-body-sm font-body-sm text-surface-variant">
+              Login with your verified Citizen Credentials, Jan Samarth ID, or Mobile OTP to manage complaints, vote on ward works, and participate in technical forums.
+            </p>
+</div>
+<div class="space-y-3 pt-6 border-t border-surface-variant/20 text-label-sm font-label-sm text-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+<span>Aadhaar OTP / DigiLocker Verification Supported</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+<span>End-to-End Cryptographic Audit Trail</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+<span>Direct Linkage to Municipal Commissioner Redressal</span>
+</div>
+</div>
+</div>
+<!-- Right Form Pane -->
+<div class="md:col-span-7 p-8">
+<!-- Auth Tabs -->
+<div class="flex border-b border-outline-variant mb-6">
+<button class="flex-1 pb-3 text-center font-headline-sm text-headline-sm border-b-2 border-secondary text-primary font-bold" id="tab-btn-login" onclick="switchAuthTab('login')">
+              Citizen Login
+            </button>
+<button class="flex-1 pb-3 text-center font-headline-sm text-headline-sm text-on-surface-variant hover:text-primary" id="tab-btn-register" onclick="switchAuthTab('register')">
+              New Registration
+            </button>
+</div>
+<!-- LOGIN FORM -->
+<div class="space-y-4" id="auth-login-form">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+                Registered Mobile Number or Email <span class="text-error">*</span>
+</label>
+<div class="relative">
+<input class="w-full px-3 py-2 border border-outline-variant rounded focus:ring-2 focus:ring-primary-container focus:border-transparent text-body-md font-body-md" placeholder="Enter 10-digit mobile or registered email" type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant text-[20px]" data-icon="smartphone">smartphone</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-1">
+<label class="text-label-md font-label-md text-primary">Password / OTP <span class="text-error">*</span></label>
+<a class="text-label-sm font-label-sm text-secondary hover:underline" href="javascript:void(0)">Forgot Credentials?</a>
+</div>
+<input class="w-full px-3 py-2 border border-outline-variant rounded focus:ring-2 focus:ring-primary-container focus:border-transparent text-body-md font-body-md" placeholder="••••••••" type="password"/>
+</div>
+<!-- Captcha Mockup -->
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/50 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="font-mono bg-surface-container-highest px-3 py-1.5 rounded font-bold tracking-widest text-primary line-through select-none text-headline-sm">
+                  7 H 9 K P
+                </div>
+<button class="p-1 text-on-surface-variant hover:text-primary" title="Refresh Captcha">
+<span class="material-symbols-outlined text-[20px]" data-icon="refresh">refresh</span>
+</button>
+</div>
+<input class="w-32 px-3 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded" placeholder="Enter Captcha" type="text"/>
+</div>
+<button class="w-full py-2.5 bg-primary-container hover:bg-primary text-on-primary font-headline-sm text-headline-sm rounded shadow-sm transition-all duration-150 active:scale-95 flex items-center justify-center gap-2" onclick="mockLoginSuccess()">
+<span class="material-symbols-outlined" data-icon="login">login</span>
+<span>Secure Login</span>
+</button>
+<div class="text-center pt-2">
+<span class="text-body-sm font-body-sm text-on-surface-variant">Are you an authorized government inspector? </span>
+<a class="text-label-sm font-label-sm text-secondary font-bold hover:underline" href="javascript:void(0)">Official Nodal SSO Login</a>
+</div>
+</div>
+<!-- REGISTER FORM -->
+<div class="space-y-4 hidden" id="auth-register-form">
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Full Name <span class="text-error">*</span></label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="As per Aadhaar" type="text"/>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Mobile No. <span class="text-error">*</span></label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="10-digit number" type="tel"/>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">State <span class="text-error">*</span></label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md bg-surface-container-lowest">
+<option>Maharashtra</option>
+<option>Karnataka</option>
+<option>Delhi (NCT)</option>
+<option>Gujarat</option>
+<option>Tamil Nadu</option>
+<option>Uttar Pradesh</option>
+</select>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">City / Municipal Ward <span class="text-error">*</span></label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="e.g. Pune Ward 14" type="text"/>
+</div>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Email ID</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="name@example.com" type="email"/>
+</div>
+<div class="flex items-start gap-2 pt-1">
+<input checked="" class="mt-1 rounded text-primary" id="terms-check" type="checkbox"/>
+<label class="text-body-sm font-body-sm text-on-surface-variant" for="terms-check">
+                I hereby declare that all grievance submissions will be truthful under the Public Interest Disclosure &amp; Whistleblower Protection guidelines.
+              </label>
+</div>
+<button class="w-full py-2.5 bg-secondary hover:bg-on-secondary-container text-on-secondary font-headline-sm text-headline-sm rounded shadow-sm transition-all duration-150 active:scale-95 flex items-center justify-center gap-2" onclick="mockRegisterSuccess()">
+<span class="material-symbols-outlined" data-icon="how_to_reg">how_to_reg</span>
+<span>Register &amp; Verify via OTP</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 3: PROJECTS TRANSPARENCY DASHBOARD -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden space-y-6" id="projects-view">
+<!-- Section Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/50 pb-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary">
+            Public Works Transparency Dashboard
+          </h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+            Cross-examine 1,428 active contracts, budget utilization, contractor performance, and live inspection records.
+          </p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 border border-primary text-primary hover:bg-surface-container rounded text-label-md font-label-md flex items-center gap-1.5" onclick="downloadTransparencyReport()">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span> Export CSV Report
+          </button>
+<button class="px-3.5 py-1.5 bg-secondary hover:bg-on-secondary-container text-on-secondary rounded text-label-md font-label-md flex items-center gap-1.5" onclick="openNewComplaintModal()">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_circle">add_circle</span> Report Infrastructure Issue
+          </button>
+</div>
+</div>
+<!-- Advanced Filter Ribbon -->
+<div class="bg-surface-container-lowest p-4 rounded-lg border border-outline-variant/60 shadow-sm space-y-3">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">State / UT</label>
+<select class="w-full px-2.5 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded bg-surface-container-lowest" id="filter-state" onchange="applyProjectFilters()">
+<option value="all">All States</option>
+<option value="Maharashtra">Maharashtra</option>
+<option value="Karnataka">Karnataka</option>
+<option value="Delhi">Delhi-NCR</option>
+<option value="Gujarat">Gujarat</option>
+</select>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">Infrastructure Sector</label>
+<select class="w-full px-2.5 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded bg-surface-container-lowest" id="filter-sector" onchange="applyProjectFilters()">
+<option value="all">All Sectors</option>
+<option value="Metro">Metro &amp; Rapid Rail</option>
+<option value="Roads">Highways &amp; Bridges</option>
+<option value="Water">Water Supply &amp; Drainage</option>
+<option value="Smart City">Smart City Urban Works</option>
+</select>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">Status</label>
+<select class="w-full px-2.5 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded bg-surface-container-lowest" id="filter-status" onchange="applyProjectFilters()">
+<option value="all">All Statuses</option>
+<option value="In Progress">In Progress</option>
+<option value="Completed">Completed</option>
+<option value="Delayed">Delayed / Warning</option>
+</select>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">Lead Contractor</label>
+<select class="w-full px-2.5 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded bg-surface-container-lowest" id="filter-contractor" onchange="applyProjectFilters()">
+<option value="all">All Contractors</option>
+<option value="Larsen &amp; Toubro">Larsen &amp; Toubro (L&amp;T)</option>
+<option value="Siemens">Siemens &amp; TRIL</option>
+<option value="Afcons">Afcons Infrastructure</option>
+<option value="Dilip Buildcon">Dilip Buildcon</option>
+</select>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">Funding Agency</label>
+<select class="w-full px-2.5 py-1.5 text-body-sm font-body-sm border border-outline-variant rounded bg-surface-container-lowest" id="filter-funding" onchange="applyProjectFilters()">
+<option value="all">All Funding</option>
+<option value="Central + State">Central + State (60:40)</option>
+<option value="ADB">Asian Development Bank (ADB)</option>
+<option value="JICA">JICA Loan</option>
+<option value="World Bank">World Bank</option>
+</select>
+</div>
+<div class="flex items-end">
+<button class="w-full py-1.5 px-3 bg-surface-container hover:bg-surface-variant text-primary rounded text-label-md font-label-md border border-outline-variant flex items-center justify-center gap-1" onclick="resetProjectFilters()">
+<span class="material-symbols-outlined text-[16px]" data-icon="restart_alt">restart_alt</span> Reset
+            </button>
+</div>
+</div>
+</div>
+<!-- Projects Grid Display -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="projects-grid-container">
+<!-- Project cards rendered via JavaScript or dynamically below -->
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 4: PROJECT DETAILS VIEW (In-depth Dossier) -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden space-y-8" id="project-details-view">
+<!-- Back Navigation & Header Ribbon -->
+<div class="flex items-center justify-between border-b border-outline-variant/40 pb-4">
+<button class="inline-flex items-center gap-2 text-primary font-label-md text-label-md hover:text-secondary transition-colors" onclick="switchView('projects-view')">
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_back">arrow_back</span>
+<span>Back to Projects Transparency Dashboard</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-1 rounded bg-secondary text-on-secondary text-label-sm font-label-sm font-bold" id="detail-badge-status">
+            In Progress (74%)
+          </span>
+<button class="px-3 py-1 bg-primary text-on-primary rounded text-label-sm font-label-sm font-semibold flex items-center gap-1" onclick="openNewComplaintModal(currentProjectDetailsCode)">
+<span class="material-symbols-outlined text-[16px]" data-icon="report">report</span> Report an Issue with this Project
+          </button>
+</div>
+</div>
+<!-- Hero Summary Banner -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/60 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+<div class="lg:col-span-8 space-y-3">
+<div class="flex items-center gap-2 text-label-sm font-label-sm text-secondary font-bold">
+<span class="font-mono bg-surface-container px-2 py-0.5 rounded text-primary" id="detail-code">#PUN-MET-03</span>
+<span id="detail-category-location">Urban Transit • Pune, Maharashtra</span>
+</div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary" id="detail-title">
+            Pune Metro Line 3 (Hinjawadi to Shivajinagar Corridor)
+          </h1>
+<p class="text-body-md font-body-md text-on-surface-variant" id="detail-description">
+            23.2-kilometer elevated double-track rapid transit corridor designed with 23 passenger stations, mitigating bumper-to-bumper peak hour traffic between Hinjawadi IT hub and downtown Pune.
+          </p>
+<div class="flex flex-wrap items-center gap-4 text-body-sm font-body-sm pt-2">
+<div><span class="text-on-surface-variant">Nodal Agency:</span> <strong class="text-primary" id="detail-agency">PMRDA (Pune Metropolitan Region Dev. Authority)</strong></div>
+<div><span class="text-on-surface-variant">Lead Contractor:</span> <strong class="text-primary" id="detail-contractor">TRIL Urban Transport &amp; Siemens Consortium</strong></div>
+<div><span class="text-on-surface-variant">Supervising Engineer:</span> <strong class="text-primary" id="detail-engineer">Er. Rajeshwar Kulkarni (Chief Civil Audit)</strong></div>
+</div>
+</div>
+<div class="lg:col-span-4 bg-[#FEF9EE] border border-[#FDE68A] p-4 rounded-lg space-y-3">
+<div class="text-label-md font-label-md font-bold text-primary">Grievance Hot-Line for this Site</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+            Direct public channel to PMRDA grievance cell for unannounced barricading, construction dust, or safety lapses.
+          </p>
+<div class="text-headline-sm font-headline-sm font-bold text-secondary">
+            +91 20 2593 3000
+          </div>
+<button class="w-full py-1.5 bg-secondary text-on-secondary rounded text-label-sm font-label-sm font-bold hover:bg-on-secondary-container transition-colors" onclick="openNewComplaintModal(currentProjectDetailsCode)">
+            File Geotagged Site Complaint
+          </button>
+</div>
+</div>
+<!-- 6-Stage Timeline Stepper -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/60 shadow-sm space-y-4">
+<h2 class="text-headline-md font-headline-md font-bold text-primary">Contract Lifecycle &amp; Execution Timeline</h2>
+<div class="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 pt-4 pb-2">
+<!-- Stage 1 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+</div>
+<div>
+<div class="text-label-md font-label-md font-bold text-primary">Sanctioned</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Oct 2018</div>
+</div>
+</div>
+<!-- Line -->
+<div class="hidden md:block w-full h-1 bg-primary -mx-4 mt-[-24px]"></div>
+<!-- Stage 2 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+</div>
+<div>
+<div class="text-label-md font-label-md font-bold text-primary">Tender Published</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Aug 2019</div>
+</div>
+</div>
+<!-- Line -->
+<div class="hidden md:block w-full h-1 bg-primary -mx-4 mt-[-24px]"></div>
+<!-- Stage 3 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+</div>
+<div>
+<div class="text-label-md font-label-md font-bold text-primary">Contract Awarded</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Dec 2019</div>
+</div>
+</div>
+<!-- Line -->
+<div class="hidden md:block w-full h-1 bg-primary -mx-4 mt-[-24px]"></div>
+<!-- Stage 4 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-label-md">
+<span class="material-symbols-outlined text-[20px]" data-icon="check">check</span>
+</div>
+<div>
+<div class="text-label-md font-label-md font-bold text-primary">Work Started</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Jan 2021</div>
+</div>
+</div>
+<!-- Line -->
+<div class="hidden md:block w-full h-1 bg-secondary -mx-4 mt-[-24px]"></div>
+<!-- Stage 5 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-secondary text-on-secondary flex items-center justify-center font-bold text-label-md animate-pulse">
+              5
+            </div>
+<div>
+<div class="text-label-md font-label-md font-bold text-secondary">Current Progress</div>
+<div class="text-body-sm font-body-sm text-secondary font-semibold">74% Complete</div>
+</div>
+</div>
+<!-- Line -->
+<div class="hidden md:block w-full h-1 bg-outline-variant -mx-4 mt-[-24px]"></div>
+<!-- Stage 6 -->
+<div class="flex md:flex-col items-center gap-3 text-left md:text-center w-full relative z-10">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold text-label-md">
+              6
+            </div>
+<div>
+<div class="text-label-md font-label-md font-bold text-on-surface-variant">Target Dedication</div>
+<div class="text-body-sm font-body-sm text-on-surface-variant">Mar 2026</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Financial Transparency Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm">
+<div class="text-label-sm font-label-sm text-on-surface-variant">Sanctioned Cost</div>
+<div class="text-headline-md font-headline-md font-bold text-primary mt-1" id="detail-budget-sanctioned">₹8,313 Cr</div>
+<div class="text-body-sm font-body-sm text-outline mt-1">Cabinet Approved FY19</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm">
+<div class="text-label-sm font-label-sm text-on-surface-variant">Revised Estimated Cost</div>
+<div class="text-headline-md font-headline-md font-bold text-primary mt-1" id="detail-budget-revised">₹8,450 Cr</div>
+<div class="text-body-sm font-body-sm text-secondary mt-1">1.6% variance (Price Index)</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm">
+<div class="text-label-sm font-label-sm text-on-surface-variant">Funds Disbursed &amp; Spent</div>
+<div class="text-headline-md font-headline-md font-bold text-secondary mt-1" id="detail-budget-spent">₹6,150 Cr</div>
+<div class="text-body-sm font-body-sm text-primary font-medium mt-1">72.7% of total allocation</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm">
+<div class="text-label-sm font-label-sm text-on-surface-variant">Funding Model</div>
+<div class="text-headline-sm font-headline-sm font-bold text-primary mt-1" id="detail-budget-model">Public-Private Partnership</div>
+<div class="text-body-sm font-body-sm text-outline mt-1">Govt of India + Govt of MH + DBFOT</div>
+</div>
+</div>
+<!-- Construction Photo Log & Project Documents -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Photo Inspection Gallery -->
+<div class="lg:col-span-7 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/60 shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm font-bold text-primary">Geotagged Inspection Photo Log</h2>
+<span class="text-label-sm font-label-sm text-outline">Updated 48 hours ago</span>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="relative rounded overflow-hidden h-40 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Close-up engineering view of elevated concrete metro pier cap reinforcement steel cage in an Indian infrastructure project under bright daylight with high detail and safety barriers." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAliilxuztSUBOtd0vzzrXtKsHPIW0y1StchZQKhN7O2b98rTel4-QWzLAeDM4_OmJHpYJZ9Q5sYRzKEqorFsDnWuRs8dz1Dm_r_n9QiS78oPUJ7a46DDs1cYJS7cMW58oBAxphVisQvL0AVqC_lhYyDwVfV2Ahp65sAmI_dYBUvgb9DVZ3ddjvyE_Yxhuqqag2ATJCFL-j_F6qtBI7YZczxEPF8_ZT6b1r1chBGbCaY-NHHAzzZJhhWA"/>
+<div class="absolute bottom-0 inset-x-0 bg-primary/80 text-surface-container-lowest p-1.5 text-label-sm font-label-sm">
+                Pier #184 Hinjawadi Ph 2 [12-Apr-2026]
+              </div>
+</div>
+<div class="relative rounded overflow-hidden h-40 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Precast segmental viaduct launcher crane positioning concrete girders above a modern multi-lane highway in India, surrounded by warning lights and civil audit engineers." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJaEF-Cs7HQekE1JwNXozsGYp_uzjcjZn67Irh3A2uznk_-G3GbMV7oHeXuuZRg-6T6kLBK9yYjKGF0lSJH5ULDzTwM-jXgRtKnAyMI5HWkCQYQUQq-Ablj-6CLcb27UxsnFIhJq-4FQVxDgLuOa0iY21aVRuM7uZUJ5_nCJX_CAbDYG-tA8JEQWE8y11D0YGDb1o7OIvwZ9X8yGD-i0Dhe1sLCY5chtdvIw_bsBncO0Bj4hgoqtPiNw"/>
+<div class="absolute bottom-0 inset-x-0 bg-primary/80 text-surface-container-lowest p-1.5 text-label-sm font-label-sm">
+                Gantry Erection Shivajinagar [10-Apr-2026]
+              </div>
+</div>
+</div>
+</div>
+<!-- Official Audited Documents Dossier -->
+<div class="lg:col-span-5 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/60 shadow-sm space-y-4">
+<h2 class="text-headline-sm font-headline-sm font-bold text-primary">Public Records &amp; Audits</h2>
+<div class="space-y-2.5">
+<div class="p-3 rounded bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="picture_as_pdf">picture_as_pdf</span>
+<div>
+<div class="text-label-md font-label-md font-semibold text-primary">CAG Financial Audit Q3-2025.pdf</div>
+<div class="text-label-sm font-label-sm text-outline">Size: 4.8 MB • Certified Clean</div>
+</div>
+</div>
+<button class="text-secondary hover:text-on-secondary-container p-1" onclick="downloadMockDoc('CAG-Audit')">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+<div class="p-3 rounded bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="picture_as_pdf">picture_as_pdf</span>
+<div>
+<div class="text-label-md font-label-md font-semibold text-primary">Environmental Clearance MoEFCC.pdf</div>
+<div class="text-label-sm font-label-sm text-outline">Size: 2.1 MB • Tree Translocation Plan</div>
+</div>
+</div>
+<button class="text-secondary hover:text-on-secondary-container p-1" onclick="downloadMockDoc('MoEFCC-Clearance')">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+<div class="p-3 rounded bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="picture_as_pdf">picture_as_pdf</span>
+<div>
+<div class="text-label-md font-label-md font-semibold text-primary">Contractor Concession Agreement.pdf</div>
+<div class="text-label-sm font-label-sm text-outline">Size: 14.2 MB • Redacted Financials</div>
+</div>
+</div>
+<button class="text-secondary hover:text-on-secondary-container p-1" onclick="downloadMockDoc('Concession-Agreement')">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 5: COMPLAINT & GRIEVANCE TRACKING VIEW -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden space-y-6" id="complaints-view">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/50 pb-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary">
+            Citizen Grievance &amp; Redressal Portal
+          </h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+            Track filed infrastructure violations, engineer inspection notes, and contractor penalty compliance.
+          </p>
+</div>
+<button class="px-4 py-2 bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md rounded flex items-center gap-2 shadow-sm" onclick="openNewComplaintModal()">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span> Lodge New Grievance
+        </button>
+</div>
+<!-- Quick Ticket Lookup Bar -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm flex flex-col md:flex-row items-center gap-3">
+<span class="material-symbols-outlined text-secondary text-[28px]" data-icon="manage_search">manage_search</span>
+<div class="flex-grow w-full md:w-auto">
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-1">Track Specific Complaint Reference Number</label>
+<div class="flex gap-2">
+<input class="w-full px-3 py-2 border border-outline-variant rounded font-mono text-body-md font-body-md uppercase" id="complaint-search-input" placeholder="e.g. CMP-2026-004821" type="text" value="CMP-2026-004821"/>
+<button class="px-5 py-2 bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary-container transition-colors" onclick="searchComplaintByTicket()">
+              Search Status
+            </button>
+</div>
+</div>
+</div>
+<!-- Active Tracked Ticket Details (Featured Card) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-2 border-secondary/40 shadow-sm space-y-6" id="active-complaint-spotlight">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-outline-variant/30 pb-3">
+<div>
+<div class="flex items-center gap-2">
+<span class="font-mono bg-surface-container px-2.5 py-0.5 rounded font-bold text-primary text-headline-sm">
+                CMP-2026-004821
+              </span>
+<span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm font-semibold">
+                Action in Progress (Assigned)
+              </span>
+</div>
+<h2 class="text-headline-md font-headline-md font-bold text-primary mt-1">
+              Hazardous deep trench left unbarricaded without retroreflective signage near Pier 142
+            </h2>
+</div>
+<div class="text-right">
+<div class="text-label-sm font-label-sm text-outline">Date Lodged: 11-Apr-2026</div>
+<div class="text-body-sm font-body-sm text-secondary font-semibold">Priority: High (Public Safety Risk)</div>
+</div>
+</div>
+<!-- 5-Step Complaint Lifecycle Timeline -->
+<div class="space-y-2">
+<div class="text-label-md font-label-md text-primary font-bold">Investigation Lifecycle:</div>
+<div class="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+<div class="p-3 bg-surface-container-low rounded border border-outline-variant/40 text-center">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary mx-auto flex items-center justify-center mb-1 text-label-sm">✓</div>
+<div class="text-label-sm font-label-sm font-bold text-primary">1. Submitted</div>
+<div class="text-label-sm font-label-sm text-outline">11-Apr, 09:15 AM</div>
+</div>
+<div class="p-3 bg-surface-container-low rounded border border-outline-variant/40 text-center">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary mx-auto flex items-center justify-center mb-1 text-label-sm">✓</div>
+<div class="text-label-sm font-label-sm font-bold text-primary">2. Under Review</div>
+<div class="text-label-sm font-label-sm text-outline">11-Apr, 11:40 AM</div>
+</div>
+<div class="p-3 bg-surface-container-low rounded border border-outline-variant/40 text-center">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary mx-auto flex items-center justify-center mb-1 text-label-sm">✓</div>
+<div class="text-label-sm font-label-sm font-bold text-primary">3. Assigned to Dept</div>
+<div class="text-label-sm font-label-sm text-outline">PMRDA Civil Works</div>
+</div>
+<div class="p-3 bg-amber-50 rounded border border-secondary text-center">
+<div class="w-7 h-7 rounded-full bg-secondary text-on-secondary mx-auto flex items-center justify-center mb-1 text-label-sm animate-pulse">4</div>
+<div class="text-label-sm font-label-sm font-bold text-secondary">4. Action in Progress</div>
+<div class="text-label-sm font-label-sm text-secondary font-semibold">Barricades Dispatched</div>
+</div>
+<div class="p-3 bg-surface-container-lowest rounded border border-outline-variant/30 text-center opacity-60">
+<div class="w-7 h-7 rounded-full bg-outline-variant text-on-surface-variant mx-auto flex items-center justify-center mb-1 text-label-sm">5</div>
+<div class="text-label-sm font-label-sm font-bold text-outline">5. Verified Resolved</div>
+<div class="text-label-sm font-label-sm text-outline">Citizen Verification</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg text-body-sm font-body-sm space-y-2 border border-outline-variant/30">
+<div class="font-bold text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="engineering">engineering</span>
+            Official Redressal Officer Note:
+          </div>
+<p class="text-on-surface-variant italic">
+            "Junior Engineer S. Patil visited the location at 02:30 PM on 11-Apr-2026. Notice issued to concessionaire under Clause 14.2 of Safety By-laws. 250 meters of high-visibility water-filled safety barricades and flashing yellow night markers are being installed tonight."
+          </p>
+</div>
+</div>
+<!-- Recent Citizen Complaints Table -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm overflow-hidden space-y-0">
+<div class="p-4 border-b border-outline-variant/40 flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm font-bold text-primary">Public Community Grievance Ledger</h2>
+<span class="text-label-sm font-label-sm text-outline">Live Feed</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-body-sm font-body-sm">
+<thead>
+<tr class="bg-primary-container text-on-primary text-label-sm font-label-sm">
+<th class="p-3">Ticket ID</th>
+<th class="p-3">Associated Project</th>
+<th class="p-3">Issue Category</th>
+<th class="p-3">Location / Ward</th>
+<th class="p-3">Status</th>
+<th class="p-3">Filed On</th>
+<th class="p-3 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/30" id="complaints-table-body">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-mono font-bold text-primary">CMP-2026-004821</td>
+<td class="p-3 font-semibold text-primary">Pune Metro Line 3</td>
+<td class="p-3">Public Safety / No Barricade</td>
+<td class="p-3">Hinjawadi Ph-1, Pune</td>
+<td class="p-3"><span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold">Action in Progress</span></td>
+<td class="p-3 text-outline">11-Apr-2026</td>
+<td class="p-3 text-right"><button class="text-secondary font-bold hover:underline" onclick="viewComplaintDetail('CMP-2026-004821')">Inspect</button></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-mono font-bold text-primary">CMP-2026-004790</td>
+<td class="p-3 font-semibold text-primary">Bengaluru PRR</td>
+<td class="p-3">Excessive Airborne Dust Pollution</td>
+<td class="p-3">Hebbal Junction, BLR</td>
+<td class="p-3"><span class="bg-green-100 text-green-900 px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold">Resolved (Sprinklers deployed)</span></td>
+<td class="p-3 text-outline">08-Apr-2026</td>
+<td class="p-3 text-right"><button class="text-secondary font-bold hover:underline" onclick="viewComplaintDetail('CMP-2026-004790')">Inspect</button></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-mono font-bold text-primary">CMP-2026-004652</td>
+<td class="p-3 font-semibold text-primary">Delhi-Meerut RRTS</td>
+<td class="p-3">Footpath encroachment by steel scrap</td>
+<td class="p-3">Ghaziabad Station, UP</td>
+<td class="p-3"><span class="bg-green-100 text-green-900 px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold">Resolved (Cleared)</span></td>
+<td class="p-3 text-outline">04-Apr-2026</td>
+<td class="p-3 text-right"><button class="text-secondary font-bold hover:underline" onclick="viewComplaintDetail('CMP-2026-004652')">Inspect</button></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="p-3 font-mono font-bold text-primary">CMP-2026-004501</td>
+<td class="p-3 font-semibold text-primary">Mumbai Coastal Road</td>
+<td class="p-3">Stormwater drainage backflow issue</td>
+<td class="p-3">Worli Promenade, Mumbai</td>
+<td class="p-3"><span class="bg-red-100 text-red-900 px-2 py-0.5 rounded text-label-sm font-label-sm font-semibold">Escalated to BMC Chief</span></td>
+<td class="p-3 text-outline">30-Mar-2026</td>
+<td class="p-3 text-right"><button class="text-secondary font-bold hover:underline" onclick="viewComplaintDetail('CMP-2026-004501')">Inspect</button></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 6: COMMUNITY DISCUSSIONS & WARD FORUMS -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden space-y-6" id="community-view">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/50 pb-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary">
+            Citizen Oversight &amp; Ward Forums
+          </h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+            Deliberate on public works tenders, post engineering observations, and interact with verified government site supervisors.
+          </p>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md rounded flex items-center gap-2 shadow-sm" onclick="openNewDiscussionModal()">
+<span class="material-symbols-outlined" data-icon="forum">forum</span> Start a Discussion
+        </button>
+</div>
+<!-- Categories Filter Tabs -->
+<div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-outline-variant/30 text-label-md font-label-md">
+<button class="px-3.5 py-1.5 bg-primary text-on-primary rounded">All Topics</button>
+<button class="px-3.5 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded">Metro &amp; Transit</button>
+<button class="px-3.5 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded">Highways &amp; Flyovers</button>
+<button class="px-3.5 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded">Water &amp; Sanitation</button>
+<button class="px-3.5 py-1.5 bg-surface-container-low hover:bg-surface-container text-on-surface-variant rounded">Environmental Compliance</button>
+</div>
+<!-- Community Threads List -->
+<div class="space-y-4">
+<!-- Thread 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-primary px-2 py-0.5 rounded text-label-sm font-label-sm font-mono font-bold">#PUN-MET-03</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Posted by <strong>Er. Amitabha Roy</strong> (Verified Resident, Hinjawadi Ph-1)</span>
+<span class="text-outline text-label-sm font-label-sm">• 4 hours ago</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary hover:text-secondary cursor-pointer">
+                Are acoustic noise barriers planned on Hinjawadi Flyover section where piers are 15m from residential towers?
+              </h3>
+<p class="text-body-md font-body-md text-on-surface-variant">
+                According to the DPR published on this portal, 2.5-meter acoustic dampening panels were sanctioned for stations 4 and 5. Can site engineers confirm if procurement for these has been initiated?
+              </p>
+</div>
+<!-- Upvotes Counter -->
+<div class="flex flex-col items-center bg-surface-container-low px-3 py-2 rounded border border-outline-variant/30 flex-shrink-0">
+<button class="hover:text-secondary text-primary" onclick="upvoteThread(this)">
+<span class="material-symbols-outlined text-[20px]" data-icon="thumb_up">thumb_up</span>
+</button>
+<span class="text-label-md font-label-md font-bold text-primary count-holder">48</span>
+</div>
+</div>
+<!-- Official Engineer Response Badge -->
+<div class="bg-surface-container-low p-3 rounded border-l-4 border-secondary text-body-sm font-body-sm space-y-1">
+<div class="flex items-center gap-1.5 text-secondary font-bold">
+<span class="material-symbols-outlined text-[16px]" data-icon="verified">verified</span>
+              Official Response: Er. Rajeshwar Kulkarni (PMRDA Nodal Officer)
+            </div>
+<p class="text-on-surface-variant">
+              "Yes. Tender package #TRIL-PUN-ACOUSTIC-09 was awarded last month. Polycarbonate noise dampening panels will be installed sequentially during the track laying phase in July 2026."
+            </p>
+</div>
+<div class="flex items-center gap-4 text-label-sm font-label-sm text-outline pt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]" data-icon="comment">comment</span> 16 Citizen Replies</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]" data-icon="share">share</span> Share Link</span>
+</div>
+</div>
+<!-- Thread 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg border border-outline-variant/60 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="bg-surface-container text-primary px-2 py-0.5 rounded text-label-sm font-label-sm font-mono font-bold">#BLR-PRR-08</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Posted by <strong>Kavita Shenoy</strong> (Ward Committee BLR-94)</span>
+<span class="text-outline text-label-sm font-label-sm">• Yesterday</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-primary hover:text-secondary cursor-pointer">
+                Tree Translocation vs Felling tally discrepancy on Doddaballapur stretch
+              </h3>
+<p class="text-body-md font-body-md text-on-surface-variant">
+                The portal's MoEFCC compliance sheet shows 1,240 saplings planted against 400 felled trees. Local volunteers mapped only 210 saplings on the designated forest boundary. We request geo-tagged drone footage.
+              </p>
+</div>
+<div class="flex flex-col items-center bg-surface-container-low px-3 py-2 rounded border border-outline-variant/30 flex-shrink-0">
+<button class="hover:text-secondary text-primary" onclick="upvoteThread(this)">
+<span class="material-symbols-outlined text-[20px]" data-icon="thumb_up">thumb_up</span>
+</button>
+<span class="text-label-md font-label-md font-bold text-primary count-holder">112</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-label-sm font-label-sm text-outline pt-1">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]" data-icon="comment">comment</span> 34 Citizen Replies</span>
+<span class="text-secondary font-semibold">Under Audit Review by State Forest Dept</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW 7: PROJECT ALERTS & WARNINGS -->
+<!-- ===================================================================== -->
+<section class="view-panel hidden space-y-6" id="alerts-view">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-outline-variant/50 pb-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary">
+            Public Safety Alerts &amp; Regulatory Warnings
+          </h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">
+            Official traffic detours, structural audit alerts, environmental penalty notices, and safety guidelines.
+          </p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm font-bold text-secondary flex items-center gap-1">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary animate-ping"></span> Live Feeds Active
+          </span>
+</div>
+</div>
+<!-- Severity Filter Toolbar -->
+<div class="flex flex-wrap items-center justify-between gap-3 bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/50">
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm font-bold text-on-surface-variant">Filter Severity:</span>
+<button class="px-2.5 py-1 text-label-sm font-label-sm bg-primary text-on-primary rounded" onclick="filterAlerts('all')">All</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm bg-red-100 text-red-800 rounded font-bold" onclick="filterAlerts('critical')">Critical (2)</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm bg-amber-100 text-amber-800 rounded font-bold" onclick="filterAlerts('warning')">Advisory / Detour (3)</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm bg-blue-100 text-blue-800 rounded font-bold" onclick="filterAlerts('compliance')">Contractor Notices (4)</button>
+</div>
+<div class="text-label-sm font-label-sm text-outline">
+          Published under Disaster Management &amp; Urban Safety Acts
+        </div>
+</div>
+<!-- Alerts Grid -->
+<div class="space-y-4" id="alerts-container">
+<!-- Critical Alert 1 -->
+<div class="alert-card critical bg-red-50/70 border-l-4 border-error p-5 rounded-r-lg border border-outline-variant/30 space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+<span class="font-bold text-error text-headline-sm font-headline-sm">HIGH RISK: Overnight Crane Erection &amp; Road Closure</span>
+</div>
+<span class="text-label-sm font-label-sm font-mono text-error font-bold">REF: ALT-2026-902</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface">
+            Hinjawadi Phase 2 to Infosys Circle completely closed for vehicular traffic between 23:00 hrs to 05:00 hrs from 12-Apr-2026 to 20-Apr-2026 for erection of 60-tonne precast girder spans on Pune Metro Line 3.
+          </p>
+<div class="flex flex-wrap items-center gap-4 text-label-sm font-label-sm text-on-surface-variant pt-1">
+<span><strong>Detour Route:</strong> Diverted through Maan Village Link Road</span>
+<span><strong>Emergency Contact:</strong> Traffic Police Helpline 1095</span>
+<span class="text-error font-bold">Penalty levied if unauthorized passage attempted</span>
+</div>
+</div>
+<!-- Warning Alert 2 -->
+<div class="alert-card warning bg-amber-50/70 border-l-4 border-secondary p-5 rounded-r-lg border border-outline-variant/30 space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="cloud_sync">cloud_sync</span>
+<span class="font-bold text-secondary text-headline-sm font-headline-sm">ADVISORY: Pre-Monsoon Culvert Desilting Mandatory Notice</span>
+</div>
+<span class="text-label-sm font-label-sm font-mono text-secondary font-bold">REF: ALT-2026-884</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface">
+            All highway contractors along the Mumbai Coastal Road and Thane Creek Bridge #3 must complete 100% de-siltation of cross-drainage pipes by 15-May-2026 to prevent stormwater inundation.
+          </p>
+<div class="flex flex-wrap items-center gap-4 text-label-sm font-label-sm text-on-surface-variant pt-1">
+<span><strong>Target Sector:</strong> BMC / L&amp;T Engineering</span>
+<span><strong>Status:</strong> Inspection teams deployed</span>
+</div>
+</div>
+<!-- Compliance Notice 3 -->
+<div class="alert-card compliance bg-blue-50/70 border-l-4 border-primary-container p-5 rounded-r-lg border border-outline-variant/30 space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container" data-icon="gavel">gavel</span>
+<span class="font-bold text-primary text-headline-sm font-headline-sm">CONTRACTOR PENALTY CLAUSE INVOKED</span>
+</div>
+<span class="text-label-sm font-label-sm font-mono text-primary font-bold">REF: ALT-2026-812</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface">
+            Liquidated damages worth ₹1.85 Crores levied against Package 4 contractor on Bengaluru Peripheral Ring Road due to unexcused 60-day milestone delay in flyover pier foundation.
+          </p>
+<div class="flex flex-wrap items-center gap-4 text-label-sm font-label-sm text-on-surface-variant pt-1">
+<span><strong>Authority:</strong> Bengaluru Development Authority (BDA)</span>
+<span><strong>Action:</strong> Cure period notice 30 days served</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- ========================================================================= -->
+<!-- MODAL: LODGE FRESH COMPLAINT / GRIEVANCE -->
+<!-- ========================================================================= -->
+<div class="fixed inset-0 z-50 bg-primary/60 backdrop-blur-sm hidden flex items-center justify-center p-4" id="new-complaint-modal">
+<div class="bg-surface-container-lowest w-full max-w-2xl rounded-xl border border-outline-variant shadow-2xl overflow-hidden flex flex-col max-h-[921px]">
+<!-- Modal Header -->
+<div class="bg-primary-container text-on-primary p-4 px-6 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="report">report</span>
+<div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-surface-container-lowest">Lodge Public Infrastructure Grievance</h3>
+<span class="text-label-sm font-label-sm text-surface-variant">Central Public Grievance Redress &amp; Monitoring System (CPGRAMS Linkage)</span>
+</div>
+</div>
+<button class="text-surface-variant hover:text-surface-container-lowest" onclick="closeNewComplaintModal()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<!-- Modal Body (Form) -->
+<form class="p-6 space-y-4 overflow-y-auto custom-scrollbar" id="grievance-form" onsubmit="handleComplaintSubmit(event)">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+            Target Public Project <span class="text-error">*</span>
+</label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md bg-surface-container-lowest" id="complaint-project-select" required="">
+<option value="pune-metro-3">Pune Metro Line 3 (Hinjawadi - Shivajinagar)</option>
+<option value="mumbai-coastal">Mumbai Coastal Road Freeway</option>
+<option value="blr-ring-road">Bengaluru Peripheral Ring Road (PRR)</option>
+<option value="delhi-meerut-rrts">Delhi-Meerut RRTS (Namo Bharat)</option>
+<option value="other">Other State Municipal Project</option>
+</select>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+              Grievance Category <span class="text-error">*</span>
+</label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md bg-surface-container-lowest" required="">
+<option>Public Safety Risk / Missing Barricades</option>
+<option>Severe Structural Defect / Cracks in Concrete</option>
+<option>Excessive Construction Dust / Noise Hazard</option>
+<option>Unscheduled Road Blocking / Traffic Choke</option>
+<option>Drainage Blockage / Monsoon Waterlogging</option>
+</select>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+              Urgency / Risk Priority <span class="text-error">*</span>
+</label>
+<select class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md bg-surface-container-lowest" required="">
+<option>High (Imminent Accident or Structural Hazard)</option>
+<option>Medium (Traffic Inconvenience / Pollution)</option>
+<option>Normal (Informational Clarification)</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+            Exact Spot / Landmark Location <span class="text-error">*</span>
+</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="e.g. Hinjawadi Ph-1 near Pier 142 opposite Wipro Circle" required="" type="text"/>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+            Factual Description of Issue <span class="text-error">*</span>
+</label>
+<textarea class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="Explain the defect or violation clearly with approximate dates and danger to commuters..." required="" rows="3"></textarea>
+</div>
+<!-- Geotagged Upload Trigger -->
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">
+            Attach Evidence Photo / Document (Geo-Tagged GPS Stamp preferred)
+          </label>
+<div class="border-2 border-dashed border-outline-variant rounded-lg p-4 text-center hover:bg-surface-container-low transition-colors cursor-pointer" onclick="document.getElementById('file-upload-input').click()">
+<span class="material-symbols-outlined text-[32px] text-secondary" data-icon="cloud_upload">cloud_upload</span>
+<p class="text-body-sm font-body-sm text-primary font-medium mt-1">Click to browse or drag &amp; drop inspection photo</p>
+<p class="text-label-sm font-label-sm text-outline">Supports JPG, PNG, PDF up to 10MB (Compliant with GIGW 3.0)</p>
+<input class="hidden" id="file-upload-input" onchange="updateFileName(this)" type="file"/>
+<div class="text-label-sm font-label-sm text-secondary font-bold mt-2" id="file-name-display"></div>
+</div>
+</div>
+<div class="p-3 bg-surface-container-low rounded text-label-sm font-label-sm text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" data-icon="verified_user">verified_user</span>
+<span>A Unique Redressal Tracking ID (e.g. CMP-2026-XXXXXX) will be generated and dispatched via SMS.</span>
+</div>
+<div class="flex items-center justify-end gap-3 pt-2">
+<button class="px-4 py-2 border border-outline-variant text-on-surface-variant hover:bg-surface-container rounded text-label-md font-label-md" onclick="closeNewComplaintModal()" type="button">
+            Cancel
+          </button>
+<button class="px-6 py-2 bg-secondary hover:bg-on-secondary-container text-on-secondary rounded text-label-md font-label-md font-bold shadow-sm transition-all duration-150 active:scale-95 flex items-center gap-1.5" type="submit">
+<span class="material-symbols-outlined text-[18px]" data-icon="send">send</span>
+<span>Submit Grievance</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- MODAL: START COMMUNITY DISCUSSION -->
+<!-- ========================================================================= -->
+<div class="fixed inset-0 z-50 bg-primary/60 backdrop-blur-sm hidden flex items-center justify-center p-4" id="new-discussion-modal">
+<div class="bg-surface-container-lowest w-full max-w-lg rounded-xl border border-outline-variant shadow-2xl overflow-hidden">
+<div class="bg-primary p-4 text-on-primary flex items-center justify-between">
+<h3 class="text-headline-sm font-headline-sm font-bold">Start Citizen Ward Discussion</h3>
+<button class="text-on-primary/80 hover:text-on-primary" onclick="closeNewDiscussionModal()">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<form class="p-6 space-y-4" onsubmit="handleDiscussionSubmit(event)">
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Infrastructure Subject / Topic</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="e.g. Noise barriers near metro stations" required="" type="text"/>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Ward / Location</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="e.g. Hinjawadi Ph-1, Ward 12" required="" type="text"/>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-primary mb-1">Technical Observation / Query</label>
+<textarea class="w-full px-3 py-2 border border-outline-variant rounded text-body-md font-body-md" placeholder="Share facts, references to DPRs, or contractor observations..." required="" rows="3"></textarea>
+</div>
+<div class="flex justify-end gap-3 pt-2">
+<button class="px-4 py-2 border border-outline-variant text-on-surface-variant rounded" onclick="closeNewDiscussionModal()" type="button">Cancel</button>
+<button class="px-5 py-2 bg-primary text-on-primary rounded font-bold" type="submit">Publish to Forum</button>
+</div>
+</form>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 4. INSTITUTIONAL FOOTER (Shared Component: Footer) -->
+<!-- ========================================================================= -->
+<footer class="bg-primary text-on-primary border-t-4 border-secondary-container mt-12">
+<div class="w-full py-8 px-4 lg:px-8 mx-auto max-w-7xl flex flex-col gap-6">
+<!-- Top Row: Portal Branding & NIC Attribution -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-on-primary-container/20 pb-6">
+<div class="space-y-1">
+<div class="text-headline-sm font-headline-sm font-bold text-on-primary">
+            Public Infrastructure Transparency Portal
+          </div>
+<div class="text-body-sm font-body-sm text-on-primary-container max-w-2xl">
+            Content Managed by Ministry of Housing and Urban Affairs, Government of India. Hosted by National Informatics Centre (NIC).
+          </div>
+</div>
+<!-- Digital India & NIC Badges Mockup -->
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-surface-container-lowest/10 rounded border border-on-primary-container/30 text-label-sm font-label-sm text-surface-container-lowest">
+            GIGW 3.0 Compliant
+          </div>
+<div class="px-3 py-1 bg-surface-container-lowest/10 rounded border border-on-primary-container/30 text-label-sm font-label-sm text-surface-container-lowest">
+            ISO 27001 Certified
+          </div>
+</div>
+</div>
+<!-- Links Grid -->
+<div class="flex flex-wrap gap-x-6 gap-y-2 text-body-sm font-body-sm text-on-primary-container">
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Privacy Policy</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Terms of Service</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Hyperlink Policy</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Accessibility Statement</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Help &amp; Support</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">Site Map</a>
+<a class="hover:text-on-primary transition-colors" href="javascript:void(0)">GIGW 3.0 Compliance</a>
+</div>
+<!-- Bottom Disclaimer -->
+<div class="text-label-sm font-label-sm text-on-primary-container/80 flex flex-col md:flex-row justify-between items-center gap-2 border-t border-on-primary-container/20 pt-4">
+<div>
+          © 2026 Government of India. All rights reserved. Version 4.8.2-SIH-STABLE.
+        </div>
+<div>
+          Last Updated: 12 April 2026 | Server Node: NIC-DEL-04
+        </div>
+</div>
+</div>
+</footer>
+<!-- ========================================================================= -->
+<!-- VANILLA JAVASCRIPT: CLIENT-SIDE ROUTING & DATA ENGINE -->
+<!-- ========================================================================= -->
+<script>
+    // In-memory Projects Data Store
+    const projectsDatabase = [
+      {
+        id: "pune-metro-3",
+        code: "#PUN-MET-03",
+        title: "Pune Metro Line 3 (Hinjawadi to Shivajinagar)",
+        sector: "Metro",
+        state: "Maharashtra",
+        status: "In Progress",
+        progress: 74,
+        budgetSanctioned: "₹8,313 Cr",
+        budgetSpent: "₹6,150 Cr",
+        contractor: "TRIL Urban Transport & Siemens",
+        funding: "Central + State",
+        desc: "23.2 km elevated transit corridor linking the Hinjawadi IT cluster with Shivajinagar civic center, reducing commuter transit time from 90 min to 35 min."
+      },
+      {
+        id: "mumbai-coastal",
+        code: "#MUM-CST-01",
+        title: "Mumbai Coastal Road (South Section)",
+        sector: "Roads",
+        state: "Maharashtra",
+        status: "Completed",
+        progress: 91,
+        budgetSanctioned: "₹12,721 Cr",
+        budgetSpent: "₹11,600 Cr",
+        contractor: "Larsen & Toubro",
+        funding: "Central + State",
+        desc: "10.58 km freeway extending from Marine Drive through Priyadarshini Park to the Worli end of the Bandra-Worli Sea Link with undersea tunnels."
+      },
+      {
+        id: "blr-ring-road",
+        code: "#BLR-PRR-08",
+        title: "Bengaluru Peripheral Ring Road (PRR)",
+        sector: "Roads",
+        state: "Karnataka",
+        status: "Delayed",
+        progress: 32,
+        budgetSanctioned: "₹21,091 Cr",
+        budgetSpent: "₹6,750 Cr",
+        contractor: "BDA / Joint Venture",
+        funding: "JICA",
+        desc: "73-kilometer greenfield eight-lane access-controlled expressway designed to de-congest inter-state freight transit around Greater Bengaluru."
+      },
+      {
+        id: "delhi-meerut-rrts",
+        code: "#DEL-MRT-01",
+        title: "Delhi-Meerut RRTS (Namo Bharat Rapid Corridor)",
+        sector: "Metro",
+        state: "Delhi",
+        status: "In Progress",
+        progress: 82,
+        budgetSanctioned: "₹30,274 Cr",
+        budgetSpent: "₹24,825 Cr",
+        contractor: "Afcons & Alstom",
+        funding: "ADB",
+        desc: "82.15 km semi-high-speed regional rail corridor designed for operational speeds of 160 km/h connecting Delhi, Ghaziabad, and Meerut."
+      },
+      {
+        id: "surat-water-drain",
+        code: "#SUR-DRN-04",
+        title: "Surat Stormwater Canal & Flood Defense Matrix",
+        sector: "Water",
+        state: "Gujarat",
+        status: "In Progress",
+        progress: 68,
+        budgetSanctioned: "₹2,450 Cr",
+        budgetSpent: "₹1,670 Cr",
+        contractor: "Dilip Buildcon",
+        funding: "World Bank",
+        desc: "Installation of high-capacity automated sluice gates, automated telemetry pumping stations, and 45 km reinforced stormwater culverts."
+      },
+      {
+        id: "ahmedabad-smart-grid",
+        code: "#AHM-SMC-12",
+        title: "Ahmedabad Smart City Supervisory Command Center",
+        sector: "Smart City",
+        state: "Gujarat",
+        status: "Completed",
+        progress: 98,
+        budgetSanctioned: "₹1,180 Cr",
+        budgetSpent: "₹1,156 Cr",
+        contractor: "Larsen & Toubro",
+        funding: "Central + State",
+        desc: "Integrated City Operation Center connecting 6,000 CCTV feeds, automatic number plate recognition, and SCADA water pressure sensors."
+      }
+    ];
+
+    let currentProjectDetailsCode = 'pune-metro-3';
+
+    // 1. ROUTING / VIEW SWITCHING
+    function switchView(viewId) {
+      // Hide all views
+      const views = document.querySelectorAll('.view-panel');
+      views.forEach(v => v.classList.add('hidden'));
+
+      // Show target view
+      const target = document.getElementById(viewId);
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // Update Navigation active state styling
+      updateNavActiveState(viewId);
+
+      // If opening dashboard, render grid
+      if (viewId === 'projects-view') {
+        renderProjectsGrid(projectsDatabase);
+      }
+    }
+
+    function updateNavActiveState(viewId) {
+      const navMap = {
+        'home-view': 'nav-home',
+        'projects-view': 'nav-projects',
+        'alerts-view': 'nav-alerts',
+        'complaints-view': 'nav-complaints',
+        'community-view': 'nav-community'
+      };
+
+      // Reset all nav button styles to inactive
+      document.querySelectorAll('nav button').forEach(btn => {
+        btn.className = "text-on-surface-variant font-label-md hover:text-primary transition-colors pb-1 flex items-center gap-1";
+      });
+
+      // Apply active style
+      const activeId = navMap[viewId];
+      if (activeId) {
+        const activeBtn = document.getElementById(activeId);
+        if (activeBtn) {
+          activeBtn.className = "border-b-2 border-secondary text-secondary font-label-md pb-1 flex items-center gap-1 transition-colors";
+        }
+      }
+    }
+
+    // 2. RENDER PROJECTS IN DASHBOARD
+    function renderProjectsGrid(list) {
+      const container = document.getElementById('projects-grid-container');
+      if (!container) return;
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full p-12 text-center bg-surface-container-lowest rounded-xl border border-outline-variant/60">
+            <span class="material-symbols-outlined text-[48px] text-outline" data-icon="search_off">search_off</span>
+            <h3 class="text-headline-sm font-headline-sm font-bold text-primary mt-2">No Matching Projects Found</h3>
+            <p class="text-body-sm font-body-sm text-on-surface-variant">Try loosening your filter parameters or state criteria.</p>
+            <button onclick="resetProjectFilters()" class="mt-4 px-4 py-2 bg-primary text-on-primary rounded text-label-md font-label-md">Reset Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = list.map(item => `
+        <div class="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div class="p-5 space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <span class="bg-surface-container text-primary font-mono text-label-sm font-label-sm px-2 py-0.5 rounded font-bold">${item.code}</span>
+              <span class="px-2 py-0.5 rounded text-label-sm font-label-sm font-bold ${
+                item.status === 'Completed' ? 'bg-green-100 text-green-900' :
+                item.status === 'Delayed' ? 'bg-red-100 text-red-900' :
+                'bg-amber-100 text-amber-900'
+              }">
+                ${item.status} (${item.progress}%)
+              </span>
+            </div>
+            <div>
+              <div class="text-label-sm font-label-sm text-secondary font-semibold">${item.sector} • ${item.state}</div>
+              <h3 class="text-headline-sm font-headline-sm font-bold text-primary mt-0.5">${item.title}</h3>
+              <p class="text-body-sm font-body-sm text-on-surface-variant line-clamp-2 mt-1">${item.desc}</p>
+            </div>
+            
+            <div class="space-y-1 pt-1">
+              <div class="flex justify-between text-label-sm font-label-sm">
+                <span class="text-on-surface-variant">Physical Progress</span>
+                <span class="font-bold text-primary">${item.progress}%</span>
+              </div>
+              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div class="${item.status === 'Delayed' ? 'bg-error' : 'bg-secondary'} h-full rounded-full" style="width: ${item.progress}%"></div>
+              </div>
+            </div>
+
+            <div class="pt-2 text-body-sm font-body-sm space-y-1 border-t border-outline-variant/30 text-on-surface-variant">
+              <div class="flex justify-between">
+                <span>Sanctioned:</span>
+                <span class="font-bold text-primary">${item.budgetSanctioned}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Contractor:</span>
+                <span class="font-medium text-primary text-right">${item.contractor}</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 pt-0">
+            <button onclick="viewProjectDetails('${item.id}')" class="w-full py-2 text-center rounded border border-primary text-primary font-label-md text-label-md hover:bg-surface-container transition-colors">
+              Inspect Detailed Dossier
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 3. FILTER LOGIC
+    function applyProjectFilters() {
+      const stateVal = document.getElementById('filter-state').value;
+      const sectorVal = document.getElementById('filter-sector').value;
+      const statusVal = document.getElementById('filter-status').value;
+      const contractorVal = document.getElementById('filter-contractor').value;
+      const fundingVal = document.getElementById('filter-funding').value;
+
+      const filtered = projectsDatabase.filter(p => {
+        const matchesState = stateVal === 'all' || p.state === stateVal;
+        const matchesSector = sectorVal === 'all' || p.sector === sectorVal;
+        const matchesStatus = statusVal === 'all' || p.status === statusVal;
+        const matchesContractor = contractorVal === 'all' || p.contractor.includes(contractorVal);
+        const matchesFunding = fundingVal === 'all' || p.funding.includes(fundingVal);
+        return matchesState && matchesSector && matchesStatus && matchesContractor && matchesFunding;
+      });
+
+      renderProjectsGrid(filtered);
+    }
+
+    function resetProjectFilters() {
+      document.getElementById('filter-state').value = 'all';
+      document.getElementById('filter-sector').value = 'all';
+      document.getElementById('filter-status').value = 'all';
+      document.getElementById('filter-contractor').value = 'all';
+      document.getElementById('filter-funding').value = 'all';
+      renderProjectsGrid(projectsDatabase);
+    }
+
+    // 4. PROJECT DETAILS VIEW ROUTING
+    function viewProjectDetails(projectId) {
+      const project = projectsDatabase.find(p => p.id === projectId) || projectsDatabase[0];
+      currentProjectDetailsCode = project.id;
+
+      document.getElementById('detail-code').innerText = project.code;
+      document.getElementById('detail-title').innerText = project.title;
+      document.getElementById('detail-description').innerText = project.desc;
+      document.getElementById('detail-category-location').innerText = `${project.sector} • ${project.state}`;
+      document.getElementById('detail-contractor').innerText = project.contractor;
+      document.getElementById('detail-badge-status').innerText = `${project.status} (${project.progress}%)`;
+      document.getElementById('detail-budget-sanctioned').innerText = project.budgetSanctioned;
+      document.getElementById('detail-budget-spent').innerText = project.budgetSpent;
+
+      switchView('project-details-view');
+    }
+
+    // 5. AUTH TAB SWITCHER
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('auth-login-form');
+      const registerForm = document.getElementById('auth-register-form');
+      const loginBtn = document.getElementById('tab-btn-login');
+      const registerBtn = document.getElementById('tab-btn-register');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        loginBtn.className = "flex-1 pb-3 text-center font-headline-sm text-headline-sm border-b-2 border-secondary text-primary font-bold";
+        registerBtn.className = "flex-1 pb-3 text-center font-headline-sm text-headline-sm text-on-surface-variant hover:text-primary";
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        registerBtn.className = "flex-1 pb-3 text-center font-headline-sm text-headline-sm border-b-2 border-secondary text-primary font-bold";
+        loginBtn.className = "flex-1 pb-3 text-center font-headline-sm text-headline-sm text-on-surface-variant hover:text-primary";
+      }
+    }
+
+    function mockLoginSuccess() {
+      alert("✅ Authorized: Welcome, Citizen Auditor. Jan Samarth single sign-on authenticated.");
+      switchView('home-view');
+    }
+
+    function mockRegisterSuccess() {
+      alert("✅ Mobile Verification OTP dispatched to your registered number. Please enter OTP to complete Aadhaar registration.");
+      switchAuthTab('login');
+    }
+
+    // 6. COMPLAINT SUBMISSION MODAL & LOGIC
+    function openNewComplaintModal(preselectedProjectId = null) {
+      const modal = document.getElementById('new-complaint-modal');
+      modal.classList.remove('hidden');
+      if (preselectedProjectId) {
+        document.getElementById('complaint-project-select').value = preselectedProjectId;
+      }
+    }
+
+    function closeNewComplaintModal() {
+      document.getElementById('new-complaint-modal').classList.add('hidden');
+    }
+
+    function updateFileName(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById('file-name-display').innerText = `Selected: ${input.files[0].name} (Ready to upload)`;
+      }
+    }
+
+    function handleComplaintSubmit(e) {
+      e.preventDefault();
+      const generatedTicket = 'CMP-2026-' + Math.floor(100000 + Math.random() * 900000);
+      alert(`✅ GRIEVANCE LODGED SUCCESSFULLY!\n\nYour Official Redressal Ticket Token is: ${generatedTicket}\n\nAn SMS confirmation has been triggered. You can track live progress under 'Complaint Tracking'.`);
+      closeNewComplaintModal();
+      
+      // Navigate to complaints view and set spotlight
+      switchView('complaints-view');
+      document.getElementById('complaint-search-input').value = generatedTicket;
+    }
+
+    function searchComplaintByTicket() {
+      const ticket = document.getElementById('complaint-search-input').value.trim();
+      if (!ticket) {
+        alert("Please enter a valid ticket number (e.g. CMP-2026-004821)");
+        return;
+      }
+      alert(`🔍 Retrieving live audit logs from CPGRAMS & State PWD server for ticket: ${ticket}...`);
+    }
+
+    function viewComplaintDetail(ticketId) {
+      document.getElementById('complaint-search-input').value = ticketId;
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+    }
+
+    // 7. COMMUNITY DISCUSSIONS
+    function openNewDiscussionModal() {
+      document.getElementById('new-discussion-modal').classList.remove('hidden');
+    }
+
+    function closeNewDiscussionModal() {
+      document.getElementById('new-discussion-modal').classList.add('hidden');
+    }
+
+    function handleDiscussionSubmit(e) {
+      e.preventDefault();
+      alert("✅ Your observation has been published to the Ward Oversight Forum for engineer verification.");
+      closeNewDiscussionModal();
+    }
+
+    function upvoteThread(btn) {
+      const countEl = btn.parentElement.querySelector('.count-holder');
+      let val = parseInt(countEl.innerText);
+      countEl.innerText = val + 1;
+      btn.disabled = true;
+      btn.classList.add('text-secondary');
+    }
+
+    // 8. ALERTS SEVERITY FILTER
+    function filterAlerts(severity) {
+      const cards = document.querySelectorAll('.alert-card');
+      cards.forEach(c => {
+        if (severity === 'all' || c.classList.contains(severity)) {
+          c.classList.remove('hidden');
+        } else {
+          c.classList.add('hidden');
+        }
+      });
+    }
+
+    // 9. ACCESSIBILITY FONT RESIZER
+    let currentFontSize = 100;
+    document.getElementById('font-increase').addEventListener('click', () => {
+      if (currentFontSize < 125) {
+        currentFontSize += 10;
+        document.body.style.fontSize = `${currentFontSize}%`;
+      }
+    });
+    document.getElementById('font-decrease').addEventListener('click', () => {
+      if (currentFontSize > 85) {
+        currentFontSize -= 10;
+        document.body.style.fontSize = `${currentFontSize}%`;
+      }
+    });
+    document.getElementById('font-reset').addEventListener('click', () => {
+      currentFontSize = 100;
+      document.body.style.fontSize = '100%';
+    });
+
+    // 10. MOCK ACTIONS
+    function downloadTransparencyReport() {
+      alert("📥 Generating GIGW 3.0 certified CSV export containing 1,428 active contracts and audit trails...");
+    }
+
+    function downloadMockDoc(docName) {
+      alert(`📥 Downloading official public document: ${docName}.pdf`);
+    }
+
+    // Initialize initial render
+    document.addEventListener('DOMContentLoaded', () => {
+      renderProjectsGrid(projectsDatabase);
+    });
+  </script>
+</body></html>

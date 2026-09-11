@@ -35,14 +35,14 @@ export function TopNav({
 
   const itemClasses = (active: boolean) =>
     cn(
-      'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-control px-3 text-body-small transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary',
+      'inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control px-2.5 text-body-small transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary xl:px-3',
       active
         ? 'bg-primary-soft font-semibold text-primary-strong'
         : 'text-fg-muted hover:bg-surface-2 hover:text-fg',
     )
 
   return (
-    <nav aria-label="Primary" className="flex h-11 items-center gap-1 border-t border-border px-2 md:px-3">
+    <nav aria-label="Primary" className="flex h-11 items-center gap-1 border-t border-border px-2 md:px-3 lg:justify-center">
       {/* Contextual (project/approval) sidebar toggle — mobile only */}
       {showProjectNavToggle && (
         <button
@@ -55,15 +55,16 @@ export function TopNav({
         </button>
       )}
 
-      {/* Desktop items */}
-      <div className="hidden items-center gap-0.5 lg:flex">
+      {/* Desktop items — centered */}
+      <div className="hidden items-center justify-center gap-0.5 lg:flex">
         {TOP_NAV.map((item) => {
           const active = isActive(item)
-          if (!item.children) {
+          const children = item.children
+          if (!children) {
             return (
               <Link key={item.id} to={item.to} aria-current={active ? 'page' : undefined} className={itemClasses(active)}>
                 <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{item.icon}</span>
-                {t(item.labelKey)}
+                {t(item.shortKey ?? item.labelKey)}
                 {badge(item.badge)}
               </Link>
             )
@@ -71,7 +72,7 @@ export function TopNav({
           return (
             <Dropdown
               key={item.id}
-              menuLabel={t(item.labelKey)}
+              menuLabel={t(item.shortKey ?? item.labelKey)}
               align="start"
               width="w-96"
               trigger={({ toggle: tg, id }) => (
@@ -86,7 +87,7 @@ export function TopNav({
                 >
                   <span className="flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{item.icon}</span>
-                    {t(item.labelKey)}
+                    {t(item.shortKey ?? item.labelKey)}
                     {badge(item.badge)}
                   </span>
                   <span className="material-symbols-outlined text-[16px] text-fg-subtle" aria-hidden="true">expand_more</span>
@@ -95,7 +96,7 @@ export function TopNav({
             >
               {(close) => (
                 <>
-                  {item.children.map((c) => (
+                  {children.map((c) => (
                     <button
                       key={c.id}
                       type="button"
@@ -121,8 +122,8 @@ export function TopNav({
 
         {/* System overflow */}
         <Dropdown
-          menuLabel={t('nav.groupSystem')}
-          align="start"
+          menuLabel={t('nav.top.more')}
+          align="end"
           width="w-80"
           trigger={({ toggle: tg, id }) => (
             <button
@@ -134,7 +135,7 @@ export function TopNav({
             >
               <span className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[18px]" aria-hidden="true">apps</span>
-                {t('nav.groupSystem')}
+                {t('nav.top.more')}
               </span>
               <span className="material-symbols-outlined text-[16px] text-fg-subtle" aria-hidden="true">expand_more</span>
             </button>
@@ -177,7 +178,7 @@ export function TopNav({
           return (
             <Link key={item.id} to={to} aria-current={active ? 'page' : undefined} className={itemClasses(active)}>
               <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{item.icon}</span>
-              {t(item.labelKey)}
+              {t(item.shortKey ?? item.labelKey)}
               {badge(item.badge)}
             </Link>
           )

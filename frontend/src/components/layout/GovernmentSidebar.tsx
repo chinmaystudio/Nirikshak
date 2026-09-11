@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+﻿import { useEffect, useMemo, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { buildWorkspaceNav, buildApprovalNav, type NavNode } from '@/constants'
 // Nav chrome only needs record lookups; importing via '@/api' would pull the
 // whole mock-API + demo-dataset barrel into the eager bundle.
@@ -219,13 +219,12 @@ function NavNodeItem({
 
 /**
  * ProjectContextSidebar — contextual navigation that exists ONLY while a
- * specific project or approval workspace route is active:
+ * project or approval workspace route is active:
  *   /government/projects/:id/*  → project module tree
  *   /government/approvals/:id/* → approval module tree
- * On any global route this component renders nothing — the top navigation
- * owns those pages. Visibility is derived from the current route (never a
- * stale boolean), so browser back/forward, refresh and direct URLs behave
- * correctly.
+ * The match has NO end anchor: the sidebar stays mounted on every module
+ * route (…/budget, …/tenders, …/audit, …) and unmounts the moment the route
+ * leaves the workspace (back to All Projects). Global routes render nothing.
  */
 export function GovernmentSidebar({
   open,
@@ -237,12 +236,13 @@ export function GovernmentSidebar({
   onClose: () => void
   onNavigate?: () => void
 }) {
+  const { t } = useI18n()
   const location = useLocation()
   const { pathname, search, hash } = location
 
-  const projectId = /^\/government\/projects\/([^/]+)$/.exec(pathname)?.[1]
+  const projectId = /^\/government\/projects\/([^/]+)/.exec(pathname)?.[1]
   const inProject = !!projectId && projectId !== 'create'
-  const approvalId = /^\/government\/approvals\/([^/]+)$/.exec(pathname)?.[1]
+  const approvalId = /^\/government\/approvals\/([^/]+)/.exec(pathname)?.[1]
 
   const { data: project } = useApiData(
     () => Promise.resolve(inProject ? findProject(projectId!) : undefined),
@@ -301,12 +301,12 @@ export function GovernmentSidebar({
     <>
       {/* Scrim (mobile) */}
       {open && (
-        <div className="fixed inset-0 top-header-full z-sidebar bg-[var(--scrim)] lg:hidden" onClick={onClose} aria-hidden="true" />
+        <div className="fixed inset-0 top-header-total z-sidebar bg-[var(--scrim)] lg:hidden" onClick={onClose} aria-hidden="true" />
       )}
       <nav
         aria-label={inProject ? 'Project sections' : 'Approval sections'}
         className={cn(
-          'fixed left-0 top-header-full z-sidebar flex h-[calc(100vh-var(--header-total))] w-sidebar flex-col overflow-y-auto border-r border-border bg-surface transition-transform duration-base',
+          'fixed left-0 top-header-total z-sidebar flex h-[calc(100vh-var(--header-total))] w-sidebar flex-col overflow-y-auto border-r border-border bg-surface transition-transform duration-base',
           // Mobile: off-canvas unless open; Desktop: visible while context lasts
           open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}

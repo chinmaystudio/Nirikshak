@@ -1,4 +1,4 @@
-/** Navigation labels (English) — sidebar groups preserved from the Stitch design. */
+﻿/** Navigation labels (English) — sidebar groups preserved from the Stitch design. */
 export const nav: Record<string, string> = {
   'nav.groupCore': 'Core',
   'nav.groupGovernance': 'Governance & Finance',
@@ -43,6 +43,15 @@ export const nav: Record<string, string> = {
   'nav.complaintsTracking': 'Complaints & Grievance Tracking',
   'nav.approvalWorkflow': 'Approval & Workflow Management',
   'nav.alertsNotifications': 'Alerts & Notifications',
+  'nav.top.dashboard': 'Dashboard',
+  'nav.top.projects': 'Projects',
+  'nav.top.complaints': 'Complaints',
+  'nav.top.approvals': 'Approvals',
+  'nav.top.alerts': 'Alerts',
+  'nav.top.documents': 'Documents',
+  'nav.top.audit': 'Audit',
+  'nav.top.ai': 'AI Insights',
+  'nav.top.more': 'More',
   'nav.activeProject': 'Active Project',
   'nav.allApprovals': 'All Approvals',
   'nav.backToApprovals': 'Back to All Approvals',

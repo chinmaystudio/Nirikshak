@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { useI18n } from '@/context/I18nContext'
 import { ProjectWorkspaceProvider, useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
+import { buildWorkspaceNav } from '@/constants'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
@@ -26,7 +27,18 @@ export function ProjectWorkspaceLayout() {
 function WorkspaceShell() {
   const { t } = useI18n()
   const location = useLocation()
+  const { pathname } = location
+  const { id = '' } = useParams()
   const { project } = useProjectWorkspace()
+
+  // Breadcrumb label for the active module (direct child of the workspace tree).
+  const moduleLabel = useMemo(() => {
+    const hit = buildWorkspaceNav(id).find(
+      (n) => n.to && n.to.split(/[?#]/)[0] === pathname,
+    )
+    if (!hit) return null
+    return hit.labelKey ? t(hit.labelKey) : (hit.label ?? null)
+  }, [id, pathname, t])
 
   // Scroll to module section anchors (e.g. /budget#payments) on navigation.
   useEffect(() => {
@@ -40,7 +52,7 @@ function WorkspaceShell() {
     return (
       <div className="nk-card p-10 text-center">
         <p className="text-heading-2 text-fg">{t('err.projectNotFound')}</p>
-        <p className="nk-mono-id mt-2 text-fg-muted"></p>
+        <p className="nk-mono-id mt-2 text-fg-muted">{id}</p>
         <Link to="/government/projects" className="mt-4 inline-block text-body-small text-primary-strong hover:underline">
           {t('common.back')} — {t('nav.allProjects')}
         </Link>
@@ -54,7 +66,8 @@ function WorkspaceShell() {
         items={[
           { label: t('nav.dashboard'), to: '/government/dashboard' },
           { label: t('nav.allProjects'), to: '/government/projects' },
-          { label: project.id },
+          { label: project.id, to: `/government/projects/${project.id}` },
+          ...(moduleLabel ? [{ label: moduleLabel }] : []),
         ]}
       />
 

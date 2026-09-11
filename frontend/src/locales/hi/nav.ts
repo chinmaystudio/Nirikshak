@@ -1,4 +1,4 @@
-/** Navigation labels (Hindi). */
+﻿/** Navigation labels (Hindi). */
 export const nav: Record<string, string> = {
   'nav.groupCore': 'मुख्य',
   'nav.groupGovernance': 'शासन एवं वित्त',
@@ -43,6 +43,15 @@ export const nav: Record<string, string> = {
   'nav.complaintsTracking': 'शिकायत एवं ट्रैकिंग',
   'nav.approvalWorkflow': 'अनुमोदन एवं कार्यप्रवाह प्रबंधन',
   'nav.alertsNotifications': 'अलर्ट एवं सूचनाएँ',
+  'nav.top.dashboard': 'डैशबोर्ड',
+  'nav.top.projects': 'परियोजनाएँ',
+  'nav.top.complaints': 'शिकायतें',
+  'nav.top.approvals': 'अनुमोदन',
+  'nav.top.alerts': 'अलर्ट',
+  'nav.top.documents': 'दस्तावेज़',
+  'nav.top.audit': 'ऑडिट',
+  'nav.top.ai': 'एआई इनसाइट्स',
+  'nav.top.more': 'अधिक',
   'nav.activeProject': 'सक्रिय परियोजना',
   'nav.allApprovals': 'सभी अनुमोदन',
   'nav.backToApprovals': 'सभी अनुमोदनों पर वापस',

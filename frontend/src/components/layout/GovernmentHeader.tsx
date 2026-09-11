@@ -9,7 +9,6 @@ import { TopNav } from '@/components/layout/TopNav'
 import { LOCALES } from '@/locales/config'
 import type { Locale } from '@/locales/config'
 import { cn } from '@/utils/cn'
-import { DEMO_BANNER_KEY } from '@/constants'
 
 /**
  * GovernmentHeader — two-row fixed header (Stitch skeleton extended):
@@ -39,10 +38,9 @@ export function GovernmentHeader({
   const { textSize, setTextSize, toggleHighContrast, contrast } = useAccessibility()
   const { resolved, toggle } = useTheme()
   const searchId = useId()
-  void DEMO_BANNER_KEY
 
   return (
-    <header className="fixed inset-x-0 top-0 z-header border-b border-border bg-surface">
+    <header className="sticky top-0 z-header border-b border-border bg-surface shadow-card">
       <div className="flex h-header items-center gap-3 px-3 md:px-4">
       <Logo variant="full" to="/government/dashboard" className="hidden h-8 sm:block" alt={t('common.appName')} />
       <Logo variant="icon" to="/government/dashboard" className="h-8 sm:hidden" alt={t('common.appName')} />
@@ -224,7 +222,7 @@ export function GovernmentHeader({
       </div>
 
       {/* Row 2 — global module navigation */}
-      <TopNav showProjectNavToggle={showProjectNavToggle} onOpenProjectNav={onOpenProjectNav ?? (() => undefined)} />
+      <TopNav showProjectNavToggle={showProjectNavToggle ?? false} onOpenProjectNav={onOpenProjectNav ?? (() => undefined)} />
     </header>
   )
 }
