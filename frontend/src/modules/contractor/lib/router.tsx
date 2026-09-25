@@ -2,8 +2,16 @@ import { useEffect, useState } from 'react';
 import type { ReactNode, MouseEvent } from 'react';
 
 export function getHash(): string {
-  const h = window.location.hash.replace(/^#/, '');
-  return h || '/';
+  let h = window.location.hash.replace(/^#/, '');
+  if (!h || h === '' || h === '/') {
+    const p = window.location.pathname.replace(/\\/g, '/');
+    if (p.includes('/contractor/')) {
+      h = '/' + p.split('/contractor/')[1];
+    } else {
+      h = '/dashboard';
+    }
+  }
+  return h;
 }
 
 export function navigate(to: string) {

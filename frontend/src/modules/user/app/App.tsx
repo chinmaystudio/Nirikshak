@@ -44,6 +44,7 @@ interface RouteDef {
 
 const ROUTE_TABLE: RouteDef[] = [
   { pattern: "/", chrome: "landing", render: () => <LandingPage /> },
+  { pattern: "/user", chrome: "landing", render: () => <LandingPage /> },
   { pattern: "/login", guestOnly: true, chrome: "auth", render: () => <LoginPage /> },
   { pattern: "/register", guestOnly: true, chrome: "auth", render: () => <RegisterPage /> },
   { pattern: "/app", render: () => <HomePage /> },
@@ -137,7 +138,7 @@ export function App(): JSX.Element {
   const redirecting = (route.auth === true && !auth.isLoggedIn) || (route.guestOnly === true && auth.isLoggedIn);
   const routeKey = `${route.pattern}:${JSON.stringify(params)}`;
 
-  if (route.chrome === "landing" || path === "/" || path === "") {
+  if (route.chrome === "landing" || path === "/" || path === "" || path === "/user") {
     return <LandingPage />;
   }
 

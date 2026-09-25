@@ -16,20 +16,32 @@ function onLocationChange(): void {
 export function parseHash(): RouteLocation {
   let h = window.location.hash.replace(/^#/, "");
   
-  // If hash is missing or empty, check if user landed on a pathname like /projects
+  // If hash is missing or empty, check if user landed on a pathname like /projects or /user
   if (!h || h === "/" || h.trim() === "") {
-    const p = window.location.pathname;
+    let p = window.location.pathname.replace(/\\/g, '/');
     if (p && p !== "/" && p !== "/index.html") {
-      h = p;
+      if (p === "/user" || p === "/user/") {
+        h = "/";
+      } else if (p.startsWith("/user/")) {
+        h = p.slice(5);
+      } else {
+        h = p;
+      }
       // Normalize to hash so subsequent clicks and refreshes stay consistent
       try {
-        window.history.replaceState(null, "", `/#${p}${window.location.search}`);
+        window.history.replaceState(null, "", `/#${h}${window.location.search}`);
       } catch {
         /* ignore history errors */
       }
     } else {
       h = "/";
     }
+  }
+
+  if (h === "/user" || h === "/user/") {
+    h = "/";
+  } else if (h.startsWith("/user/")) {
+    h = h.slice(5);
   }
 
   const qIdx = h.indexOf("?");

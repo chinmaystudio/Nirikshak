@@ -5,30 +5,25 @@ const GovernmentModule = React.lazy(() => import('../modules/government/App'));
 const ContractorModule = React.lazy(() => import('../modules/contractor/App'));
 const UserModule = React.lazy(() => import('../modules/user/app/App').then((m) => ({ default: m.App })));
 
+function detectPortal(): 'government' | 'contractor' | 'user' {
+  const p = window.location.pathname.toLowerCase().replace(/\\/g, '/');
+  const h = window.location.hash.toLowerCase().replace(/\\/g, '/');
+
+  if (p.includes('government') || h.includes('government')) {
+    return 'government';
+  }
+  if (p.includes('contractor') || h.includes('contractor')) {
+    return 'contractor';
+  }
+  return 'user';
+}
+
 export function App() {
-  const [currentPortal, setCurrentPortal] = useState<'government' | 'contractor' | 'user'>(() => {
-    const path = window.location.pathname.toLowerCase();
-    const hash = window.location.hash.toLowerCase();
-    if (path.startsWith('/government') || hash.startsWith('#/government')) {
-      return 'government';
-    }
-    if (path.startsWith('/contractor') || hash.startsWith('#/contractor')) {
-      return 'contractor';
-    }
-    return 'user';
-  });
+  const [currentPortal, setCurrentPortal] = useState<'government' | 'contractor' | 'user'>(detectPortal);
 
   useEffect(() => {
     const handleLocation = () => {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path.startsWith('/government') || hash.startsWith('#/government')) {
-        setCurrentPortal('government');
-      } else if (path.startsWith('/contractor') || hash.startsWith('#/contractor')) {
-        setCurrentPortal('contractor');
-      } else {
-        setCurrentPortal('user');
-      }
+      setCurrentPortal(detectPortal());
     };
 
     window.addEventListener('popstate', handleLocation);
@@ -49,7 +44,7 @@ export function App() {
       }
     >
       {currentPortal === 'government' && (
-        <BrowserRouter basename="/government">
+        <BrowserRouter>
           <GovernmentModule />
         </BrowserRouter>
       )}
