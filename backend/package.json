@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild api/index.ts --bundle --platform=node --format=esm --outfile=api/index.js --external:express --external:@supabase/supabase-js --external:dotenv --external:cors --external:zod",
+    "build": "tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
