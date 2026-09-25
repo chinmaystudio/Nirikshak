@@ -1,13 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App'
-import './styles/globals.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './app/App';
+import './modules/government/styles/tokens.css';
+import './modules/government/styles/globals.css';
+import './modules/government/styles/themes.css';
+import './modules/government/styles/accessibility.css';
+import './modules/user/styles/globals.css';
+import './modules/contractor/index.css';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
+const rootEl = document.getElementById('root');
+if (rootEl) {
+  ReactDOM.createRoot(rootEl).render(
+    <React.StrictMode>
       <App />
-    </BrowserRouter>
-  </StrictMode>,
-)
+    </React.StrictMode>
+  );
+}

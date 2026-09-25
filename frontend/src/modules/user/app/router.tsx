@@ -1,0 +1,167 @@
+import { useEffect, useState, useCallback } from "react";
+
+export interface RouteLocation {
+  path: string;
+  query: Record<string, string>;
+}
+
+let listeners = new Set<() => void>();
+let notifyVersion = 0;
+
+function onLocationChange(): void {
+  notifyVersion += 1;
+  listeners.forEach((l) => l());
+}
+
+export function parseHash(): RouteLocation {
+  let h = window.location.hash.replace(/^#/, "");
+  
+  // If hash is missing or empty, check if user landed on a pathname like /projects
+  if (!h || h === "/" || h.trim() === "") {
+    const p = window.location.pathname;
+    if (p && p !== "/" && p !== "/index.html") {
+      h = p;
+      // Normalize to hash so subsequent clicks and refreshes stay consistent
+      try {
+        window.history.replaceState(null, "", `/#${p}${window.location.search}`);
+      } catch {
+        /* ignore history errors */
+      }
+    } else {
+      h = "/";
+    }
+  }
+
+  const qIdx = h.indexOf("?");
+  const pathPart = qIdx === -1 ? h : h.slice(0, qIdx);
+  const query: Record<string, string> = {};
+  
+  // Also parse query from window.location.search if not in hash
+  const queryString = qIdx !== -1 ? h.slice(qIdx + 1) : window.location.search.replace(/^\?/, "");
+  if (queryString) {
+    queryString.split("&").forEach((pair) => {
+      if (!pair) return;
+      const [k, v] = pair.split("=");
+      query[decodeURIComponent(k)] = v ? decodeURIComponent(v) : "";
+    });
+  }
+
+  const path = "/" + pathPart.split("/").filter(Boolean).join("/");
+  return { path: path === "//" ? "/" : path, query };
+}
+
+export function navigate(to: string): void {
+  if (!to) return;
+  // Clean leading hash if present to normalize
+  const clean = to.startsWith("#") ? to.slice(1) : to;
+  const target = `#${clean.startsWith("/") ? clean : `/${clean}`}`;
+  
+  if (window.location.hash === target) {
+    onLocationChange();
+  } else {
+    window.location.hash = target;
+  }
+}
+
+// Global click interceptor for internal links
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const a = (e.target as HTMLElement).closest("a");
+    if (!a) return;
+    
+    // Ignore middle clicks, ctrl/cmd clicks, downloads, external links
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey ||
+      a.target === "_blank" ||
+      a.hasAttribute("download")
+    ) {
+      return;
+    }
+
+    const href = a.getAttribute("href");
+    if (!href) return;
+
+    // Ignore external protocols
+    if (
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:") ||
+      href.startsWith("javascript:")
+    ) {
+      return;
+    }
+
+    // Handle hash links (#/projects or #projects)
+    if (href.startsWith("#/")) {
+      e.preventDefault();
+      navigate(href.slice(1));
+      return;
+    }
+
+    // Handle standard relative paths (/projects, /complaints)
+    if (href.startsWith("/") && !href.startsWith("//")) {
+      e.preventDefault();
+      navigate(href);
+      return;
+    }
+  });
+}
+
+export function useLocation(): RouteLocation & { fullPath: string } {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const listener = (): void => setTick((t) => t + 1);
+    if (listeners.size === 0) {
+      window.addEventListener("hashchange", onLocationChange);
+      window.addEventListener("popstate", onLocationChange);
+    }
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+
+  const { path, query } = parseHash();
+  const fullPath = `${path}${Object.keys(query).length ? "?" : ""}${Object.entries(query)
+    .map(([k, v]) => `${k}=${v}`)
+    .join("&")}`;
+  return { path, query, fullPath };
+}
+
+export function useNavigate(): (to: string) => void {
+  return useCallback(navigate, []);
+}
+
+export interface MatchParams {
+  [key: string]: string;
+}
+
+export function matchPattern(pattern: string, path: string): MatchParams | null {
+  const patternSegs = pattern.split("/").filter(Boolean);
+  const pathSegs = path.split("/").filter(Boolean);
+  if (patternSegs.length !== pathSegs.length) return null;
+  const params: MatchParams = {};
+  for (let i = 0; i < patternSegs.length; i++) {
+    if (patternSegs[i].startsWith(":")) {
+      params[patternSegs[i].slice(1)] = decodeURIComponent(pathSegs[i]);
+    } else if (patternSegs[i] !== pathSegs[i]) {
+      return null;
+    }
+  }
+  return params;
+}
+
+/**
+ * Safely extracts dynamic route ID from current path
+ */
+export function getRouteId(): string {
+  const { path } = parseHash();
+  const parts = path.split("/").filter(Boolean);
+  return parts.length > 0 ? parts[parts.length - 1] : "";
+}

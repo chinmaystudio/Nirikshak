@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "cloudflare": {
+      "serverUrl": "https://mcp.cloudflare.com/mcp"
+    },
+    "openrouter": {
+      "serverUrl": "https://mcp.openrouter.ai/mcp"
+    }
+  }
+}
