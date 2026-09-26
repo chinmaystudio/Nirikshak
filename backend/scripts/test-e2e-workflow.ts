@@ -244,7 +244,6 @@ async function run() {
       .update({
         status: 'RESOLVED',
         resolved_at: new Date().toISOString(),
-        resolution_summary: 'Excavation backfilled and pedestrian walkway restored.',
       })
       .eq('id', complaint.id);
 
