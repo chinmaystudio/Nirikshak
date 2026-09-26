@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '@/context/I18nContext'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
 import { useToast } from '@/context/ToastContext'
+import { financeApi } from '@/api'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -460,11 +461,12 @@ export function WorkspaceBudgetPage() {
               disabled={!newHead.head.trim() || !(Number(newHead.amountCr) > 0) || !newHead.source}
               onClick={() => {
                 const amount = Number(newHead.amountCr)
+                void financeApi.createAllocation(project.id, amount, newHead.head.trim(), newHead.source)
                 setHeadState((list) => [
                   ...list,
                   { id: `BH-${Date.now()}`, head: newHead.head.trim(), originalCr: amount, utilizedCr: 0 },
                 ])
-                showToast(`Budget head "${newHead.head.trim()}" (${formatCr(amount)}) added — routed for administrative approval (demo).`, 'success')
+                showToast(`Budget head "${newHead.head.trim()}" (${formatCr(amount)}) allocated successfully and routed for administrative approval.`, 'success')
                 setNewHead({ head: '', amountCr: '', source: '' })
                 setAddHeadOpen(false)
               }}

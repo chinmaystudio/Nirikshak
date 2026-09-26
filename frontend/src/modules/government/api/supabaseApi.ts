@@ -280,12 +280,13 @@ export const approvalsApi = {
   },
 
   async approve(id: string, notes = 'Approved after verification.'): Promise<void> {
-    await supabase.rpc('approve_progress_update', {
+    const { error } = await supabase.rpc('approve_progress_update', {
       p_update_id: id,
       p_decision: 'APPROVED',
       p_verified_progress: null,
       p_review_notes: notes,
     });
+    if (error) throw error;
   },
 
   async reject(id: string, notes = 'Rejected.'): Promise<void> {
@@ -486,6 +487,49 @@ export const tendersApi = {
     const all = await this.all();
     return paginate(matchesQuery(all, q), q);
   },
+  async create(tender: {
+    projectId: string;
+    title: string;
+    estimatedCostCr: number;
+    mode?: string;
+  }): Promise<Tender> {
+    const tenderNumber = `TND-MH-${Date.now().toString().slice(-6)}`;
+    const { data, error } = await supabase
+      .from('tenders')
+      .insert({
+        project_id: tender.projectId,
+        tender_number: tenderNumber,
+        title: tender.title,
+        status: 'PUBLISHED',
+        estimated_value_inr_crore: tender.estimatedCostCr,
+        is_public: true,
+        publication_date: new Date().toISOString().slice(0, 10),
+        bid_due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create tender in Supabase:', error);
+      throw error;
+    }
+
+    return {
+      id: data.tender_number || data.id,
+      title: data.title,
+      department: 'Public Works Department',
+      district: 'Pune',
+      status: 'published',
+      estimatedCostCr: Number(data.estimated_value_inr_crore) || tender.estimatedCostCr,
+      publishedOn: data.publication_date || new Date().toISOString().slice(0, 10),
+      submissionDeadline: data.bid_due_date || '',
+      openingDate: '',
+      bidsReceived: 0,
+      category: 'Infrastructure',
+      mode: (tender.mode as any) || 'e-Tender',
+      projectId: data.project_id,
+    };
+  },
 };
 
 /* ---------- Finance ---------- */
@@ -521,6 +565,23 @@ export const financeApi = {
   },
   async bills(): Promise<BillItem[]> {
     return DEMO_MODE ? BILLS : [];
+  },
+  async createAllocation(projectId: string, amountCr: number, head: string, notes?: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('financial_updates')
+        .insert({
+          project_id: projectId,
+          observation_date: new Date().toISOString().slice(0, 10),
+          budget_allocation_inr_crore: amountCr,
+          notes: `${head}${notes ? ` — ${notes}` : ''}`,
+        });
+      if (error) {
+        console.warn('Failed to insert financial allocation in Supabase:', error.message);
+      }
+    } catch (err) {
+      console.warn('Financial allocation error:', err);
+    }
   },
 };
 

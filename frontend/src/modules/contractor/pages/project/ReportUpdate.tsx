@@ -56,7 +56,7 @@ export default function ReportUpdate({ project }: { project: Project }) {
     reset();
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!validate()) return;
     addReport({
       projectId: project.id,
@@ -70,6 +70,44 @@ export default function ReportUpdate({ project }: { project: Project }) {
       docs: docs.map((d) => d.name),
       status: 'Under Government Review',
     });
+
+    try {
+      const { supabase } = await import('@/core/supabase/client');
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(project.id);
+      let targetProjectId = isUuid ? project.id : null;
+      if (!targetProjectId) {
+        const { data: projData } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('nirikshak_project_id', project.code || project.id)
+          .maybeSingle();
+        if (projData) targetProjectId = (projData as any).id;
+      }
+
+      if (targetProjectId) {
+        const summary = [
+          completed ? `Completed: ${completed}` : '',
+          planned ? `Planned: ${planned}` : '',
+          challenges ? `Challenges: ${challenges}` : '',
+        ].filter(Boolean).join('\n');
+
+        const { error: rpcErr } = await supabase.rpc('submit_progress_update', {
+          p_project_id: targetProjectId,
+          p_reported_progress: Number(progress) || project.progress,
+          p_description: summary || 'Physical progress update submitted via Contractor Portal.',
+          p_milestone_id: null,
+        });
+
+        if (rpcErr) {
+          console.warn('Live Supabase progress update notice:', rpcErr.message);
+        } else {
+          toast('success', 'Submitted to Government', 'Update has been submitted for official verification.');
+        }
+      }
+    } catch (e) {
+      console.warn('Supabase submit_progress_update dispatch notice:', e);
+    }
+
     setConfirmOpen(false);
     setSuccessOpen(true);
     reset();

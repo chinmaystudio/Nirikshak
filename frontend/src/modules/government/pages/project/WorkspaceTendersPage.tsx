@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '@/context/I18nContext'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
 import { useToast } from '@/context/ToastContext'
+import { tendersApi } from '@/api'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -36,26 +37,53 @@ function stageIndex(status: Tender['status']): number {
 export function WorkspaceTendersPage() {
   const { t } = useI18n()
   const { showToast } = useToast()
-  const { tenders } = useProjectWorkspace()
+  const { projectId, tenders } = useProjectWorkspace()
+  const [tenderList, setTenderList] = useState<Tender[]>(tenders)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [detail, setDetail] = useState<Tender | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [newTender, setNewTender] = useState({ title: '', estimate: '', mode: 'e-Tender' })
+
+  useEffect(() => {
+    setTenderList(tenders)
+  }, [tenders])
+
+  async function handleCreateTender() {
+    if (!newTender.title.trim() || !(Number(newTender.estimate) > 0)) return
+    setSubmitting(true)
+    try {
+      const created = await tendersApi.create({
+        projectId,
+        title: newTender.title.trim(),
+        estimatedCostCr: Number(newTender.estimate),
+        mode: newTender.mode,
+      })
+      setTenderList((prev) => [created, ...prev])
+      showToast(`Tender "${created.title}" published successfully (${created.id})`, 'success')
+      setNewTender({ title: '', estimate: '', mode: 'e-Tender' })
+      setCreateOpen(false)
+    } catch (err: any) {
+      showToast(err.message || 'Failed to publish tender', 'danger')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const rows = useMemo(
     () =>
-      tenders.filter(
+      tenderList.filter(
         (x) =>
           (!statusFilter || x.status === statusFilter) &&
           (!search || `${x.id} ${x.title}`.toLowerCase().includes(search.toLowerCase())),
       ),
-    [tenders, statusFilter, search],
+    [tenderList, statusFilter, search],
   )
 
-  const active = tenders.filter((x) => ['published', 'bid_open', 'under_evaluation'].includes(x.status))
-  const totalBids = tenders.reduce((s, x) => s + x.bidsReceived, 0)
-  const awarded = tenders.filter((x) => x.status === 'awarded')
+  const active = tenderList.filter((x) => ['published', 'bid_open', 'under_evaluation'].includes(x.status))
+  const totalBids = tenderList.reduce((s, x) => s + x.bidsReceived, 0)
+  const awarded = tenderList.filter((x) => x.status === 'awarded')
   const avgBid = awarded.length ? awarded.reduce((s, x) => s + (x.awardedAmountCr ?? 0), 0) / awarded.length : 0
 
   return (
@@ -177,14 +205,10 @@ export function WorkspaceTendersPage() {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
-              disabled={!newTender.title.trim() || !(Number(newTender.estimate) > 0)}
-              onClick={() => {
-                showToast(`Tender "${newTender.title.trim()}" drafted at ${formatCr(Number(newTender.estimate))} — publish from the e-Tender cell (demo).`, 'success')
-                setNewTender({ title: '', estimate: '', mode: 'e-Tender' })
-                setCreateOpen(false)
-              }}
+              disabled={!newTender.title.trim() || !(Number(newTender.estimate) > 0) || submitting}
+              onClick={handleCreateTender}
             >
-              Create Draft
+              {submitting ? 'Publishing...' : 'Publish Tender'}
             </Button>
           </>
         }

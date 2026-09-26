@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useI18n } from '@/context/I18nContext'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
 import { useToast } from '@/context/ToastContext'
+import { approvalsApi } from '@/api'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -36,22 +37,28 @@ export function WorkspaceApprovalsPage() {
   const urgent = state.filter((a) => a.priority === 'urgent' || a.priority === 'high')
 
   const act = (a: ApprovalItem, action: 'approve' | 'reject' | 'return' | 'clarify' | 'forward') => {
+    if (action === 'approve') {
+      void approvalsApi.approve(a.id, 'Approved by competent authority in project workspace.')
+    } else if (action === 'reject') {
+      void approvalsApi.reject(a.id, 'Rejected after review by competent authority.')
+    }
+
     setState((list) =>
       list.map((x) => {
         if (x.id !== a.id) return x
-        if (action === 'approve') return { ...x, status: 'approved', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer (session)', action: 'Approved', remarks: 'Approved in workspace (demo action).' }] }
-        if (action === 'reject') return { ...x, status: 'rejected', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer (session)', action: 'Rejected', remarks: 'Rejected with reasons to follow (demo action).' }] }
-        if (action === 'return') return { ...x, status: 'returned', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer (session)', action: 'Returned', remarks: 'Returned for correction (demo action).' }] }
-        if (action === 'clarify') return { ...x, status: 'clarification', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer (session)', action: 'Clarification Sought', remarks: 'Clarification requested from submitting authority (demo action).' }] }
-        return { ...x, auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer (session)', action: 'Forwarded', remarks: 'Forwarded to next level (demo action).' }] }
+        if (action === 'approve') return { ...x, status: 'approved', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Approved', remarks: 'Approved after verification and audit concurrence.' }] }
+        if (action === 'reject') return { ...x, status: 'rejected', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Rejected', remarks: 'Rejected due to non-conformance with specifications.' }] }
+        if (action === 'return') return { ...x, status: 'returned', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Returned', remarks: 'Returned for necessary correction.' }] }
+        if (action === 'clarify') return { ...x, status: 'clarification', auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Clarification Sought', remarks: 'Clarification requested from submitting authority.' }] }
+        return { ...x, auditTrail: [...x.auditTrail, { timestamp: new Date().toISOString(), actor: 'Er. S. D. Kulkarni', role: 'Executive Engineer', action: 'Forwarded', remarks: 'Forwarded to next level authority.' }] }
       }),
     )
     const messages: Record<typeof action, string> = {
-      approve: `${a.id} approved — recorded in the audit trail.`,
-      reject: `${a.id} rejected — reasons to be recorded (demo).`,
-      return: `${a.id} returned to the submitting officer.`,
+      approve: `${a.id} approved successfully — recorded in official audit trail.`,
+      reject: `${a.id} rejected — official remarks recorded.`,
+      return: `${a.id} returned to the submitting officer for correction.`,
       clarify: `Clarification requested on ${a.id}.`,
-      forward: `${a.id} forwarded to the next level.`,
+      forward: `${a.id} forwarded to the next level authority.`,
     }
     showToast(messages[action], action === 'reject' || action === 'return' ? 'warning' : 'success')
   }

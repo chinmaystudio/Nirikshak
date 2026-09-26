@@ -133,6 +133,31 @@ export const tendersApi = {
     await delay(120)
     return TENDERS
   },
+  async create(tender: {
+    projectId: string;
+    title: string;
+    estimatedCostCr: number;
+    mode?: string;
+  }): Promise<Tender> {
+    await delay()
+    const newTender: Tender = {
+      id: `TND-MH-${Date.now().toString().slice(-6)}`,
+      title: tender.title,
+      department: 'Public Works Department',
+      district: 'Pune',
+      status: 'published',
+      estimatedCostCr: tender.estimatedCostCr,
+      publishedOn: new Date().toISOString().slice(0, 10),
+      submissionDeadline: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      openingDate: '',
+      bidsReceived: 0,
+      category: 'Infrastructure',
+      mode: (tender.mode as any) || 'e-Tender',
+      projectId: tender.projectId,
+    }
+    TENDERS.unshift(newTender)
+    return newTender
+  },
 }
 
 /* ---------- Grievances ---------- */
@@ -180,6 +205,9 @@ export const financeApi = {
   async bills(): Promise<BillItem[]> {
     await delay()
     return BILLS
+  },
+  async createAllocation(_projectId: string, _amountCr: number, _head: string, _notes?: string): Promise<void> {
+    await delay()
   },
 }
 
