@@ -275,6 +275,14 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                     {i.label}
                   </Link>
                 ))}
+                <div className="border-t border-slate-100 my-1 pt-1 dark:border-slate-800">
+                  <a href="/government" className="flex items-center gap-2.5 px-4 py-1.5 text-xs text-blue-700 hover:bg-slate-50 dark:text-blue-400 dark:hover:bg-slate-800 font-medium">
+                    Government Portal
+                  </a>
+                  <a href="/" className="flex items-center gap-2.5 px-4 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 font-medium">
+                    Citizen Public Audit
+                  </a>
+                </div>
               </div>
             )}
           </Dropdown>

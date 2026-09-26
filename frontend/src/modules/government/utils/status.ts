@@ -17,8 +17,7 @@ import type {
  * + a distinct Material Symbols icon. Components must render all three.
  */
 
-/* ---------- Projects ---------- */
-export const PROJECT_STATUS: Record<ProjectStatus, StatusDescriptor> = {
+const BASE_PROJECT_STATUS: Record<ProjectStatus, StatusDescriptor> = {
   sanctioned: { key: 'status.sanctioned', tone: 'info', icon: 'verified' },
   in_execution: { key: 'status.inExecution', tone: 'info', icon: 'progress_activity' },
   delayed: { key: 'status.delayed', tone: 'danger', icon: 'timer_off' },
@@ -26,6 +25,28 @@ export const PROJECT_STATUS: Record<ProjectStatus, StatusDescriptor> = {
   completed: { key: 'status.completed', tone: 'success', icon: 'check_circle' },
   on_hold: { key: 'status.onHold', tone: 'neutral', icon: 'pause_circle' },
 }
+
+export function getSafeStatusDescriptor(status?: string): StatusDescriptor {
+  if (!status) return BASE_PROJECT_STATUS.in_execution
+  const s = String(status).toLowerCase().replace(/[-\s]/g, '_')
+  if (s in BASE_PROJECT_STATUS) return BASE_PROJECT_STATUS[s as ProjectStatus]
+  if (s.includes('complete')) return BASE_PROJECT_STATUS.completed
+  if (s.includes('delay')) return BASE_PROJECT_STATUS.delayed
+  if (s.includes('risk') || s.includes('stall') || s.includes('suspend')) return BASE_PROJECT_STATUS.at_risk
+  if (s.includes('sanction') || s.includes('approv') || s.includes('propos')) return BASE_PROJECT_STATUS.sanctioned
+  if (s.includes('hold')) return BASE_PROJECT_STATUS.on_hold
+  return BASE_PROJECT_STATUS.in_execution
+}
+
+/* ---------- Projects ---------- */
+export const PROJECT_STATUS: Record<string, StatusDescriptor> = new Proxy(BASE_PROJECT_STATUS, {
+  get(target, prop: string) {
+    if (typeof prop === 'string' && prop in target) {
+      return (target as any)[prop]
+    }
+    return getSafeStatusDescriptor(String(prop))
+  },
+})
 
 /* ---------- Milestones ---------- */
 export const MILESTONE_STATUS: Record<MilestoneStatus, StatusDescriptor> = {

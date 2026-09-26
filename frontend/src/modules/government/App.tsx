@@ -19,7 +19,9 @@ export default function App() {
           <AuthProvider>
             <NotificationsProvider>
               <ToastProvider>
-                <AppRoutes />
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
               </ToastProvider>
             </NotificationsProvider>
           </AuthProvider>

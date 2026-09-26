@@ -12,12 +12,13 @@ export function StatusBadge({
   className,
   size = 'md',
 }: {
-  descriptor: StatusDescriptor
+  descriptor?: StatusDescriptor
   className?: string
   size?: 'sm' | 'md'
 }) {
   const { t } = useI18n()
-  const tone = TONE_CLASS[descriptor.tone]
+  const desc = descriptor || { key: 'status.inExecution', tone: 'info' as const, icon: 'progress_activity' }
+  const tone = TONE_CLASS[desc.tone] || TONE_CLASS.neutral
   return (
     <span
       className={cn(
@@ -33,23 +34,24 @@ export function StatusBadge({
         className={cn('material-symbols-outlined', size === 'sm' ? 'text-[13px]' : 'text-[15px]')}
         aria-hidden="true"
       >
-        {descriptor.icon}
+        {desc.icon || 'info'}
       </span>
-      {t(descriptor.key)}
+      {desc.key ? t(desc.key) : 'In Execution'}
     </span>
   )
 }
 
 /** Plain tinted text (no border) for dense tables — still icon+text. */
-export function StatusText({ descriptor, className }: { descriptor: StatusDescriptor; className?: string }) {
+export function StatusText({ descriptor, className }: { descriptor?: StatusDescriptor; className?: string }) {
   const { t } = useI18n()
-  const tone = TONE_CLASS[descriptor.tone]
+  const desc = descriptor || { key: 'status.inExecution', tone: 'info' as const, icon: 'progress_activity' }
+  const tone = TONE_CLASS[desc.tone] || TONE_CLASS.neutral
   return (
     <span className={cn('inline-flex items-center gap-1 whitespace-nowrap text-caption', tone.text, className)}>
       <span className="material-symbols-outlined text-[15px]" aria-hidden="true">
-        {descriptor.icon}
+        {desc.icon || 'info'}
       </span>
-      {t(descriptor.key)}
+      {desc.key ? t(desc.key) : 'In Execution'}
     </span>
   )
 }

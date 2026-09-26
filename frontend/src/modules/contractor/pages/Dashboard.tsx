@@ -22,22 +22,22 @@ export default function Dashboard() {
 
   const active = projects.filter((p) => p.status !== 'Completed');
   const atRisk = projects.filter((p) => p.status === 'At Risk' || p.status === 'Delayed');
-  const overall = Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length);
-  const totalValue = projects.reduce((s, p) => s + p.value, 0);
-  const received = projects.reduce((s, p) => s + p.received, 0);
+  const overall = projects.length > 0 ? Math.round(projects.reduce((s, p) => s + (p.progress || 0), 0) / projects.length) : 0;
+  const totalValue = projects.reduce((s, p) => s + (p.value || 0), 0);
+  const received = projects.reduce((s, p) => s + (p.received || 0), 0);
   const pendingAmt = invoices
     .filter((i) => ['Submitted', 'Under Verification', 'Approved'].includes(i.status))
-    .reduce((s, i) => s + i.amount, 0);
-  const upcomingInspections = projects.flatMap((p) => p.upcoming.map((u) => ({ ...u, projectId: p.id, projectName: p.name })));
+    .reduce((s, i) => s + (i.amount || 0), 0);
+  const upcomingInspections = projects.flatMap((p) => (p.upcoming || []).map((u) => ({ ...u, projectId: p.id, projectName: p.name })));
 
   const kpis: KPIItem[] = [
     { label: 'Active Projects', value: String(active.length), sub: '+1 this quarter', icon: Map, iconClass: 'text-blue-600' },
-    { label: 'Projects at Risk', value: String(atRisk.length), sub: '1 critical', icon: ShieldAlert, iconClass: 'text-red-500' },
+    { label: 'Projects at Risk', value: String(atRisk.length), sub: `${atRisk.length} critical`, icon: ShieldAlert, iconClass: 'text-red-500' },
     { label: 'Overall Progress', value: `${overall}%`, sub: 'portfolio average', icon: TrendingUp, iconClass: 'text-slate-400' },
     { label: 'Total Contract Value', value: cr(totalValue), icon: Landmark, iconClass: 'text-blue-600' },
-    { label: 'Amount Received', value: cr(received), sub: `${Math.round((received / totalValue) * 100)}% of value`, icon: Banknote, iconClass: 'text-green-600' },
+    { label: 'Amount Received', value: cr(received), sub: totalValue > 0 ? `${Math.round((received / totalValue) * 100)}% of value` : '0% of value', icon: Banknote, iconClass: 'text-green-600' },
     { label: 'Pending Payments', value: money(pendingAmt), sub: `${invoices.filter((i) => ['Submitted', 'Under Verification', 'Approved'].includes(i.status)).length} bills in process`, icon: Banknote, iconClass: 'text-amber-500' },
-    { label: 'Upcoming Inspections', value: String(upcomingInspections.length), sub: `Next: ${fmtDate(upcomingInspections[0]?.date ?? new Date())}`, icon: CalendarClock, iconClass: 'text-amber-500' },
+    { label: 'Upcoming Inspections', value: String(upcomingInspections.length), sub: upcomingInspections[0]?.date ? `Next: ${fmtDate(upcomingInspections[0].date)}` : 'Scheduled', icon: CalendarClock, iconClass: 'text-amber-500' },
     { label: 'Pending Actions', value: '6', sub: '2 urgent', icon: ListChecks, iconClass: 'text-amber-500', onClick: () => document.getElementById('action-center')?.scrollIntoView({ behavior: 'smooth' }) },
   ];
 
@@ -111,12 +111,15 @@ export default function Dashboard() {
         <Card className="p-5 lg:col-span-2 flex flex-col">
           <SectionTitle icon={ShieldAlert} title="My Project Health" />
           <HBars
-            items={projects.map((p) => ({
-              label: p.name,
-              value: p.health.score,
-              num: p.health.score,
-              color: p.health.score >= 75 ? 'bg-green-600' : p.health.score >= 55 ? 'bg-amber-500' : 'bg-red-600',
-            }))}
+            items={projects.map((p) => {
+              const score = p.health?.score ?? Math.round(p.progress || 60);
+              return {
+                label: p.name,
+                value: score,
+                num: score,
+                color: score >= 75 ? 'bg-green-600' : score >= 55 ? 'bg-amber-500' : 'bg-red-600',
+              };
+            })}
             showNum
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
@@ -386,8 +389,8 @@ function AlertItem({
 
 function ActionCenter() {
   const { projects } = useStore();
-  const p5 = projects.find((p) => p.id === 'p5') || projects[4] || projects[0];
-  const p1 = projects.find((p) => p.id === 'p1') || projects[0];
+  const p5 = projects.find((p) => p.id === 'p5') || projects[4] || projects[0] || ({ id: 'p5', name: 'Rural Bridge Construction' } as Project);
+  const p1 = projects.find((p) => p.id === 'p1') || projects[0] || ({ id: 'p1', name: 'Pune Road Development' } as Project);
   return (
     <Card className="p-5" >
       <div id="action-center" />

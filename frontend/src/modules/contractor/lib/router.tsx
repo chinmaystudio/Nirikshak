@@ -3,10 +3,11 @@ import type { ReactNode, MouseEvent } from 'react';
 
 export function getHash(): string {
   let h = window.location.hash.replace(/^#/, '');
-  if (!h || h === '' || h === '/') {
+  if (!h || h === '' || h === '/' || h === '/contractor' || h === '/contractor/' || h === 'contractor') {
     const p = window.location.pathname.replace(/\\/g, '/');
     if (p.includes('/contractor/')) {
-      h = '/' + p.split('/contractor/')[1];
+      const rest = p.split('/contractor/')[1];
+      h = rest ? (rest.startsWith('/') ? rest : `/${rest}`) : '/dashboard';
     } else {
       h = '/dashboard';
     }

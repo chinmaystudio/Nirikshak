@@ -39,14 +39,14 @@ export function ProjectsListPage() {
     if (s)
       r = r.filter(
         (p) =>
-          p.id.toLowerCase().includes(s) ||
-          p.name.toLowerCase().includes(s) ||
-          p.district.toLowerCase().includes(s) ||
-          p.category.toLowerCase().includes(s),
+          (p.id || '').toLowerCase().includes(s) ||
+          (p.name || '').toLowerCase().includes(s) ||
+          (p.district || '').toLowerCase().includes(s) ||
+          (p.category || '').toLowerCase().includes(s),
       )
-    if (dept) r = r.filter((p) => p.department === dept)
-    if (district) r = r.filter((p) => p.district === district)
-    if (category) r = r.filter((p) => p.category === category)
+    if (dept) r = r.filter((p) => (p.department || '') === dept)
+    if (district) r = r.filter((p) => (p.district || '') === district)
+    if (category) r = r.filter((p) => (p.category || '') === category)
     if (status) r = r.filter((p) => p.status === status)
     return r
   }, [projects, debounced, dept, district, category, status])
@@ -176,7 +176,7 @@ export function ProjectsListPage() {
               </div>
               <p className="line-clamp-2 min-h-10 text-label text-fg">{p.name}</p>
               <p className="text-caption text-fg-subtle">
-                {p.department.replace(' Department', '')} • {p.district}
+                {(p.department || 'Public Works').replace(/ Department$/i, '')} • {p.district || 'Pune'}
               </p>
               <Progress value={p.physicalProgressPct} label={`Physical progress of ${p.id}`} size="sm" />
               <div className="flex items-center justify-between border-t border-border pt-2 text-caption">

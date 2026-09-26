@@ -21,10 +21,12 @@ function Router() {
   const path = usePath();
 
   useEffect(() => {
-    if (path === '/' || path === '') navigate('/dashboard');
+    if (path === '/' || path === '' || path === '/contractor' || path === '/contractor/' || path === 'contractor') {
+      navigate('/dashboard');
+    }
   }, [path]);
 
-  const activePath = path === '/' || path === '' ? '/dashboard' : path;
+  const activePath = (path === '/' || path === '' || path === '/contractor' || path === '/contractor/' || path === 'contractor') ? '/dashboard' : path;
 
   // Tender routes
   let m = match('/tenders/:tenderId/bid/ai-assist', activePath);

@@ -212,6 +212,13 @@ export function GovernmentHeader({
                 {t('nav.settings')}
               </MenuItem>
               <MenuDivider />
+              <MenuItem icon="engineering" onClick={() => { close(); window.location.href = '/contractor'; }}>
+                Contractor Portal
+              </MenuItem>
+              <MenuItem icon="public" onClick={() => { close(); window.location.href = '/'; }}>
+                Citizen Portal
+              </MenuItem>
+              <MenuDivider />
               <MenuItem icon="logout" onClick={() => { close(); onLogout() }}>
                 Sign out
               </MenuItem>

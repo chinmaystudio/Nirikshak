@@ -60,13 +60,14 @@ export function DashboardPage() {
   const byDepartment = useMemo(() => {
     const map = new Map<string, { count: number; delayRisk: number }>()
     for (const p of projects ?? []) {
-      const e = map.get(p.department) ?? { count: 0, delayRisk: 0 }
+      const dept = (p.department || 'Public Works').replace(/ Department$/i, '').trim()
+      const e = map.get(dept) ?? { count: 0, delayRisk: 0 }
       e.count += 1
       if (p.status === 'delayed' || p.status === 'at_risk') e.delayRisk += 1
-      map.set(p.department, e)
+      map.set(dept, e)
     }
     return Array.from(map.entries()).map(([dept, v]) => ({
-      label: dept.replace(' Department', ''),
+      label: dept || 'Infrastructure',
       value: v.count,
       risk: v.delayRisk,
       count: v.count,
@@ -307,8 +308,8 @@ export function DashboardPage() {
           columns={[
             { key: 'id', header: 'ID', isRowHeader: true, render: (p) => <span className="nk-mono-id text-fg-muted">{p.id}</span> },
             { key: 'name', header: 'Project', render: (p) => <span className="block max-w-80 truncate font-medium text-fg" title={p.name}>{p.name}</span> },
-            { key: 'dept', header: t('common.department'), render: (p) => p.department.replace(' Department', '') },
-            { key: 'district', header: t('common.district'), render: (p) => p.district },
+            { key: 'dept', header: t('common.department'), render: (p) => (p.department || 'Public Works').replace(/ Department$/i, '') },
+            { key: 'district', header: t('common.district'), render: (p) => p.district || 'Pune' },
             { key: 'status', header: t('common.status'), render: (p) => <StatusBadge descriptor={PROJECT_STATUS[p.status]} /> },
             { key: 'amount', header: 'Sanctioned', cellClassName: 'tabular-nums', render: (p) => formatCr(p.sanctionedAmountCr) },
             { key: 'progress', header: t('common.progress'), render: (p) => <Progress value={p.physicalProgressPct} label={`Physical progress of ${p.id}`} size="sm" className="min-w-36" /> },
