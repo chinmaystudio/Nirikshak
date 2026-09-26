@@ -84,7 +84,7 @@ export default function Dashboard() {
         <Card className="p-5 flex flex-col">
           <SectionTitle icon={BarChart2} title="Contractor Project Overview" right={<Link to="/projects" className="link text-sm flex items-center gap-1">All projects <ArrowRight className="w-4 h-4" /></Link>} />
           <p className="text-sm text-slate-700 leading-relaxed mb-6 dark:text-slate-300">
-            Portfolio of {active.length} active works worth <strong>{cr(active.reduce((s, p) => s + p.value, 0))}</strong> in execution this FY.
+            Portfolio of {active.length} active works worth <strong>{cr(active.reduce((s, p) => s + (p.value || 0), 0))}</strong> in execution this FY.
             <strong> {atRisk.length} works</strong> need attention and <strong>3 bills</strong> are pending with government offices.
           </p>
           <StackedBar

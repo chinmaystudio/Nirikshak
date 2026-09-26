@@ -9,60 +9,93 @@ const useMock = import.meta.env.VITE_USE_MOCK_API === 'true';
 function mapDbComplaint(c: any): Complaint {
   const statusMap: Record<string, Complaint['status']> = {
     'SUBMITTED': 'submitted',
-    'UNDER_REVIEW': 'in-review',
+    'UNDER_REVIEW': 'under-review',
     'ASSIGNED': 'assigned',
-    'IN_PROGRESS': 'in-progress',
+    'INVESTIGATION': 'investigation',
+    'ACTION_TAKEN': 'action-taken',
+    'IN_PROGRESS': 'action-taken',
     'RESOLVED': 'resolved',
-    'CLOSED': 'resolved',
-    'REJECTED': 'rejected',
+    'CLOSED': 'closed',
+    'ESCALATED': 'escalated',
+    'REJECTED': 'closed',
   };
 
-  const status = statusMap[c.status] || 'submitted';
-  const severity = (c.severity || 'MEDIUM').toLowerCase() as Complaint['priority'];
+  const status: Complaint['status'] = statusMap[String(c.status || '').toUpperCase()] || 'submitted';
+  const sev = String(c.severity || 'medium').toLowerCase();
+  const priority: Complaint['priority'] =
+    sev === 'critical' ? 'critical' : sev === 'high' ? 'high' : sev === 'low' ? 'low' : 'medium';
+
+  const totalHours = priority === 'critical' ? 12 : priority === 'high' ? 24 : priority === 'medium' ? 48 : 72;
+  const createdAt = c.created_at || new Date().toISOString();
+  const deadline = new Date(createdAt).getTime() + totalHours * 3600_000;
+
+  const catLabel = c.category_label || c.category || 'Public Works & Roads';
+  const locText = c.location_text || c.location || (c.latitude && c.longitude ? `Pune (GPS ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)})` : 'Pune Municipal Jurisdiction');
 
   return {
-    id: c.reference_number || c.id,
-    projectId: c.projects?.nirikshak_project_id || c.project_id || 'NIR-PUNE-1C6ACEADF93FFB1A',
-    projectName: c.projects?.project_name || 'Pune Infrastructure Project',
-    title: c.title,
-    description: c.description,
-    category: c.category as any,
+    id: c.reference_number || c.id || `CMP-${Date.now()}`,
+    title: c.title || 'Civic Infrastructure Concern',
+    category: c.category || 'roads',
+    categoryLabel: catLabel,
+    priority,
+    projectId: c.projects?.nirikshak_project_id || c.project_id || null,
+    ward: c.ward || 'Ward 12 — Kothrud / Shivajinagar',
+    location: typeof locText === 'string' ? locText : 'Pune Municipal Jurisdiction',
+    description: c.description || 'Public grievance registered via NIRIKSHAK audit interface.',
     status,
-    priority: severity,
-    ward: 'Pune Municipal Region',
-    address: 'Pune Municipal Jurisdiction',
-    location: {
-      latitude: c.latitude || 18.5204,
-      longitude: c.longitude || 73.8567,
+    submittedAt: createdAt,
+    updatedAt: c.updated_at || createdAt,
+    sla: {
+      deadline,
+      totalHours,
     },
-    submittedAt: c.created_at || new Date().toISOString(),
-    updatedAt: c.updated_at || new Date().toISOString(),
-    slaDueAt: slaFromNow(5),
-    assignedDepartment: 'PMC / Regional Project Office',
-    assignedOfficial: {
-      name: 'Er. R. K. Shinde',
-      designation: 'Executive Engineer',
-      contact: '+91 20 2550 1000',
+    department: c.department || c.assigned_department || 'Pune Municipal Corporation',
+    officer: {
+      name: c.officer_name || 'Er. S. Patil',
+      role: c.officer_role || 'Executive Engineer (Grievances), PMC',
+      phone: c.officer_phone || '+91 20 2550 1000',
     },
     evidence: (c.complaint_evidence || []).map((ev: any, idx: number) => ({
       id: ev.id || `ev-${idx}`,
-      type: 'photo',
-      url: ev.storage_path,
-      caption: ev.file_name || 'Citizen complaint photo evidence',
-      timestamp: ev.created_at || new Date().toISOString(),
+      name: ev.file_name || 'site_evidence.jpg',
+      size: '2.4 MB',
+      kind: 'image' as const,
+      meta: `Uploaded with complaint • ${new Date(createdAt).toLocaleDateString()}`,
+      thumb: ev.storage_path || null,
     })),
     timeline: [
       {
         id: 'tl-1',
-        title: 'Grievance Registered',
-        description: 'Citizen filed grievance via NIRIKSHAK Public Transparency Portal.',
-        timestamp: c.created_at || new Date().toISOString(),
-        status: 'submitted',
+        title: 'Complaint Submitted',
+        description: 'Citizen registered grievance via NIRIKSHAK Civic Oversight Gateway.',
+        timestamp: createdAt,
+        actor: 'Citizen',
+        status: 'completed',
+      },
+      {
+        id: 'tl-2',
+        title: 'Assigned to Municipal Officer',
+        description: 'Routed to Executive Engineer for on-site inspection.',
+        timestamp: c.updated_at || createdAt,
+        actor: 'Grievance Cell',
+        status: status === 'submitted' ? 'upcoming' : 'completed',
+      },
+      {
+        id: 'tl-3',
+        title: 'Action & Verification',
+        description: 'Departmental rectification and photographic verification.',
+        timestamp: status === 'resolved' || status === 'closed' ? (c.updated_at || createdAt) : null,
+        actor: 'Field Inspector',
+        status: (status === 'resolved' || status === 'closed') ? 'completed' : status === 'action-taken' ? 'current' : 'upcoming',
       },
     ],
-    upvotes: 8,
-    upvotedByUser: false,
-    publicVisible: true,
+    officerNote: c.officer_note || 'Inspection scheduled under municipal audit directive.',
+    resolution: (status === 'resolved' || status === 'closed') ? {
+      closedAt: c.updated_at || new Date().toISOString(),
+      note: 'Rectification completed and inspected on site.',
+      evidence: [],
+    } : null,
+    feedback: null,
   };
 }
 
@@ -115,7 +148,7 @@ export async function getComplaintById(id: string): Promise<Complaint> {
 }
 
 export async function createComplaint(payload: NewComplaintPayload): Promise<Complaint> {
-  const refNum = `NIR-PUNE-CMP-2026-${Math.floor(100000 + Math.random() * 900000)}`;
+  const refNum = `CMP-2026-${Math.floor(100000 + Math.random() * 900000)}`;
 
   let targetProjectId = 'b1000000-0000-0000-0000-000000000001';
   if (payload.projectId) {
@@ -138,34 +171,52 @@ export async function createComplaint(payload: NewComplaintPayload): Promise<Com
       description: payload.description,
       severity: (payload.priority || 'MEDIUM').toUpperCase(),
       status: 'SUBMITTED',
-      latitude: payload.coordinates?.latitude || 18.5204,
-      longitude: payload.coordinates?.longitude || 73.8567,
+      location_text: payload.location,
     })
     .select('*, projects(project_name, nirikshak_project_id)')
     .single();
 
   if (error || !data) {
     console.error('Supabase complaint insert failed, falling back to local storage:', error);
+    const totalHours = payload.priority === 'critical' ? 12 : payload.priority === 'high' ? 24 : payload.priority === 'medium' ? 48 : 72;
+    const now = new Date().toISOString();
     const fallbackComplaint: Complaint = {
       id: refNum,
-      projectId: payload.projectId,
-      projectName: 'Pune Infrastructure Project',
       title: payload.title,
-      description: payload.description,
       category: payload.category,
-      status: 'submitted',
+      categoryLabel: payload.categoryLabel || payload.category,
       priority: payload.priority || 'medium',
-      ward: payload.ward || 'Ward 12',
-      address: payload.location,
-      location: payload.coordinates || { latitude: 18.5204, longitude: 73.8567 },
-      submittedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      slaDueAt: slaFromNow(7),
-      assignedDepartment: 'PMC Infrastructure Cell',
-      evidence: [],
-      timeline: [{ id: 'tl-1', title: 'Filed by Citizen', description: payload.description, timestamp: new Date().toISOString(), status: 'submitted' }],
-      upvotes: 1,
-      publicVisible: true,
+      projectId: payload.projectId,
+      ward: payload.ward || 'Ward 12 — Kothrud / Shivajinagar',
+      location: payload.location || 'Pune Municipal Region',
+      description: payload.description,
+      status: 'submitted',
+      submittedAt: now,
+      updatedAt: now,
+      sla: {
+        deadline: Date.now() + totalHours * 3600_000,
+        totalHours,
+      },
+      department: payload.department || 'Pune Municipal Corporation',
+      officer: {
+        name: 'Er. S. Patil',
+        role: 'Executive Engineer (Grievances), PMC',
+        phone: '+91 20 2550 1000',
+      },
+      evidence: payload.evidence || [],
+      timeline: [
+        {
+          id: 'tl-1',
+          title: 'Complaint Submitted',
+          description: 'Grievance submitted via NIRIKSHAK Citizen Portal.',
+          timestamp: now,
+          actor: 'Citizen',
+          status: 'completed',
+        },
+      ],
+      officerNote: 'Awaiting initial departmental triage.',
+      resolution: null,
+      feedback: null,
     };
     appStore.setState({ created: [fallbackComplaint, ...appStore.getState().created] });
     return fallbackComplaint;

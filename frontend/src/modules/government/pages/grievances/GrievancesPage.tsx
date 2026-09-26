@@ -32,7 +32,7 @@ export function GrievancesPage() {
       (grievances ?? []).filter((g) => {
         if (status && g.status !== status) return false
         if (priority && g.priority !== priority) return false
-        if (debounced && !`${g.id} ${g.subject} ${g.category}`.toLowerCase().includes(debounced.toLowerCase()))
+        if (debounced && !`${g.id || ''} ${g.subject || ''} ${g.category || ''}`.toLowerCase().includes(debounced.toLowerCase()))
           return false
         return true
       }),

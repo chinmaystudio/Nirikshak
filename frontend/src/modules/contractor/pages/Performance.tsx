@@ -17,8 +17,8 @@ export default function Performance() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-6 flex flex-col items-center justify-center text-center">
           <ProgressRing value={p.score} size={150} label={`${p.score} / 100`} sub="Performance Score" color="var(--ch-green)" />
-          <p className="font-display font-bold text-lg text-slate-800 mt-4 dark:text-slate-100">Grade {p.grade.split('—')[0].trim()}</p>
-          <p className="text-xs text-slate-500 font-semibold mt-1 dark:text-slate-400">{p.grade.split('—')[1].trim()}</p>
+          <p className="font-display font-bold text-lg text-slate-800 mt-4 dark:text-slate-100">Grade {(p.grade || '').split(/[—\-]/)[0]?.trim() || 'A'}</p>
+          <p className="text-xs text-slate-500 font-semibold mt-1 dark:text-slate-400">{(p.grade || '').split(/[—\-]/)[1]?.trim() || 'Reliable Partner'}</p>
           <p className="text-[11px] text-slate-500 mt-3 dark:text-slate-400">{p.percentile}</p>
         </Card>
 

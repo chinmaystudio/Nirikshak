@@ -12,8 +12,10 @@ export interface SLAState {
 }
 
 export function slaState(c: Complaint): SLAState {
-  const remaining = c.sla.deadline - Date.now();
-  const total = c.sla.totalHours * 3600_000;
+  const deadline = c.sla?.deadline ? Number(c.sla.deadline) : Date.now() + 48 * 3600_000;
+  const totalHours = c.sla?.totalHours || 48;
+  const remaining = deadline - Date.now();
+  const total = totalHours * 3600_000;
   const elapsedPct = Math.max(0, Math.min(100, Math.round(((total - remaining) / total) * 100)));
   const breached = remaining <= 0;
   const closed = c.status === "resolved" || c.status === "closed";
@@ -56,10 +58,10 @@ export function SlaPanel({ complaint }: { complaint: Complaint }): JSX.Element {
           <Icon name="task_alt" className="text-[20px] text-green-600" /> Redressal SLA
         </div>
         <p className="text-body-sm text-on-surface-variant">
-          Resolved within the {complaint.sla.totalHours}-hour service window. Feedback from citizens keeps the accountability score updated.
+          Resolved within the {complaint.sla?.totalHours || 48}-hour service window. Feedback from citizens keeps the accountability score updated.
         </p>
         <div className="text-label-sm text-outline">
-          Deadline was {new Date(complaint.sla.deadline).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+          Deadline was {complaint.sla?.deadline ? new Date(complaint.sla.deadline).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : 'On Schedule'}
         </div>
       </div>
     );
@@ -71,7 +73,7 @@ export function SlaPanel({ complaint }: { complaint: Complaint }): JSX.Element {
           <Icon name="report" className="text-[22px]" /> SLA BREACHED
         </div>
         <p className="text-body-sm text-on-surface">
-          The {complaint.sla.totalHours}-hour response deadline elapsed without closure. This complaint was{" "}
+          The {complaint.sla?.totalHours || 48}-hour response deadline elapsed without closure. This complaint was{" "}
           <strong>automatically escalated</strong> to the department head and the Municipal Commissioner's oversight list.
         </p>
         <div className="text-label-sm text-error font-semibold">Escalated under CPGRAMS linkage</div>
@@ -94,7 +96,7 @@ export function SlaPanel({ complaint }: { complaint: Complaint }): JSX.Element {
       </div>
       <div className="flex justify-between text-label-sm text-outline">
         <span>Filed {shortDate(complaint.submittedAt)}</span>
-        <span>{complaint.sla.totalHours}-hour SLA window</span>
+        <span>{complaint.sla?.totalHours || 48}-hour SLA window</span>
       </div>
     </div>
   );

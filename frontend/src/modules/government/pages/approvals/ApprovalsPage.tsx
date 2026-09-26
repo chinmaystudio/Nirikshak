@@ -33,7 +33,7 @@ export function ApprovalsPage() {
         if (priority && a.priority !== priority) return false
         if (
           debounced &&
-          !`${a.id} ${a.type} ${a.projectId} ${a.projectName}`.toLowerCase().includes(debounced.toLowerCase())
+          !`${a.id || ''} ${a.type || ''} ${a.projectId || ''} ${a.projectName || ''}`.toLowerCase().includes(debounced.toLowerCase())
         )
           return false
         return true

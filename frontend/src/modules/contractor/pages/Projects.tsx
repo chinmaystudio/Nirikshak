@@ -38,7 +38,7 @@ export default function Projects() {
     downloadCSV(
       'nirikshak-my-projects.csv',
       ['Project ID', 'Project', 'Department', 'Location', 'Contract Value (Cr)', 'Progress %', 'Status', 'Risk', 'Start', 'Deadline'],
-      filtered.map((p) => [p.code, p.name, p.department, p.location, p.value, p.progress, p.status, p.risk, fmtDate(p.start), fmtDate(p.deadline)])
+      filtered.map((p) => [p.code || '', p.name || '', p.department || '', p.location || '', p.value || 0, p.progress || 0, p.status || '', p.risk || '', fmtDate(p.start), fmtDate(p.deadline)])
     );
     toast('success', 'Export ready', 'nirikshak-my-projects.csv downloaded.');
   };

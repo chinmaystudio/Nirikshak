@@ -198,10 +198,10 @@ export function DashboardPage() {
             </thead>
             <tbody>
               {[
-                { id: 'NIR-PWD-2026-0142', item: 'Review Geo-Inspection & Notice', sla: 'Due today', tone: 'danger' as const, action: 'inspections' },
-                { id: 'NIR-WRD-2026-0089', item: 'Verify Measurement Book (e-MB)', sla: 'Due in 2 days', tone: 'warning' as const, action: 'finance' },
-                { id: 'NIR-PWD-2026-0205', item: 'Assign Field Engineer', sla: 'Due in 3 days', tone: 'warning' as const, action: 'milestones' },
-                { id: 'NIR-UID-2026-0311', item: 'Open Comparative Chart', sla: 'Due in 5 days', tone: 'info' as const, action: 'reports' },
+                { id: 'NIR-PWD-2026-0142', item: 'Review Geo-Inspection & Notice', sla: 'Due today', tone: 'danger' as const, action: '/government/approvals' },
+                { id: 'NIR-WRD-2026-0089', item: 'Verify Measurement Book (e-MB)', sla: 'Due in 2 days', tone: 'warning' as const, action: '/government/projects' },
+                { id: 'NIR-PWD-2026-0205', item: 'Assign Field Engineer', sla: 'Due in 3 days', tone: 'warning' as const, action: '/government/projects' },
+                { id: 'NIR-UID-2026-0311', item: 'Open Comparative Chart', sla: 'Due in 5 days', tone: 'info' as const, action: '/government/reports' },
               ].map((row) => (
                 <tr key={row.id + row.item} className="border-t border-border hover:bg-surface-2">
                   <td className="px-4 py-2.5">

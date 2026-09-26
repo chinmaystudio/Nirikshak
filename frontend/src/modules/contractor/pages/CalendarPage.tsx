@@ -33,7 +33,7 @@ export default function CalendarPage() {
   const [year, setYear] = useState(2026);
   const [selected, setSelected] = useState('2026-09-11');
 
-  const types = FILTERS.find((f) => f.key === filter)!.types;
+  const types = FILTERS.find((f) => f.key === filter)?.types ?? FILTERS[0].types;
   const events = useMemo(() => CALENDAR_EVENTS.filter((e) => types.includes(e.type)), [filter]);
 
   const cells = useMemo(() => {

@@ -84,12 +84,12 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps): JSX.Element 
         <div className="grid grid-cols-2 gap-2 pt-2 mt-1 border-t border-outline-variant/30">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-outline font-bold">Budget</div>
-            <div className="text-body-md font-bold text-primary">{formatCr(project.finance.sanctionedAmount)}</div>
+            <div className="text-body-md font-bold text-primary">{formatCr(project.finance?.sanctionedAmount ?? 0)}</div>
           </div>
           <div className="text-right">
             <div className="text-[10px] uppercase tracking-wider text-outline font-bold">Expected</div>
             <div className="text-body-md font-semibold text-primary">
-              {shortDate(project.dates.actual ?? project.dates.revisedExpected ?? project.dates.expected)}
+              {shortDate(project.dates?.actual ?? project.dates?.revisedExpected ?? project.dates?.expected ?? '')}
             </div>
           </div>
         </div>
@@ -132,7 +132,7 @@ export function ProjectMiniRow({ project, onOpen }: { project: Project; onOpen?:
       </div>
       <div className="text-right flex-shrink-0">
         <div className={`text-label-sm font-bold ${project.status === "delayed" ? "text-error" : "text-secondary"}`}>{meta.label}</div>
-        <div className="text-label-sm text-outline">{formatCr(project.finance.sanctionedAmount)}</div>
+        <div className="text-label-sm text-outline">{formatCr(project.finance?.sanctionedAmount ?? 0)}</div>
       </div>
     </button>
   );

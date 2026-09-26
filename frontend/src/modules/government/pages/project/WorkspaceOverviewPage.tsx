@@ -20,7 +20,7 @@ export function WorkspaceOverviewPage() {
   const modules = [
     { labelKey: 'nav.finance', icon: 'account_balance', to: `/government/projects/${projectId}/budget`, value: formatCr(project.utilizedAmountCr), note: `${t('common.progress')} ${project.financialProgressPct}%` },
     { labelKey: 'nav.tenderManagement', icon: 'gavel', to: `/government/projects/${projectId}/tenders`, value: String(tenders.length), note: 'on this record' },
-    { labelKey: 'nav.milestoneManagement', icon: 'fact_check', to: `/government/projects/${projectId}/milestones`, value: String(project.milestones.length), note: 'milestones' },
+    { labelKey: 'nav.milestoneManagement', icon: 'fact_check', to: `/government/projects/${projectId}/milestones`, value: String((project.milestones ?? []).length), note: 'milestones' },
     { labelKey: 'nav.complaintsTracking', icon: 'report_problem', to: `/government/projects/${projectId}/complaints`, value: String(grievances.length), note: 'linked complaints' },
     { labelKey: 'nav.approvalWorkflow', icon: 'rule', to: `/government/projects/${projectId}/approvals`, value: String(approvals.length), note: 'approval actions' },
     { labelKey: 'nav.documents', icon: 'folder_shared', to: `/government/projects/${projectId}/documents`, value: String(documents.length), note: 'on this record' },
@@ -62,7 +62,7 @@ export function WorkspaceOverviewPage() {
         </Panel>
         <Panel title="Milestone Timeline" icon="timeline">
           <ol className="relative ml-3 border-l-2 border-border">
-            {project.milestones.slice(0, 5).map((m) => (
+            {(project.milestones ?? []).slice(0, 5).map((m) => (
               <li key={m.id} className="mb-4 ml-4 last:mb-0">
                 <span className="absolute -left-[9px] mt-1.5 h-4 w-4 rounded-full border-2 border-surface bg-primary" aria-hidden="true" />
                 <div className="flex flex-wrap items-center gap-2">
