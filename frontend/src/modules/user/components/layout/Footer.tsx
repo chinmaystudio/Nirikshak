@@ -19,7 +19,7 @@ export function Footer(): JSX.Element {
       <div className="w-full py-8 px-4 lg:px-8 mx-auto max-w-7xl flex flex-col gap-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-on-primary-container/20 pb-6">
           <div className="space-y-1">
-            <div className="text-headline-sm font-bold text-on-primary">NIRIKSHAN — Public Infrastructure Transparency Portal</div>
+            <div className="text-headline-sm font-bold text-on-primary">NIRIKSHAK — Public Infrastructure Transparency Portal</div>
             <div className="text-body-sm text-on-primary-container max-w-2xl">
               Content managed by Ministry of Housing and Urban Affairs, Government of India. Hosted by National Informatics Centre (NIC).
             </div>
@@ -41,7 +41,7 @@ export function Footer(): JSX.Element {
           ))}
         </div>
         <div className="text-label-sm text-on-primary-container/80 flex flex-col md:flex-row justify-between items-center gap-2 border-t border-on-primary-container/20 pt-4">
-          <div>© 2026 Government of India. All rights reserved. Version {environment.version}-NIRIKSHAN-STABLE.</div>
+          <div>© 2026 Government of India. All rights reserved. Version {environment.version}-NIRIKSHAK-STABLE.</div>
           <div>Last Updated: 11 September 2026 | Server Node: NIC-PUN-02</div>
         </div>
       </div>

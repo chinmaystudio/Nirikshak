@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useI18n } from '@/context/I18nContext'
 import { useAccessibility } from '@/context/AccessibilityContext'
 import { useTheme } from '@/context/ThemeContext'
@@ -9,6 +10,7 @@ import { TopNav } from '@/components/layout/TopNav'
 import { LOCALES } from '@/locales/config'
 import type { Locale } from '@/locales/config'
 import { cn } from '@/utils/cn'
+import { RealtimeStatusIndicator } from '@/core/realtime/RealtimeStatusIndicator'
 
 /**
  * GovernmentHeader — two-row fixed header (Stitch skeleton extended):
@@ -38,6 +40,7 @@ export function GovernmentHeader({
   const { textSize, setTextSize, toggleHighContrast, contrast } = useAccessibility()
   const { resolved, toggle } = useTheme()
   const searchId = useId()
+  const navigate = useNavigate()
 
   return (
     <header className="sticky top-0 z-header border-b border-border bg-surface shadow-card">
@@ -69,6 +72,7 @@ export function GovernmentHeader({
       </div>
 
       <div className="ml-auto flex items-center gap-1 md:gap-1.5">
+        <RealtimeStatusIndicator className="hidden text-fg-muted sm:inline-flex" />
         {/* Text size steppers */}
         <div className="hidden items-center rounded-control border border-border lg:flex" role="group" aria-label={t('a11y.textSize')}>
           {(
@@ -208,7 +212,7 @@ export function GovernmentHeader({
         >
           {(close) => (
             <>
-              <MenuItem icon="account_circle" onClick={close}>
+              <MenuItem icon="settings" onClick={() => { close(); navigate('/government/settings') }}>
                 {t('nav.settings')}
               </MenuItem>
               <MenuDivider />

@@ -75,7 +75,7 @@ export function ComplaintDetailsPage(): JSX.Element {
             }
             const reader = new FileReader();
             reader.onload = () => {
-              void addEvidence(complaint.id, { name: f.name, size: formatFileSize(f.size), thumb: String(reader.result) }).then(() => {
+              void addEvidence(complaint.id, { id: crypto.randomUUID(), name: f.name, size: formatFileSize(f.size), kind: "image", meta: "Citizen-uploaded evidence", thumb: String(reader.result) }).then(() => {
                 toast("Evidence added to the case file.", "success");
                 refresh();
               });
@@ -277,7 +277,7 @@ export function ComplaintDetailsPage(): JSX.Element {
                   setFeedbackOpen(false);
                   return;
                 }
-                void submitFeedback(complaint.id, { rating, comment: feedbackText.trim() }).then(() => {
+                void submitFeedback(complaint.id, { rating, comment: feedbackText.trim(), at: new Date().toISOString() }).then(() => {
                   setFeedbackOpen(false);
                   toast("Feedback recorded. Thank you for keeping the system accountable.", "success");
                   refresh();

@@ -6,10 +6,12 @@ import { PageHeader, Card, StatusBadge, RiskBadge, ProgressBar, Select, SearchIn
 import { DataTable } from '../components/DataTable';
 import { CONTRACTOR } from '../lib/data';
 import type { Project } from '../lib/data';
+import { useAuth } from '@/core/auth/useAuth';
 import { cr, daysLeftLabel, daysUntil, downloadCSV, fmtDate, fmtDateCompact } from '../lib/utils';
 
 export default function Projects() {
   const { projects, toast } = useStore();
+  const { session } = useAuth();
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('All Statuses');
   const [risk, setRisk] = useState('All Risks');
@@ -47,7 +49,7 @@ export default function Projects() {
     <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-5">
       <PageHeader
         title="My Projects"
-        subtitle={`${projects.length} contracts awarded to ${CONTRACTOR.name} • ${projects.filter((p) => p.status !== 'Completed').length} in execution`}
+        subtitle={`${projects.length} assigned contracts • ${projects.filter((p) => p.status !== 'Completed').length} in execution • ${session?.organization?.name || 'Organization not available'}`}
         actions={
           <button className="btn btn-secondary" onClick={exportCSV}>
             <Download className="w-4 h-4" />

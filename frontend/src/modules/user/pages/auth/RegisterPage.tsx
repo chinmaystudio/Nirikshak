@@ -233,7 +233,7 @@ export function RegisterPage(): JSX.Element {
                 >
                   {LANGUAGE_ORDER.map((code) => (
                     <option key={code} value={code}>
-                      {LANGUAGES[code].label} ({LANGUAGES[code].native})
+                      {LANGUAGES[code]}
                     </option>
                   ))}
                 </select>

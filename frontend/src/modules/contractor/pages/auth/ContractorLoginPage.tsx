@@ -100,7 +100,7 @@ export default function ContractorLoginPage() {
                 <span>Remember session</span>
               </label>
               <a
-                href="#/forgot-password"
+                href="/contractor/forgot-password"
                 className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
               >
                 Forgot password?
@@ -125,7 +125,7 @@ export default function ContractorLoginPage() {
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
             <span className="text-slate-400">Unregistered agency?</span>
-            <a href="#/register" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
+            <a href="/contractor/register" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
               Apply for Onboarding
             </a>
           </div>

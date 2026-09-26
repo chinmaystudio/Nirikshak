@@ -19,6 +19,9 @@ import type {
   Officer,
   Contractor,
 } from '@/modules/government/types';
+import { normalizeProjectStatus } from '@/core/status/projectStatus';
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
 
 // Helper to map DB project to Government Portal Project type
 function mapDbProject(db: any): Project {
@@ -120,12 +123,8 @@ function mapDbProject(db: any): Project {
 }
 
 function mapNormalizedStatus(status: string): Project['status'] {
-  const s = String(status || '').toUpperCase();
-  if (s === 'COMPLETED') return 'completed';
-  if (s === 'DELAYED') return 'delayed';
-  if (s === 'STALLED' || s === 'SUSPENDED') return 'at_risk';
-  if (s === 'PROPOSED' || s === 'DPR_STAGE' || s === 'APPROVED') return 'sanctioned';
-  return 'in_execution';
+  const shared = normalizeProjectStatus(status);
+  return shared === 'unknown' ? 'on_hold' : shared;
 }
 
 export const projectsApi = {
@@ -156,8 +155,9 @@ export const projectsApi = {
       query = query.or(`project_name.ilike.%${q.search}%,location_text.ilike.%${q.search}%,nirikshak_project_id.ilike.%${q.search}%`);
     }
 
-    if (q?.status) {
-      query = query.ilike('normalized_status', `%${q.status}%`);
+    const statusFilter = q?.filters?.status?.[0];
+    if (statusFilter) {
+      query = query.ilike('normalized_status', `%${statusFilter}%`);
     }
 
     const { data, count, error } = await query
@@ -166,7 +166,7 @@ export const projectsApi = {
 
     if (error) {
       console.error('Failed to list projects from Supabase:', error);
-      return { items: [], total: 0, page, pageSize, totalPages: 0 };
+      return { items: [], total: 0, page, pageSize };
     }
 
     const items = (data || []).map(mapDbProject);
@@ -176,7 +176,6 @@ export const projectsApi = {
       total,
       page,
       pageSize,
-      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     };
   },
 
@@ -203,7 +202,7 @@ export const projectsApi = {
 
     const { data, error } = await supabase
       .from('projects')
-      .update(updatePayload)
+      .update(updatePayload as any)
       .or(`id.eq.${id},nirikshak_project_id.eq.${id}`)
       .select()
       .single();
@@ -245,25 +244,34 @@ export const approvalsApi = {
       id: u.id,
       type: 'Technical Sanction / Progress Verification',
       projectId: u.projects?.nirikshak_project_id || u.project_id,
-      projectName: u.projects?.project_name || 'Infrastructure Project',
-      submittedBy: 'Er. Sandeep Kale (Contractor PM)',
-      submittedOn: (u.created_at || '').slice(0, 10) || '2026-02-15',
-      amountCr: 14.5,
+      projectName: u.projects?.project_name || 'Not available',
+      submittedBy: 'Not available',
+      submittedOn: (u.created_at || '').slice(0, 10),
       status: u.verification_status === 'APPROVED' ? 'approved' : u.verification_status === 'REJECTED' ? 'rejected' : 'pending',
-      slaDueDate: '2026-03-01',
-      assignedTo: 'Er. R. K. Shinde (Superintending Engineer)',
+      slaDueDate: '',
+      assignedTo: 'Not assigned',
       priority: 'high',
-      description: u.description || `Milestone verification claim for ${u.project_milestones?.milestone_name || 'civil works'} (${u.reported_progress}%)`,
-      history: [
+      auditTrail: [
         {
-          timestamp: (u.created_at || '2026-02-15T10:00:00Z'),
-          actor: 'Er. Sandeep Kale',
-          role: 'Contractor PM',
-          action: 'Submitted e-MB & Progress Claim',
-          remarks: 'Submitted for departmental technical approval',
+          timestamp: u.created_at || '',
+          actor: 'Contractor organization',
+          role: 'Submitter',
+          action: 'Submitted progress update',
+          remarks: u.description || 'No remarks supplied',
         },
       ],
     }));
+  },
+
+  async list(q?: ListQuery): Promise<Paginated<ApprovalItem>> {
+    const all = await this.all();
+    const page = q?.page ?? 1; const pageSize = q?.pageSize ?? 20;
+    const filtered = q?.search ? all.filter((item) => `${item.id} ${item.projectName} ${item.type}`.toLowerCase().includes(q.search!.toLowerCase())) : all;
+    return { items: filtered.slice((page - 1) * pageSize, page * pageSize), total: filtered.length, page, pageSize };
+  },
+
+  async get(id: string): Promise<ApprovalItem | undefined> {
+    return (await this.all()).find((item) => item.id === id);
   },
 
   async pending(): Promise<ApprovalItem[]> {
@@ -300,36 +308,32 @@ export const grievancesApi = {
 
     return (data || []).map((c: any) => {
       const sev = String(c.severity || '').toLowerCase();
-      const severity: Grievance['severity'] = sev === 'critical' ? 'critical' : sev === 'high' ? 'high' : sev === 'low' ? 'low' : 'medium';
+      const priority: Grievance['priority'] = sev === 'critical' ? 'urgent' : sev === 'high' ? 'high' : sev === 'low' ? 'low' : 'medium';
       const st = String(c.status || '').toUpperCase();
       const status: Grievance['status'] = st === 'RESOLVED' ? 'resolved' : st === 'IN_PROGRESS' ? 'action_taken' : 'submitted';
 
       return {
         id: c.reference_number || c.id,
         projectId: c.projects?.nirikshak_project_id || c.project_id || 'NIR-PUN-000',
-        projectName: c.projects?.project_name || 'Pune Infrastructure Project',
         category: c.category || 'Quality of Work',
-        severity,
         status,
-        filedBy: 'Citizen (Masked Aadhaar)',
-        filedDate: (c.created_at || '').slice(0, 10) || '2026-02-10',
         subject: c.title || 'Public Works Grievance',
         description: c.description || 'Grievance submitted regarding infrastructure status.',
-        assignedOfficer: 'Er. R. K. Shinde (Executive Engineer, PMC)',
-        department: 'Public Works Department',
-        district: 'Pune',
-        location: 'Pune Municipal Area',
-        resolutionDueDate: '2026-03-05',
-        isEscalated: severity === 'critical',
-        history: [
+        submittedOn: (c.created_at || '').slice(0, 10),
+        submittedBy: '(identity protected)',
+        slaDeadline: '',
+        assignedTo: c.assigned_user_id || 'Not assigned',
+        priority,
+        district: 'Not available',
+        timeline: [
           {
-            timestamp: c.created_at || '2026-02-10T10:00:00Z',
+            timestamp: c.created_at || '',
             actor: 'System',
-            role: 'Citizen Portal',
             action: 'Grievance registered and geolocated',
-            notes: 'Assigned to field division for inspection',
+            note: 'Submitted through the citizen portal',
           },
         ],
+        attachments: 0,
       };
     });
   },
@@ -361,16 +365,13 @@ export const citizenApi = {
       name: p.project_name,
       department: p.project_authority || 'Pune Municipal Corporation',
       district: p.district || p.city || 'Pune',
-      category: p.sector || 'Urban Infrastructure',
       status: mapNormalizedStatus(p.normalized_status),
       physicalProgressPct: Number(p.physical_progress_percent) || 0,
       sanctionedAmountCr: Number(p.total_cost_inr_crore) || 0,
-      spentAmountCr: Number(p.total_cost_inr_crore || 0) * (Number(p.physical_progress_percent || 0) / 100),
-      expectedCompletion: p.original_completion_date || p.revised_completion_date || '2026-12-31',
-      location: p.location_text || 'Pune, Maharashtra',
-      contractor: p.contractor_concessionaire || 'Public Works Contractor',
-      geoLat: p.latitude || 18.5204,
-      geoLng: p.longitude || 73.8567,
+      expectedCompletion: p.original_completion_date || p.revised_completion_date || '',
+      contractor: p.contractor_concessionaire || 'Not available',
+      scope: p.public_summary || p.description || 'Not available',
+      publicMilestones: [],
     }));
   },
 
@@ -381,6 +382,15 @@ export const citizenApi = {
 
   async trackGrievance(ref: string): Promise<Grievance | undefined> {
     return grievancesApi.get(ref);
+  },
+
+  async projects(q?: ListQuery): Promise<Paginated<CitizenProjectSummary>> {
+    const all = await this.all(); const page = q?.page ?? 1; const pageSize = q?.pageSize ?? 20;
+    return { items: all.slice((page - 1) * pageSize, page * pageSize), total: all.length, page, pageSize };
+  },
+
+  async submitGrievanceInput(): Promise<Grievance> {
+    throw new Error('Use the canonical /user/report flow to submit a grievance.');
   },
 };
 
@@ -433,7 +443,7 @@ export const authApi = {
 /* ---------- Contractors ---------- */
 export const contractorsApi = {
   async all(): Promise<Contractor[]> {
-    return CONTRACTORS;
+    return DEMO_MODE ? CONTRACTORS : [];
   },
   async list(q?: ListQuery): Promise<Paginated<Contractor>> {
     const all = await this.all();
@@ -500,17 +510,17 @@ export const financeApi = {
             allocationCr: budget,
             releasedCr: budget * 0.8,
             utilizedCr: spent,
-            status: spent >= budget ? 'utilized' : (budget > 0 ? 'released' : 'allocated'),
+            status: budget > 0 ? 'released' : 'allocated',
           };
         });
       }
     } catch (err) {
       console.warn('Error fetching financial updates from Supabase:', err);
     }
-    return FUND_FLOWS;
+    return DEMO_MODE ? FUND_FLOWS : [];
   },
   async bills(): Promise<BillItem[]> {
-    return BILLS;
+    return DEMO_MODE ? BILLS : [];
   },
 };
 
@@ -541,7 +551,7 @@ export const auditApi = {
     } catch (err) {
       console.warn('Error fetching audit findings:', err);
     }
-    return AUDIT_FINDINGS;
+    return DEMO_MODE ? AUDIT_FINDINGS : [];
   },
 };
 
@@ -569,7 +579,7 @@ export const alertsApi = {
     } catch (err) {
       console.warn('Error fetching notifications from Supabase:', err);
     }
-    return ALERTS;
+    return DEMO_MODE ? ALERTS : [];
   },
 };
 
@@ -605,7 +615,7 @@ export const documentsApi = {
     } catch (err) {
       console.warn('Error fetching project documents:', err);
     }
-    return DOCUMENTS;
+    return DEMO_MODE ? DOCUMENTS : [];
   },
   async list(q?: ListQuery): Promise<Paginated<DocumentItem>> {
     const all = await this.all();
@@ -616,7 +626,7 @@ export const documentsApi = {
 /* ---------- Litigation ---------- */
 export const litigationApi = {
   async all(): Promise<LitigationCase[]> {
-    return LITIGATION;
+    return DEMO_MODE ? LITIGATION : [];
   },
 };
 
@@ -644,7 +654,7 @@ export const workApi = {
     } catch (err) {
       console.warn('Error fetching contracts from Supabase:', err);
     }
-    return WORK_ORDERS;
+    return DEMO_MODE ? WORK_ORDERS : [];
   },
   async inspections(): Promise<InspectionRecord[]> {
     try {
@@ -669,7 +679,7 @@ export const workApi = {
     } catch (err) {
       console.warn('Error fetching inspections from Supabase:', err);
     }
-    return INSPECTIONS;
+    return DEMO_MODE ? INSPECTIONS : [];
   },
 };
 
@@ -699,7 +709,7 @@ export const insightsApi = {
     } catch (err) {
       console.warn('Error fetching AI insights from Supabase:', err);
     }
-    return AI_INSIGHTS;
+    return DEMO_MODE ? AI_INSIGHTS : [];
   },
   async evaluateContractor(id: string): Promise<{
     contractorId: string;
@@ -709,6 +719,7 @@ export const insightsApi = {
     risks: string[];
     disclaimer: string;
   } | undefined> {
+    if (!DEMO_MODE) return undefined;
     const c = CONTRACTORS.find((x) => x.id === id);
     if (!c) return undefined;
     return {

@@ -32,7 +32,7 @@ export function VisionAnalysisPanel({ step }: { step: number }): JSX.Element {
         </span>
         <div>
           <div className="text-headline-sm font-bold text-primary flex items-center gap-2">
-            NIRIKSHAN VISION <span className="text-label-sm font-normal text-outline">Analyzing infrastructure…</span>
+            NIRIKSHAK VISION <span className="text-label-sm font-normal text-outline">Analyzing infrastructure…</span>
           </div>
           <div className="text-label-sm text-outline">Typically takes a few seconds. AI-assisted; advisory only.</div>
         </div>
@@ -120,8 +120,8 @@ export function RelatedProjectBlock({ result }: { result: VisionAnalysis }): JSX
         <Icon name="search_off" className="text-[28px] text-outline block mx-auto" />
         <h3 className="text-headline-sm font-bold text-primary">Infrastructure Identified — No Project Match</h3>
         <p className="text-body-sm text-on-surface-variant max-w-md mx-auto">
-          No registered Nirikshan project could be matched to this infrastructure. You can still report an issue or submit this information to
-          improve Nirikshan's coverage.
+          No registered NIRIKSHAK project could be matched to this infrastructure. You can still report an issue or submit this information to
+          improve NIRIKSHAK's coverage.
         </p>
       </section>
     );
@@ -133,7 +133,7 @@ export function RelatedProjectBlock({ result }: { result: VisionAnalysis }): JSX
     <section className="bg-surface-container-lowest rounded-xl border-2 border-secondary/50 shadow-sm overflow-hidden">
       <div className="px-5 py-3 bg-[#FEF9EE] border-b border-[#FDE68A] flex items-center justify-between gap-2">
         <span className="text-label-md font-bold text-primary flex items-center gap-1.5">
-          <Icon name="link" className="text-[18px] text-secondary" /> Related Nirikshan Project
+          <Icon name="link" className="text-[18px] text-secondary" /> Related NIRIKSHAK Project
         </span>
         <VerifiedBadge />
       </div>

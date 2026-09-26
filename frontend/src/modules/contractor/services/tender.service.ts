@@ -38,7 +38,7 @@ export interface DbBid {
   submitted_by?: string | null;
   submitted_at?: string | null;
   created_at: string;
-  tenders?: DbTender;
+  tenders?: Partial<DbTender>;
 }
 
 export class ContractorTenderService {
@@ -128,7 +128,7 @@ export class ContractorTenderService {
       throw error;
     }
 
-    return (data || []) as DbBid[];
+    return (data || []) as unknown as DbBid[];
   }
 
   /**

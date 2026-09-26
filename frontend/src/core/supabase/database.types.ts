@@ -2259,39 +2259,48 @@ export type Database = {
       tender_bids: {
         Row: {
           bid_amount: number
+          bid_reference: string | null
           contractor_organization_id: string
+          created_at: string | null
           deleted_at: string | null
           financial_score: number | null
           id: string
           status: string
           submitted_at: string | null
           submitted_by: string | null
+          technical_proposal: string | null
           technical_score: number | null
           tender_id: string
           updated_at: string | null
         }
         Insert: {
           bid_amount: number
+          bid_reference?: string | null
           contractor_organization_id: string
+          created_at?: string | null
           deleted_at?: string | null
           financial_score?: number | null
           id?: string
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
+          technical_proposal?: string | null
           technical_score?: number | null
           tender_id: string
           updated_at?: string | null
         }
         Update: {
           bid_amount?: number
+          bid_reference?: string | null
           contractor_organization_id?: string
+          created_at?: string | null
           deleted_at?: string | null
           financial_score?: number | null
           id?: string
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
+          technical_proposal?: string | null
           technical_score?: number | null
           tender_id?: string
           updated_at?: string | null

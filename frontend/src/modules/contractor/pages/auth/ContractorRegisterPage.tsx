@@ -74,7 +74,7 @@ export default function ContractorRegisterPage() {
           </div>
           <div className="mt-6">
             <a
-              href="#/login"
+              href="/contractor/login"
               className="inline-flex items-center justify-center w-full h-11 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors"
             >
               Return to Contractor Login
@@ -262,7 +262,7 @@ export default function ContractorRegisterPage() {
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
             <span className="text-slate-400">Already registered?</span>
-            <a href="#/login" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
+            <a href="/contractor/login" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
               Sign In to Portal
             </a>
           </div>

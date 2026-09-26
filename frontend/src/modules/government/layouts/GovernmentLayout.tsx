@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { GovernmentHeader } from '@/components/layout/GovernmentHeader'
 import { GovernmentSidebar } from '@/components/layout/GovernmentSidebar'
 import { NotificationDrawer } from '@/components/layout/NotificationDrawer'
@@ -23,6 +23,7 @@ export function GovernmentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   /** Context rule (route-derived): any route under a project/approval
    * workspace ⇒ sidebar. NOTE: no `$` anchor — the sidebar must persist on
@@ -63,6 +64,10 @@ export function GovernmentLayout() {
         officerRole={officer?.designation}
         onLogout={logout}
         onOpenNotifications={() => setNotifOpen(true)}
+        onSearch={(query) => {
+          const q = query.trim()
+          navigate(q ? `/government/projects?search=${encodeURIComponent(q)}` : '/government/projects')
+        }}
         showProjectNavToggle={contextualNav}
         onOpenProjectNav={() => setSidebarOpen(true)}
       />

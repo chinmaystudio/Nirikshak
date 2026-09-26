@@ -15,7 +15,7 @@ export function NotFoundPage(): JSX.Element {
         </span>
         <h1 className="text-headline-lg font-extrabold text-primary mt-1">Page Not Found</h1>
         <p className="text-body-md text-on-surface-variant max-w-md mx-auto mt-2">
-          The requested section does not exist on the Nirikshan Public Infrastructure Portal, or the route has been updated.
+          The requested section does not exist on the NIRIKSHAK Public Infrastructure Portal, or the route has been updated.
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3 pt-3">

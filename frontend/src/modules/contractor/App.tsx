@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { usePath, navigate, match } from './lib/router';
+import { usePath, navigate, match, Link } from './lib/router';
 import { StoreProvider } from './lib/store';
 import Layout from './components/Layout';
 import { useAuth } from '@/core/auth/useAuth';
@@ -110,8 +110,8 @@ function Router() {
           The page <code className="font-mono text-xs bg-slate-100 rounded px-1.5 py-0.5 dark:bg-slate-800">{path}</code> does not exist in the Contractor Portal.
         </p>
         <div className="flex justify-center gap-2.5 mt-6">
-          <a href="#/dashboard" className="btn btn-primary">Go to Dashboard</a>
-          <a href="#/projects" className="btn btn-secondary">My Projects</a>
+          <Link to="/dashboard" className="btn btn-primary">Go to Dashboard</Link>
+          <Link to="/projects" className="btn btn-secondary">My Projects</Link>
         </div>
       </div>
     </Layout>

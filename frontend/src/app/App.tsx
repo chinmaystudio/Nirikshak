@@ -61,32 +61,28 @@ class RootErrorBoundary extends React.Component<
   }
 }
 
+function normalizeLegacyLocation(): void {
+  const pathname = window.location.pathname.replace(/\\/g, '/');
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  if (!hash) return;
+
+  let target: string | null = null;
+  if (pathname.startsWith('/contractor')) target = `/contractor/${hash}`;
+  else if (pathname.startsWith('/government')) target = `/government/${hash}`;
+  else if (hash.startsWith('contractor/')) target = `/${hash}`;
+  else if (hash.startsWith('government/')) target = `/${hash}`;
+  else target = `/user/${hash}`;
+
+  const normalized = target.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/user';
+  window.history.replaceState(null, '', `${normalized}${window.location.search}`);
+}
+
+normalizeLegacyLocation();
+
 function detectPortal(): 'government' | 'contractor' | 'user' {
   const p = window.location.pathname.toLowerCase().replace(/\\/g, '/');
-  const h = window.location.hash.toLowerCase().replace(/\\/g, '/');
-
-  if (p.includes('/government') || p.startsWith('government') || h.includes('government')) {
-    if (h.includes('government') && !p.includes('/government')) {
-      try {
-        const sub = h.replace(/^#\/?government\/?/, '');
-        window.history.replaceState(null, '', '/government' + (sub ? `/${sub}` : ''));
-      } catch {
-        /* ignore */
-      }
-    }
-    return 'government';
-  }
-  if (p.includes('/contractor') || p.startsWith('contractor') || h.includes('contractor')) {
-    if (h.includes('contractor') && !p.includes('/contractor')) {
-      try {
-        const sub = h.replace(/^#\/?contractor\/?/, '');
-        window.history.replaceState(null, '', '/contractor' + (sub ? `/#/${sub}` : '/#/dashboard'));
-      } catch {
-        /* ignore */
-      }
-    }
-    return 'contractor';
-  }
+  if (p === '/government' || p.startsWith('/government/')) return 'government';
+  if (p === '/contractor' || p.startsWith('/contractor/')) return 'contractor';
   return 'user';
 }
 
@@ -107,8 +103,9 @@ export function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <React.Suspense
+    <BrowserRouter>
+      <AuthProvider>
+        <React.Suspense
         fallback={
           <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
             <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -118,9 +115,7 @@ export function App() {
       >
         {currentPortal === 'government' && (
           <RootErrorBoundary portal="Government">
-            <BrowserRouter>
-              <GovernmentModule />
-            </BrowserRouter>
+            <GovernmentModule />
           </RootErrorBoundary>
         )}
         {currentPortal === 'contractor' && (
@@ -133,8 +128,9 @@ export function App() {
             <UserModule />
           </RootErrorBoundary>
         )}
-      </React.Suspense>
-    </AuthProvider>
+        </React.Suspense>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

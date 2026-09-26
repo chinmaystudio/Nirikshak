@@ -12,7 +12,7 @@ import { ROUTES } from "@/constants/routes";
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
   const auth = useAuth();
-  const next = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("next");
+  const next = new URLSearchParams(window.location.search).get("next");
   const decodedNext = next ? decodeURIComponent(next) : null;
 
   const [email, setEmail] = useState("");

@@ -26,7 +26,7 @@ export function VisionResultPage(): JSX.Element {
           <EmptyState
             icon="photo_camera"
             title="No analysis yet"
-            text="Take or upload a photo of public infrastructure and Nirikshan Vision will identify it for you."
+            text="Take or upload a photo of public infrastructure and NIRIKSHAK Vision will assist with identification."
             ctaLabel="Identify Infrastructure"
             ctaRoute={ROUTES.VISION}
           />
@@ -49,7 +49,7 @@ export function VisionResultPage(): JSX.Element {
         }}
         onInfoSubmit={() => {
           submitInfo(result.id);
-          toast("Thank you — this observation was recorded to improve Nirikshan's coverage.", "success");
+          toast("Thank you — this observation was recorded to improve NIRIKSHAK's coverage.", "success");
         }}
         onAnalyzeAnother={() => navigate(ROUTES.VISION)}
       />

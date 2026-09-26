@@ -51,7 +51,7 @@ export function wizardSub(step: number): string {
 }
 
 export function NextButtonLabel(step: number): string {
-  if (step === 3) return "Continue to AI Verification";
+  if (step === 3) return "Continue to AI-Assisted Review";
   if (step === 5) return "Submit Complaint";
   return "Next";
 }

@@ -6,6 +6,7 @@ import { formatCr } from "@/utils/formatCurrency";
 import { shortDate } from "@/utils/formatDate";
 import { projectRoute } from "@/constants/routes";
 import type { Project } from "@/types/project";
+import { navigate } from "@/app/router";
 
 interface ProjectCardProps {
   project: Project;
@@ -64,7 +65,7 @@ export function ProjectCard({ project, onOpen }: ProjectCardProps): JSX.Element 
   const meta = statusMeta(project.status);
   const open = (): void => {
     if (onOpen) onOpen(project);
-    else window.location.hash = projectRoute(project.id);
+    else navigate(projectRoute(project.id));
   };
   return (
     <article className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">

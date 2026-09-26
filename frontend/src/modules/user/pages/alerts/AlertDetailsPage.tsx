@@ -82,7 +82,7 @@ export function AlertDetailsPage(): JSX.Element {
             icon="content_copy"
             onClick={() => {
               void navigator.clipboard
-                ?.writeText(`Nirikshan Alert ${a.id} — ${a.title} (${a.area})`)
+                ?.writeText(`NIRIKSHAK Alert ${a.id} — ${a.title} (${a.area})`)
                 .then(() => toast("Alert reference copied to clipboard.", "success"))
                 .catch(() => toast("Copy is blocked in this browser context.", "error"));
             }}

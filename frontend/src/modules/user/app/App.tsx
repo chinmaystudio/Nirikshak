@@ -120,9 +120,9 @@ export function App(): JSX.Element {
       const qs = Object.entries(query)
         .map(([k, v]) => `${k}=${v}`)
         .join("&");
-      const next = `#${path}${qs ? `?${qs}` : ""}`;
+      const next = `/user${path}${qs ? `?${qs}` : ""}`;
       void import("@/app/providers/store").then(({ appStore }) => appStore.setState({ next }));
-      toast("Please sign in with your mobile OTP to continue.", "info");
+      toast("Please sign in with your registered account to continue.", "info");
       navigate(ROUTES.LOGIN);
     }
     if (route.guestOnly && auth.isLoggedIn) {
@@ -179,7 +179,7 @@ export function App(): JSX.Element {
 
       <Footer />
       <MobileNavigation />
-      {!isAuthChrome && path !== ROUTES.ASSISTANT && !path.startsWith("/vision") ? <AssistantFab /> : null}
+      {!isAuthChrome && path !== "/assistant" && !path.startsWith("/vision") ? <AssistantFab /> : null}
       <PolicyDialog policyKey={policyKey} onClose={() => setPolicyKey(null)} />
       <ToastViewport />
     </div>

@@ -26,7 +26,7 @@ export function AIVerification({ stepIndex, running, result, onRun }: AIVerifica
           <Icon name="psychology" className="text-[22px]" />
         </span>
         <div>
-          <div className="text-label-md font-bold text-primary">AI Verification Assistant</div>
+          <div className="text-label-md font-bold text-primary">AI-Assisted Classification</div>
           <p className="text-body-sm text-on-surface-variant">
             Before submission, the system cross-checks your report against project records, similar complaints and location data. AI only{" "}
             <strong>assists verification</strong> — the final decision always rests with department officials.

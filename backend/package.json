@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
     "build": "tsc",
     "seed:test-users": "tsx scripts/seed-test-users.ts",
     "start": "node dist/index.js"

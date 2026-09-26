@@ -17,11 +17,12 @@ import ReportUpdate from './ReportUpdate';
 import AIAnalysis from './AIAnalysis';
 import AICompletion from './AICompletion';
 import Communication from './Communication';
-import { CONTRACTOR } from '../../lib/data';
 import { cls, cr, fmtDate, daysUntil, daysLeftLabel } from '../../lib/utils';
+import { useAuth } from '@/core/auth/useAuth';
 
 export default function ProjectLayout({ projectId, section }: { projectId: string; section: string }) {
   const { projects, documents, addDocument, toast } = useStore();
+  const { session } = useAuth();
   const project = projects.find((p) => p.id === projectId || p.code === projectId) || getProject(projectId) || projects[0];
   const [uploadOpen, setUploadOpen] = useState(false);
   const [docType, setDocType] = useState('QA Report');
@@ -156,9 +157,9 @@ export default function ProjectLayout({ projectId, section }: { projectId: strin
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <Avatar name={CONTRACTOR.short} />
+            <Avatar name={session?.organization?.name || session?.profile?.full_name || 'Unknown'} />
             <div>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{CONTRACTOR.name}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{session?.organization?.name || 'Organization not available'}</p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">{project.code} • {project.department}</p>
             </div>
           </div>

@@ -111,7 +111,7 @@ export function VisionStrip({ projectId }: { projectId: string }): JSX.Element {
       <span className="text-body-sm text-on-surface-variant flex items-center gap-2">
         <Icon name="photo_camera" className="text-[19px] text-secondary" />
         <span>
-          <strong className="text-primary">Verify what you see.</strong> Have a concern about this infrastructure? Analyze it with Nirikshan Vision.
+          <strong className="text-primary">Verify what you see.</strong> Have a concern about this infrastructure? Analyze it with NIRIKSHAK Vision.
         </span>
       </span>
       <a

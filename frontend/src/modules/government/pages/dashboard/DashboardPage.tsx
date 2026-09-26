@@ -20,7 +20,7 @@ import { cn } from '@/utils/cn'
  * DashboardPage — the preserved Stitch government command dashboard: 8 KPI
  * cards, executive summary, portfolio health, pipeline analytics, urgent
  * officer action queue, ground-truth field feed, and the filterable projects
- * register. All figures are mock data.
+ * register. Production figures come from the authenticated Supabase views.
  */
 export function DashboardPage() {
   const { t } = useI18n()
@@ -31,6 +31,8 @@ export function DashboardPage() {
   const [budget, setBudget] = useState('')
   const [keyword, setKeyword] = useState('')
   const [expandedDepts, setExpandedDepts] = useState(false)
+  const [loadedAt] = useState(() => new Date())
+  const demoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true'
 
   const list = useMemo(() => {
     let rows = projects ?? []
@@ -55,7 +57,9 @@ export function DashboardPage() {
     const utilized = rows.reduce((s, p) => s + p.utilizedAmountCr, 0)
     const avgPhys = rows.length ? rows.reduce((s, p) => s + p.physicalProgressPct, 0) / rows.length : 0
     const delayed = rows.filter((p) => p.status === 'delayed' || p.delayDays > 0).length
-    return { active: active.length, outlay, utilized, avgPhys, delayed }
+    const pendingApprovals = rows.reduce((sum, project) => sum + (project.pendingApprovals || 0), 0)
+    const openGrievances = rows.reduce((sum, project) => sum + (project.openComplaints || 0), 0)
+    return { active: active.length, outlay, utilized, avgPhys, delayed, pendingApprovals, openGrievances }
   }, [projects])
 
   const byDepartment = useMemo(() => {
@@ -97,7 +101,7 @@ export function DashboardPage() {
         <div>
           <h1 className="text-heading-1 text-fg">{t('dash.greeting')}</h1>
           <p className="mt-1 text-body-small text-fg-muted">
-            {t('dash.subtitle')} • <span className="tabular-nums">FY 2025-2026 • Sync: 10:42 AM IST</span>
+            {t('dash.subtitle')} • <span className="tabular-nums">Supabase data loaded {loadedAt.toLocaleString('en-IN')}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -112,13 +116,13 @@ export function DashboardPage() {
 
       {/* 8 KPI cards (Stitch grid: 1/2/4/7 cols) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard label={t('dash.kpi.activeProjects')} value={loading ? '—' : totals.active.toLocaleString('en-IN')} icon="map" iconTone="primary" delta="+2 this quarter" deltaTone="success" />
+        <KpiCard label={t('dash.kpi.activeProjects')} value={loading ? '—' : totals.active.toLocaleString('en-IN')} icon="map" iconTone="primary" />
         <KpiCard label={t('dash.kpi.totalOutlay')} value={loading ? '—' : formatCr(totals.outlay)} icon="account_balance" iconTone="primary" />
         <KpiCard label={t('dash.kpi.fundsUtilized')} value={loading ? '—' : formatCr(totals.utilized)} icon="payments" iconTone="success" delta={`${totals.outlay ? formatPct((totals.utilized / totals.outlay) * 100, 1) : '—'} of outlay`} deltaTone="neutral" />
         <KpiCard label={t('dash.kpi.avgPhysical')} value={loading ? '—' : formatPct(totals.avgPhys)} icon="trending_up" iconTone="neutral" />
-        <KpiCard label={t('dash.kpi.delayedWorks')} value={loading ? '—' : totals.delayed} icon="timer_off" iconTone="danger" delta="3 critical" deltaTone="danger" />
-        <KpiCard label={t('dash.kpi.pendingApprovals')} value="7" icon="rule" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/approvals">{t('common.viewAll')}</Link>} />
-        <KpiCard label={t('dash.kpi.openGrievances')} value="4" icon="report_problem" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/complaints">{t('common.viewAll')}</Link>} />
+        <KpiCard label={t('dash.kpi.delayedWorks')} value={loading ? '—' : totals.delayed} icon="timer_off" iconTone="danger" />
+        <KpiCard label={t('dash.kpi.pendingApprovals')} value={loading ? '—' : totals.pendingApprovals} icon="rule" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/approvals">{t('common.viewAll')}</Link>} />
+        <KpiCard label={t('dash.kpi.openGrievances')} value={loading ? '—' : totals.openGrievances} icon="report_problem" iconTone="warning" footer={<Link className="text-primary-strong hover:underline" to="/government/complaints">{t('common.viewAll')}</Link>} />
       </div>
 
       {/* Executive summary + pipeline (5+7 split) */}
@@ -132,8 +136,8 @@ export function DashboardPage() {
           <div className="flex flex-col gap-4">
             <p className="text-body text-fg-muted">
               Portfolio of {totals.active} active works worth {formatCr(totals.outlay)} sanctioned this FY.
-              <strong className="text-fg"> 7 priority approvals</strong> and
-              <strong className="text-fg"> 3 delayed critical works</strong> need officer attention.
+              <strong className="text-fg"> {totals.pendingApprovals} pending approvals</strong> and
+              <strong className="text-fg"> {totals.delayed} delayed works</strong> need officer attention.
             </p>
             <SegmentBar ariaLabel="Portfolio status split" segments={statusSplit} />
             <p className="border-t border-border pt-2 text-caption text-fg-subtle">{t('dash.statutoryNote')}</p>
@@ -213,8 +217,8 @@ export function DashboardPage() {
         </Panel>
       </div>
 
-      {/* Urgent officer action queue */}
-      <Panel
+      {/* Fixture-only operational queues stay out of production. */}
+      {demoMode ? <Panel
         title={t('dash.urgentQueue')}
         icon="crisis_alert"
         actions={<Link to="/government/approvals" className="text-caption text-primary-strong hover:underline">{t('common.viewAll')}</Link>}
@@ -255,10 +259,10 @@ export function DashboardPage() {
             </tbody>
           </table>
         </div>
-      </Panel>
+      </Panel> : null}
 
       {/* Ground-truth feed (3-col) */}
-      <Panel title={t('dash.groundTruth')} icon="fact_check" subtitle={t('dash.groundTruthSubtitle')} bodyClassName="p-0">
+      {demoMode ? <Panel title={t('dash.groundTruth')} icon="fact_check" subtitle={t('dash.groundTruthSubtitle')} bodyClassName="p-0">
         <ul className="divide-y divide-border">
           {[
             { id: 'INS-2026-0231', p: 'NIR-PWD-2026-0142', txt: 'Core sample 38.4 MPa after 28-day curing — above M35 spec (NABL Accredited lab).', when: '09 Feb, 15:40 IST', tone: 'success' as const, icon: 'verified' },
@@ -286,7 +290,7 @@ export function DashboardPage() {
             </li>
           ))}
         </ul>
-      </Panel>
+      </Panel> : null}
 
       {/* Projects register with filters */}
       <Panel title={t('dash.projectsRegister')} icon="map" subtitle={t('dash.registerSubtitle')} bodyClassName="p-0">
@@ -369,7 +373,7 @@ export function DashboardPage() {
         />
       </Panel>
 
-      <p className="text-caption text-fg-subtle">{t('common.mockDataNote')}</p>
+      {demoMode ? <p className="text-caption text-fg-subtle">{t('common.mockDataNote')}</p> : null}
     </div>
   )
 }

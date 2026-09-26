@@ -3,7 +3,7 @@ import { Link, NavLink, useLocation } from 'react-router-dom'
 import { buildWorkspaceNav, buildApprovalNav, type NavNode } from '@/constants'
 // Nav chrome only needs record lookups; importing via '@/api' would pull the
 // whole mock-API + demo-dataset barrel into the eager bundle.
-import { findProject } from '@/data/projects'
+import { projectsApi } from '@/api'
 import { findApproval } from '@/data/approvals'
 import { useApiData } from '@/hooks/useApiData'
 import { useI18n } from '@/context/I18nContext'
@@ -245,7 +245,7 @@ export function GovernmentSidebar({
   const approvalId = /^\/government\/approvals\/([^/]+)/.exec(pathname)?.[1]
 
   const { data: project } = useApiData(
-    () => Promise.resolve(inProject ? findProject(projectId!) : undefined),
+    () => inProject ? projectsApi.get(projectId!) : Promise.resolve(undefined),
     [projectId],
   )
   const { data: approval } = useApiData(

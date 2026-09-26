@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useParams, useLocation } from 'react-router-dom'
 import { GovernmentLayout } from '@/layouts/GovernmentLayout'
-import { CitizenLayout } from '@/layouts/CitizenLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { NotFoundPage, ErrorPage } from '@/pages/errors/ErrorPages'
 import { LoadingBlock } from '@/components/feedback/Feedback'
@@ -39,14 +38,6 @@ const ApprovalOverviewPage = lazy(() => import('@/pages/approval/ApprovalOvervie
 const ApprovalWorkflowPage = lazy(() => import('@/pages/approval/ApprovalWorkflowPage').then((m) => ({ default: m.ApprovalWorkflowPage })))
 const ApprovalHistoryPage = lazy(() => import('@/pages/approval/ApprovalHistoryPage').then((m) => ({ default: m.ApprovalHistoryPage })))
 const ApprovalProjectPage = lazy(() => import('@/pages/approval/ApprovalProjectPage').then((m) => ({ default: m.ApprovalProjectPage })))
-
-/* ---------- Citizen screens (code-split) ---------- */
-const CitizenHomePage = lazy(() => import('@/pages/citizen/CitizenHomePage').then((m) => ({ default: m.CitizenHomePage })))
-const CitizenProjectsPage = lazy(() => import('@/pages/citizen/CitizenProjectsPage').then((m) => ({ default: m.CitizenProjectsPage })))
-const CitizenProjectDetailPage = lazy(() => import('@/pages/citizen/CitizenProjectDetailPage').then((m) => ({ default: m.CitizenProjectDetailPage })))
-const CitizenNearbyPage = lazy(() => import('@/pages/citizen/CitizenNearbyPage').then((m) => ({ default: m.CitizenNearbyPage })))
-const CitizenGrievancePage = lazy(() => import('@/pages/citizen/CitizenGrievancePage').then((m) => ({ default: m.CitizenGrievancePage })))
-const CitizenTrackPage = lazy(() => import('@/pages/citizen/CitizenTrackPage').then((m) => ({ default: m.CitizenTrackPage })))
 
 /* ---------- Project workspace (code-split; all modules project-scoped) ---------- */
 const ProjectWorkspaceLayout = lazy(() => import('@/pages/project/ProjectWorkspaceLayout').then((m) => ({ default: m.ProjectWorkspaceLayout })))
@@ -191,19 +182,22 @@ export function AppRoutes() {
         <Route path="/reports" element={<Navigate to="/government/reports" replace />} />
         <Route path="/settings" element={<Navigate to="/government/settings" replace />} />
 
-        {/* Citizen (public) suite */}
-        <Route path="/citizen" element={<CitizenLayout />}>
-          <Route index element={<CitizenHomePage />} />
-          <Route path="projects" element={<CitizenProjectsPage />} />
-          <Route path="projects/:id" element={<CitizenProjectDetailPage />} />
-          <Route path="nearby" element={<CitizenNearbyPage />} />
-          <Route path="grievance" element={<CitizenGrievancePage />} />
-          <Route path="track" element={<CitizenTrackPage />} />
-        </Route>
+        {/* Deprecated Government-module citizen routes now use the canonical portal. */}
+        <Route path="/citizen" element={<Navigate to="/user" replace />} />
+        <Route path="/citizen/projects" element={<Navigate to="/user/projects" replace />} />
+        <Route path="/citizen/projects/:id" element={<LegacyCitizenProjectRedirect />} />
+        <Route path="/citizen/nearby" element={<Navigate to="/user/projects" replace />} />
+        <Route path="/citizen/grievance" element={<Navigate to="/user/report" replace />} />
+        <Route path="/citizen/track" element={<Navigate to="/user/complaints" replace />} />
 
         <Route path="*" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
       </Routes>
     </Suspense>
   )
+}
+
+function LegacyCitizenProjectRedirect() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/user/projects/${encodeURIComponent(id)}`} replace />
 }

@@ -41,7 +41,7 @@ export default function ContractorForgotPasswordPage() {
               If an active contractor account is associated with <span className="text-white font-mono">{email}</span>, a secure password reset link has been dispatched.
             </p>
             <div className="mt-4">
-              <a href="#/login" className="inline-block text-xs font-semibold text-blue-400 hover:underline">
+              <a href="/contractor/login" className="inline-block text-xs font-semibold text-blue-400 hover:underline">
                 Back to Sign In
               </a>
             </div>
@@ -74,7 +74,7 @@ export default function ContractorForgotPasswordPage() {
               {busy ? 'Sending Reset Instructions...' : 'Send Password Reset Link'}
             </button>
             <div className="pt-2 text-center">
-              <a href="#/login" className="text-xs text-slate-400 hover:text-slate-200">
+              <a href="/contractor/login" className="text-xs text-slate-400 hover:text-slate-200">
                 Return to Login
               </a>
             </div>

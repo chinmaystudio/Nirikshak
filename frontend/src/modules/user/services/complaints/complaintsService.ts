@@ -171,13 +171,13 @@ export async function createComplaint(payload: NewComplaintPayload): Promise<Com
       description: payload.description,
       severity: (payload.priority || 'MEDIUM').toUpperCase(),
       status: 'SUBMITTED',
-      location_text: payload.location,
     })
     .select('*, projects(project_name, nirikshak_project_id)')
     .single();
 
   if (error || !data) {
-    console.error('Supabase complaint insert failed, falling back to local storage:', error);
+    if (!useMock) throw error ?? new Error('Complaint submission failed.');
+    console.error('Supabase complaint insert failed; using the explicit mock fixture path:', error);
     const totalHours = payload.priority === 'critical' ? 12 : payload.priority === 'high' ? 24 : payload.priority === 'medium' ? 48 : 72;
     const now = new Date().toISOString();
     const fallbackComplaint: Complaint = {
@@ -228,8 +228,8 @@ export async function createComplaint(payload: NewComplaintPayload): Promise<Com
 }
 
 export async function upvoteComplaint(id: string): Promise<Complaint> {
-  const current = await getComplaintById(id);
-  return { ...current, upvotes: current.upvotes + 1, upvotedByUser: true };
+  await getComplaintById(id);
+  throw new Error('Complaint upvotes are not supported. Use the community issue flow instead.');
 }
 
 export async function submitFeedback(id: string, fb: ComplaintFeedback): Promise<Complaint> {

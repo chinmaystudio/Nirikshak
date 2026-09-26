@@ -9,7 +9,7 @@ const env = import.meta.env;
 
 export const environment: AppEnvironment = {
   apiBaseUrl: (env.VITE_API_BASE_URL as string | undefined) ?? "",
-  demoMode: !(env.VITE_API_BASE_URL as string | undefined),
-  appName: "NIRIKSHAN",
+  demoMode: env.VITE_DEMO_MODE === "true" || env.VITE_USE_MOCK_API === "true",
+  appName: "NIRIKSHAK",
   version: "7.0.0"
 };

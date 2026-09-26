@@ -41,7 +41,7 @@ export async function loginWithEmail(email: string, password: string, next: stri
   };
 
   appStore.setState({ user: citizen, next: null });
-  const target = next ?? appStore.getState().next ?? "#/home";
+  const target = next ?? appStore.getState().next ?? "/user/home";
   return { user: citizen, next: target };
 }
 

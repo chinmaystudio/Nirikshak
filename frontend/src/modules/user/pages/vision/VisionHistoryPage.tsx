@@ -14,7 +14,7 @@ export function VisionHistoryPage(): JSX.Element {
     <div className="max-w-3xl mx-auto space-y-5">
       <PageHeader
         title="My Infrastructure Checks"
-        sub="Photos you analyzed with Nirikshan Vision — reopen any result to view details or report an issue."
+        sub="Photos you analyzed with NIRIKSHAK Vision — reopen any result to view details or report an issue."
         actions={
           <Button variant="accent" icon="photo_camera" onClick={() => navigate(ROUTES.VISION)}>
             Identify Infrastructure

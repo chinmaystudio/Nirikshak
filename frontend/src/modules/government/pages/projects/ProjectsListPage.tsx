@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '@/context/I18nContext'
 import { Panel } from '@/components/ui/Card'
 import { Select, TextField } from '@/components/ui/Fields'
@@ -23,8 +23,9 @@ import { cn } from '@/utils/cn'
 export function ProjectsListPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { data: projects, loading } = useApiData(() => projectsApi.all(), [])
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const debounced = useDebounced(search)
   const [dept, setDept] = useState('')
   const [district, setDistrict] = useState('')
@@ -61,7 +62,7 @@ export function ProjectsListPage() {
         <div>
           <h1 className="text-heading-1 text-fg">{t('nav.projects')}</h1>
           <p className="mt-1 text-body-small text-fg-muted">
-            Master registry of sanctioned works across 36 Dists (mock data).
+            Master registry of sanctioned works available to your account.
           </p>
         </div>
         <div className="flex items-center gap-2">

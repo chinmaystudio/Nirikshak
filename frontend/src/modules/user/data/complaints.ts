@@ -34,8 +34,8 @@ export const complaints: Complaint[] = [
       { id: "ev-4821-2", name: "IMG_20260909_1838.jpg", size: "2.7 MB", kind: "image", meta: "GPS 18.5911, 73.7390 • 10-Sep, 06:38 PM", tone: "safety" }
     ],
     timeline: [
-      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via Nirikshan Citizen Portal with 2 geotagged photos.", timestamp: ago(2 * DAY), actor: "You", status: "completed" },
-      { id: "tl-2", title: "AI Verification", description: "AI classified: Safety Hazard • Severity High • Confidence 94%. Matched to Pune Metro Line-3.", timestamp: ago(2 * DAY - 60_000), actor: "Nirikshan AI", status: "completed" },
+      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via NIRIKSHAK Citizen Portal with 2 geotagged photos.", timestamp: ago(2 * DAY), actor: "You", status: "completed" },
+      { id: "tl-2", title: "AI-assisted Review", description: "AI classified: Safety Hazard • Severity High • Confidence 94%. Matched to Pune Metro Line-3.", timestamp: ago(2 * DAY - 60_000), actor: "NIRIKSHAK Assistant", status: "completed" },
       { id: "tl-3", title: "Assigned to MahaMetro", description: "Routed to Site Engineer, Package-4. SLA clock started (48h).", timestamp: ago(2 * DAY - 40 * 60_000), actor: "Grievance Cell", status: "completed" },
       { id: "tl-4", title: "Inspection Completed", description: "JE visited at 2:30 PM. Notice issued under Clause 14.2 Safety By-laws.", timestamp: ago(DAY), actor: "Er. S. Patil", status: "completed" },
       { id: "tl-5", title: "Action In Progress", description: "250 m of water-filled barricades and flashing night markers being installed tonight.", timestamp: ago(3 * HOUR), actor: "Contractor Crew", status: "current" },
@@ -65,8 +65,8 @@ export const complaints: Complaint[] = [
     officer: { name: "Er. P. R. Kadam", role: "Superintending Engineer, Water Supply", phone: "+91 20 2712 0502" },
     evidence: [{ id: "ev-4905-1", name: "leak_joint_01.jpg", size: "2.2 MB", kind: "image", meta: "GPS 18.6295, 73.8475 • 11-Sep, 07:58 AM", tone: "water" }],
     timeline: [
-      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via Nirikshan Citizen Portal with 1 geotagged photo.", timestamp: ago(5 * HOUR), actor: "You", status: "completed" },
-      { id: "tl-2", title: "AI Verification", description: "AI classified: Water Leakage • Severity High • Confidence 91%. Matched to Bhosari 24×7 Water Supply project.", timestamp: ago(5 * HOUR - 60_000), actor: "Nirikshan AI", status: "completed" },
+      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via NIRIKSHAK Citizen Portal with 1 geotagged photo.", timestamp: ago(5 * HOUR), actor: "You", status: "completed" },
+      { id: "tl-2", title: "AI-assisted Review", description: "AI classified: Water Leakage • Severity High • Confidence 91%. Matched to Bhosari 24×7 Water Supply project.", timestamp: ago(5 * HOUR - 60_000), actor: "NIRIKSHAK Assistant", status: "completed" },
       { id: "tl-3", title: "Assignment to Water Supply Department", description: "Pending — queue position 3 for this zone.", timestamp: null, actor: "Grievance Cell", status: "upcoming" },
       { id: "tl-4", title: "Field Action", description: "Pending assignment.", timestamp: null, actor: "—", status: "upcoming" },
       { id: "tl-5", title: "Citizen Verification & Closure", description: "Pending.", timestamp: null, actor: "You", status: "upcoming" }
@@ -94,8 +94,8 @@ export const complaints: Complaint[] = [
     officer: { name: "Er. G. N. Rao", role: "Chief Engineer, BDA", phone: "+91 80 2266 3911" },
     evidence: [{ id: "ev-4790-1", name: "dust_hebbal.jpg", size: "2.9 MB", kind: "image", meta: "GPS 13.0358, 77.5970 • 07-Sep, 05:12 PM", tone: "environment" }],
     timeline: [
-      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via Nirikshan Citizen Portal.", timestamp: ago(4 * DAY), actor: "You", status: "completed" },
-      { id: "tl-2", title: "AI Verification", description: "AI classified: Environmental Issue • Severity Medium • Confidence 88%.", timestamp: ago(4 * DAY - 60_000), actor: "Nirikshan AI", status: "completed" },
+      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via NIRIKSHAK Citizen Portal.", timestamp: ago(4 * DAY), actor: "You", status: "completed" },
+      { id: "tl-2", title: "AI-assisted Review", description: "AI classified: Environmental Issue • Severity Medium • Confidence 88%.", timestamp: ago(4 * DAY - 60_000), actor: "NIRIKSHAK Assistant", status: "completed" },
       { id: "tl-3", title: "Assigned to BDA Environment Cell", description: "Routed with 72h SLA.", timestamp: ago(4 * DAY - 2 * HOUR), actor: "Grievance Cell", status: "completed" },
       { id: "tl-4", title: "Investigation", description: "Site inspection confirmed non-compliance with dust suppression schedule.", timestamp: ago(3 * DAY), actor: "Environment Cell", status: "completed" },
       { id: "tl-5", title: "Resolved", description: "Two sprinkler tankers deployed twice daily; stockpiles covered with geotextile. Compliance photo attached.", timestamp: ago(2 * DAY), actor: "Contractor", status: "completed" }
@@ -127,8 +127,8 @@ export const complaints: Complaint[] = [
     officer: { name: "Er. P. K. Singh", role: "Director, Projects (NCRTC)", phone: "+91 120 456 7811" },
     evidence: [{ id: "ev-4652-1", name: "encroach_path.jpg", size: "3.3 MB", kind: "image", meta: "GPS 28.6675, 77.4370 • 03-Sep, 11:45 AM", tone: "safety" }],
     timeline: [
-      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via Nirikshan Citizen Portal.", timestamp: ago(8 * DAY), actor: "You", status: "completed" },
-      { id: "tl-2", title: "AI Verification", description: "AI classified: Safety Hazard • Severity Medium • Confidence 90%.", timestamp: ago(8 * DAY - 60_000), actor: "Nirikshan AI", status: "completed" },
+      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via NIRIKSHAK Citizen Portal.", timestamp: ago(8 * DAY), actor: "You", status: "completed" },
+      { id: "tl-2", title: "AI-assisted Review", description: "AI classified: Safety Hazard • Severity Medium • Confidence 90%.", timestamp: ago(8 * DAY - 60_000), actor: "NIRIKSHAK Assistant", status: "completed" },
       { id: "tl-3", title: "Assigned to NCRTC", description: "Routed to yard management.", timestamp: ago(8 * DAY - 3 * HOUR), actor: "Grievance Cell", status: "completed" },
       { id: "tl-4", title: "Resolved", description: "Scrap shifted to designated yard; footpath cleared and barriers installed.", timestamp: ago(6 * DAY), actor: "Contractor", status: "completed" },
       { id: "tl-5", title: "Citizen Verified", description: "You confirmed the footpath is clear. Complaint closed.", timestamp: ago(5 * DAY), actor: "You", status: "completed" }
@@ -160,8 +160,8 @@ export const complaints: Complaint[] = [
     officer: { name: "Er. S. V. Rane", role: "Chief Engineer, Coastal (BMC)", phone: "+91 22 2270 4411" },
     evidence: [{ id: "ev-4501-1", name: "backflow_worli.jpg", size: "3.0 MB", kind: "image", meta: "GPS 19.0170, 72.8213 • 30-Aug, 08:05 AM", tone: "water" }],
     timeline: [
-      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via Nirikshan Citizen Portal.", timestamp: ago(12 * DAY), actor: "You", status: "completed" },
-      { id: "tl-2", title: "AI Verification", description: "AI classified: Drainage Problem • Severity High • Confidence 89%.", timestamp: ago(12 * DAY - 60_000), actor: "Nirikshan AI", status: "completed" },
+      { id: "tl-1", title: "Complaint Submitted", description: "Submitted via NIRIKSHAK Citizen Portal.", timestamp: ago(12 * DAY), actor: "You", status: "completed" },
+      { id: "tl-2", title: "AI-assisted Review", description: "AI classified: Drainage Problem • Severity High • Confidence 89%.", timestamp: ago(12 * DAY - 60_000), actor: "NIRIKSHAK Assistant", status: "completed" },
       { id: "tl-3", title: "Assigned to BMC Coastal Cell", description: "Routed with 72h SLA.", timestamp: ago(12 * DAY - 5 * HOUR), actor: "Grievance Cell", status: "completed" },
       { id: "tl-4", title: "SLA Breached — Auto Escalation", description: "72h SLA elapsed without field action. Automatically escalated to Chief Engineer's office.", timestamp: ago(8 * DAY), actor: "System", status: "completed", breach: true },
       { id: "tl-5", title: "Re-inspection Ordered", description: "CE office ordered desilting jetting machine deployment and tidal valve check.", timestamp: ago(DAY), actor: "Er. S. V. Rane", status: "current" },

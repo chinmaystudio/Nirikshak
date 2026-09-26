@@ -56,13 +56,13 @@ export function HomePage(): JSX.Element {
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-secondary/15 text-secondary text-[11px] font-bold uppercase tracking-wider mb-2 border border-secondary/20">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-              Citizen Surveillance &amp; Audit Portal
+              Citizen Infrastructure Transparency Portal
             </div>
             <h1 className="text-headline-lg font-headline-lg font-extrabold text-primary">
               {greeting()}, {user ? user.name.split(" ")[0] : "Citizen"}
             </h1>
             <p className="text-body-md text-on-surface-variant mt-1">
-              Track active public works, inspect expenditures, and verify municipal infrastructure in real-time.
+              Track public works, inspect published expenditures, and review the latest verified infrastructure data.
             </p>
           </div>
           <div className="flex flex-col md:items-end text-label-sm text-outline gap-1.5 flex-shrink-0">
@@ -90,7 +90,7 @@ export function HomePage(): JSX.Element {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <QuickAction label="Find Nearby Projects" sub="Map, budgets & timelines" icon="travel_explore" route={ROUTES.PROJECTS} warm />
-        <QuickAction label="Report an Issue" sub="Guided, AI-verified in minutes" icon="report" route={ROUTES.REPORT} warm />
+        <QuickAction label="Report an Issue" sub="Guided, AI-assisted submission" icon="report" route={ROUTES.REPORT} warm />
         <QuickAction label="Track My Complaints" sub="SLA status & escalation" icon="receipt_long" route={ROUTES.COMPLAINTS} />
         <QuickAction label="Ask the AI Assistant" sub="Civic answers instantly" icon="smart_toy" route={ROUTES.ASSISTANT} />
       </div>
@@ -99,11 +99,11 @@ export function HomePage(): JSX.Element {
         <div className="grid grid-cols-1 md:grid-cols-12">
           <div className="md:col-span-8 p-5 space-y-2.5">
             <span className="text-[11px] font-bold uppercase tracking-widest text-secondary inline-flex items-center gap-1.5">
-              <Icon name="auto_awesome" className="text-[15px]" /> NIRIKSHAN VISION
+              <Icon name="auto_awesome" className="text-[15px]" /> NIRIKSHAK VISION
             </span>
             <h2 className="text-headline-sm font-bold text-primary">Understand Your Infrastructure</h2>
             <p className="text-body-sm text-on-surface-variant max-w-xl">
-              Take a photo of a road, bridge, public building or construction site. Nirikshan Vision identifies it, shows who maintains it, and
+              Take a photo of a road, bridge, public building or construction site. NIRIKSHAK Vision assists with identification, shows published maintenance details, and
               connects it to the registered project and its transparency record.
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
@@ -131,7 +131,7 @@ export function HomePage(): JSX.Element {
 
       <SectionHead
         title="Nearby Active Projects"
-        sub={`Live status of public works closest to you in ${ward.name}`}
+        sub={`Latest published status of public works closest to you in ${ward.name}`}
         link={ROUTES.PROJECTS}
         linkLabel="View all on map"
       />
@@ -164,7 +164,7 @@ export function HomePage(): JSX.Element {
                 return (
                   <button
                     key={a.id}
-                    onClick={() => navigate(`#/alerts/${a.id}`)}
+                    onClick={() => navigate(`/user/alerts/${a.id}`)}
                     className={`w-full text-left ${meta.cardClass} p-3 rounded-lg border border-outline-variant/20 space-y-1`}
                   >
                     <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export function HomePage(): JSX.Element {
             </a>
           </div>
           {!auth.isLoggedIn ? (
-            <EmptyState icon="lock" title="Sign in to track complaints" text="Login with your mobile OTP to see your complaint SLA status." ctaLabel="Login" ctaRoute={ROUTES.LOGIN} />
+            <EmptyState icon="lock" title="Sign in to track complaints" text="Sign in with your registered email and password to see complaint status." ctaLabel="Login" ctaRoute={ROUTES.LOGIN} />
           ) : complaintsState.loading ? (
             <LoadingSkeleton kind="list" />
           ) : activeComplaints.length > 0 ? (

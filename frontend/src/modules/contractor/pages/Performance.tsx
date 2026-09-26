@@ -1,16 +1,30 @@
 import { Gauge, Star, History, MessageSquareQuote } from 'lucide-react';
 import { PageHeader, Card, SectionTitle, StatusBadge } from '../components/ui';
 import { ProgressRing, HBars, LineChart } from '../components/charts';
-import { PERFORMANCE, CONTRACTOR } from '../lib/data';
+import { PERFORMANCE } from '../lib/data';
 import { cr } from '../lib/utils';
+import { useAuth } from '@/core/auth/useAuth';
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
 
 export default function Performance() {
   const p = PERFORMANCE;
+  const { session } = useAuth();
+  if (!DEMO_MODE) {
+    return (
+      <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-6">
+        <PageHeader title="My Performance" subtitle={session?.organization?.name || 'Organization not available'} />
+        <Card className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
+          No verified performance records are available yet.
+        </Card>
+      </div>
+    );
+  }
   return (
     <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-6">
       <PageHeader
         title="My Performance"
-        subtitle={`${CONTRACTOR.name} • Government evaluation, quality records and citizen feedback across ${p.history.length + 18} completed works`}
+        subtitle={`${session?.organization?.name || 'Organization not available'} • Government evaluation, quality records and citizen feedback`}
       />
 
       {/* Score hero */}

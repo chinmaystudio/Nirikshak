@@ -4,7 +4,7 @@ export const common: Record<string, string> = {
   'common.tagline': 'पारदर्शी परियोजनाएँ • सशक्त भारत',
   'common.demoBanner':
     'डेमो संस्करण — दिखाया गया सारा डेटा नमूना (मॉक) डेटा है। किसी वास्तविक सरकारी बैकएंड से जुड़ा नहीं है।',
-  'common.mockDataNote': 'इस पृष्ठ के सभी आँकड़े प्रदर्शन हेतु नमूना डेटा हैं।',
+  'common.mockDataNote': (import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true') ? 'इस पृष्ठ के सभी आँकड़े प्रदर्शन हेतु नमूना डेटा हैं।' : '',
   'common.search': 'खोजें',
   'common.searchPlaceholder': 'परियोजनाएँ, निविदाएँ, शिकायतें खोजें…',
   'common.view': 'देखें',

@@ -21,7 +21,7 @@ export function IdentifyInfrastructurePage(): JSX.Element {
   const navigate = useNavigate();
   const auth = useAuth();
   const { analyze } = useInfrastructureVision();
-  const query = new URLSearchParams(window.location.hash.split("?")[1] ?? "");
+  const query = new URLSearchParams(window.location.search);
   const preProject = query.get("project");
   const continueToReport = query.get("next") === "report";
   const preferred = preProject ? findProject(preProject) : null;
@@ -43,7 +43,7 @@ export function IdentifyInfrastructurePage(): JSX.Element {
         />
         <div className="mt-6">
           <ErrorState
-            title="Sign in to use Nirikshan Vision"
+            title="Sign in to use NIRIKSHAK Vision"
             message="Vision analyses are saved to your on-device infrastructure checks and need a citizen identity."
             onRetry={() => navigate(`${ROUTES.LOGIN}?next=${encodeURIComponent(`#/vision${preProject ? `?project=${preProject}` : ""}`)}`)}
           />

@@ -11,6 +11,10 @@ import type {
 } from './data';
 import { uid } from './utils';
 import { PROJECTS } from './data';
+import { normalizeProjectStatus } from '@/core/status/projectStatus';
+import { useAuth } from '@/core/auth/useAuth';
+
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
 
 interface A11y {
   hc: boolean;
@@ -79,6 +83,7 @@ export function useStore(): Store {
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { session } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('nrk-theme') as 'light' | 'dark') || 'light');
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -112,12 +117,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const [notifications, setNotifications] = useState<Notification[]>(() => clone(INITIAL_NOTIFICATIONS));
+  const [notifications, setNotifications] = useState<Notification[]>(() => DEMO_MODE ? clone(INITIAL_NOTIFICATIONS) : []);
   const markRead = useCallback((id: string) => setNotifications((ns) => ns.map((n) => (n.id === id ? { ...n, read: true } : n))), []);
   const markAllRead = useCallback(() => setNotifications((ns) => ns.map((n) => ({ ...n, read: true }))), []);
   const unread = notifications.filter((n) => !n.read).length;
 
-  const [projects, setProjects] = useState<Project[]>(() => clone(PROJECTS));
+  const [projects, setProjects] = useState<Project[]>(() => DEMO_MODE ? clone(PROJECTS) : []);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,103 +130,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       try {
         const { supabase } = await import('@/core/supabase/client');
         const { data, error } = await supabase
-          .from('projects')
-          .select('*, project_milestones(*), contracts(*)')
-          .or('city.eq.Pune,location_text.ilike.%Pune%,state.ilike.%Maharashtra%')
+          .from('contractor_assigned_projects_view')
+          .select('*')
           .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
           .limit(100);
 
         if (!error && data && data.length > 0 && isMounted) {
-          const liveProjects: Project[] = data.map((p: any, idx: number) => {
-            const cost = Number(p.total_cost_inr_crore) || 75.5;
-            const progress = Number(p.physical_progress_percent) || (idx === 0 ? 94 : idx === 1 ? 65 : 48);
-            const spent = Number(p.amount_spent_inr_crore) || (cost * (progress / 100));
-            const received = Math.round(spent * 0.95);
-            const st = String(p.normalized_status || '').toUpperCase();
-            const status: Project['status'] =
-              st === 'COMPLETED' ? 'Completed' : st === 'DELAYED' ? 'Delayed' : progress < 50 ? 'At Risk' : 'Active';
+          const liveProjects: Project[] = data.map((p: any) => {
+            const cost = Number(p.contract_value ?? p.total_cost_inr_crore) || 0;
+            const progress = Number(p.physical_progress_percent) || 0;
+            const sharedStatus = normalizeProjectStatus(p.normalized_status);
+            const status: Project['status'] = sharedStatus === 'completed' ? 'Completed' : sharedStatus === 'delayed' ? 'Delayed' : sharedStatus === 'at_risk' ? 'At Risk' : 'Active';
 
             const projId = p.nirikshak_project_id || p.id;
-            const slotId = idx < 6 ? `p${idx + 1}` : projId;
             return {
-              id: slotId,
+              id: p.id || projId,
               code: projId,
-              name: p.project_name || 'Infrastructure Project',
-              department: p.project_authority || p.implementing_agency || 'Pune Municipal Corporation',
-              deptAbbr: (p.project_authority || 'PMC').slice(0, 4).toUpperCase(),
-              officer: 'Er. Suhas Joshi',
-              officerRole: 'Executive Engineer',
-              officerPhone: '+91 98230 45678',
-              officerEmail: 'ee.pwd.pune@maharashtra.gov.in',
-              location: p.location_text || 'Pune, Maharashtra',
-              district: p.district || 'Pune',
-              category: p.sector || 'Roads & Bridges',
+              name: p.project_name || 'Project name not available',
+              department: p.project_authority || 'Not available',
+              deptAbbr: (p.project_authority || 'N/A').slice(0, 4).toUpperCase(),
+              officer: 'Not available', officerRole: 'Not available', officerPhone: '', officerEmail: '',
+              location: p.location_text || 'Not available', district: 'Not available',
+              category: p.sector || p.subsector || 'Not available',
               value: cost,
-              budgetApproved: Number(p.revised_cost_inr_crore) || cost,
-              spent,
-              received,
+              budgetApproved: cost, spent: 0, received: 0,
               progress,
               planned: Math.min(100, progress + 8),
-              start: p.award_date || p.planned_start_date || '2023-01-15',
-              deadline: p.original_completion_date || p.revised_completion_date || '2026-12-31',
-              months: 24,
+              start: '', deadline: p.scheduled_completion_date || '', months: 0,
               status,
               risk: status === 'Delayed' ? 'High' : status === 'At Risk' ? 'Medium' : 'Low',
-              lastUpdate: '2026-02-15',
-              lastUpdateNote: 'Quarterly physical progress audit and e-MB measurement completed.',
-              workOrder: `WO-MH-${projId.slice(-6)}`,
-              scope: p.description || p.public_summary || 'Authoritative public works contract under NIRIKSHAK audit monitoring.',
-              milestones: (p.project_milestones && p.project_milestones.length > 0)
-                ? p.project_milestones.map((m: any) => ({
-                    name: m.milestone_name || 'Project Milestone',
-                    date: m.planned_completion_date || '2025-06-30',
-                    state: m.status === 'COMPLETED' ? 'done' : m.status === 'IN_PROGRESS' ? 'current' : 'pending',
-                    progress: Number(m.physical_progress_weight) || 50,
-                  }))
-                : [
-                    { name: 'Site Clearing & Substructure Piling', date: '2024-03-31', state: 'done', progress: 100 },
-                    { name: 'Superstructure & Viaduct Launching', date: '2025-09-30', state: progress >= 60 ? 'done' : 'current', progress: Math.min(100, Math.round(progress * 1.3)) },
-                    { name: 'Finishing, Testing & Safety Certification', date: p.original_completion_date || '2026-12-31', state: progress >= 100 ? 'done' : 'pending', progress: progress >= 100 ? 100 : 0 },
-                  ],
-              upcoming: [
-                { date: '2026-03-15', time: '10:30 AM', stage: 'Concrete Core Strength Test', inspector: 'Er. R. K. Shinde', designation: 'Superintending Engineer' },
-              ],
-              history: [
-                { date: '2026-01-20', stage: 'Pier Cap Quality Inspection', inspector: 'Er. V. Deshmukh', designation: 'Third-Party Quality Auditor', result: 'Passed', remarks: 'Core sample strength verified according to M35 IRC standards.' },
-              ],
-              compliance: [
-                { name: 'Labour Cess & EPF Remittance', status: 'ok', note: 'Challan verified for FY 2025-26 Q3' },
-                { name: 'Environmental MoEF Clearance', status: 'ok', note: 'Air & noise monitoring compliant' },
-                { name: 'Third-Party Quality Assurance Certificate', status: 'ok', note: 'Submitted to PMU' },
-              ],
-              complianceScore: 94,
+              lastUpdate: '', lastUpdateNote: 'No verified update metadata available.',
+              workOrder: p.contract_number || 'Not available', scope: 'Not available',
+              milestones: [], upcoming: [], history: [], compliance: [], complianceScore: 0,
               forecast: {
-                predicted: p.revised_completion_date || '2026-11-30',
-                earlyDays: 14,
-                confidence: 88,
-                factors: [
-                  { label: 'Material Supply Rate', value: 92, detail: 'Consistent supply of steel and RMC' },
-                  { label: 'Labour Availability', value: 85, detail: 'Adequate skilled manpower on site' },
-                ],
-                actions: [
-                  { label: 'Accelerate span 4 girder lifting', impact: '+5 days recovery' },
-                ],
+                predicted: p.scheduled_completion_date || '', earlyDays: 0, confidence: 0, factors: [], actions: [],
               },
               health: {
                 overall: status === 'Delayed' ? 'POOR' : progress > 50 ? 'GOOD' : 'FAIR',
                 score: Math.round(progress),
-                scores: [
-                  { label: 'Schedule Adherence', value: status === 'Delayed' ? 55 : 88 },
-                  { label: 'Financial Burn Rate', value: 84 },
-                  { label: 'Safety Compliance', value: 96 },
-                ],
+                scores: [],
                 risks: [],
               },
-              expenses: [
-                { label: 'Civil Structures & Concrete', budget: cost * 0.45, spent: spent * 0.45 },
-                { label: 'Earthworks & Subbase', budget: cost * 0.25, spent: spent * 0.25 },
-                { label: 'MEP & Safety Signage', budget: cost * 0.30, spent: spent * 0.30 },
-              ],
+              expenses: [],
             };
           });
           setProjects(liveProjects);
@@ -236,7 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const [reports, setReports] = useState<ProgressReport[]>(() => clone(INITIAL_REPORTS));
+  const [reports, setReports] = useState<ProgressReport[]>(() => DEMO_MODE ? clone(INITIAL_REPORTS) : []);
   const addReport = useCallback((r: Omit<ProgressReport, 'id' | 'submittedAt'>) => {
     const id = uid('rep');
     const newRep = { ...r, id, submittedAt: new Date().toISOString() };
@@ -245,11 +195,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // Send to Supabase progress_updates for real Government review
     try {
       import('@/core/supabase/client').then(({ supabase }) => {
+        const project = projects.find((item) => item.id === r.projectId || item.code === r.projectId);
+        if (!project || !session?.organization?.id) return;
         supabase.from('progress_updates').insert({
-          project_id: 'b1000000-0000-0000-0000-000000000001',
-          contractor_organization_id: '55555555-5555-5555-5555-555555555555',
-          reported_progress: (r as any).physicalProgress || 92.5,
-          description: (r as any).summary || (r as any).highlights || 'Contractor progress report submission',
+          project_id: project.id,
+          contractor_organization_id: session.organization.id,
+          reported_progress: r.progress,
+          description: r.completed || r.challenges || 'Contractor progress report submission',
           verification_status: 'SUBMITTED',
         }).then(({ error }) => {
           if (error) console.warn('Contractor progress Supabase sync notice:', error.message);
@@ -260,12 +212,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     return id;
-  }, []);
+  }, [projects, session?.organization?.id]);
   const setReportStatus = useCallback((id: string, status: ProgressReport['status'], note?: string) => {
     setReports((rs) => rs.map((r) => (r.id === id ? { ...r, status, reviewerNote: note ?? r.reviewerNote } : r)));
   }, []);
 
-  const [workers, setWorkers] = useState<Record<string, Worker[]>>(() => clone(INITIAL_WORKERS));
+  const [workers, setWorkers] = useState<Record<string, Worker[]>>(() => DEMO_MODE ? clone(INITIAL_WORKERS) : {});
   const addWorker = useCallback((projectId: string, w: Omit<Worker, 'id'>) => {
     setWorkers((ws) => ({ ...ws, [projectId]: [...(ws[projectId] ?? []), { ...w, id: uid('w') }] }));
   }, []);
@@ -276,12 +228,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setWorkers((ws) => ({ ...ws, [projectId]: (ws[projectId] ?? []).filter((x) => x.id !== id) }));
   }, []);
 
-  const [resources, setResources] = useState<Record<string, ResourceRow[]>>(() => clone(INITIAL_RESOURCES));
+  const [resources, setResources] = useState<Record<string, ResourceRow[]>>(() => DEMO_MODE ? clone(INITIAL_RESOURCES) : {});
   const addResource = useCallback((projectId: string, r: Omit<ResourceRow, 'id'>) => {
     setResources((rs) => ({ ...rs, [projectId]: [...(rs[projectId] ?? []), { ...r, id: uid('r') }] }));
   }, []);
 
-  const [invoices, setInvoices] = useState<Invoice[]>(() => clone(INITIAL_INVOICES));
+  const [invoices, setInvoices] = useState<Invoice[]>(() => DEMO_MODE ? clone(INITIAL_INVOICES) : []);
   const addInvoice = useCallback((i: Omit<Invoice, 'id'>) => {
     setInvoices((inv) => [{ ...i, id: uid('i') }, ...inv]);
   }, []);
@@ -289,14 +241,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setInvoices((inv) => inv.map((i) => (i.id === id && i.status === 'Draft' ? { ...i, status: 'Submitted', verification: 'Awaiting DyE check' } : i)));
   }, []);
 
-  const [messages, setMessages] = useState<Record<string, Message[]>>(() => clone(INITIAL_MESSAGES));
+  const [messages, setMessages] = useState<Record<string, Message[]>>(() => DEMO_MODE ? clone(INITIAL_MESSAGES) : {});
   const sendMessage = useCallback((m: Omit<Message, 'id' | 'ts' | 'status'>) => {
     const id = uid('m');
     setMessages((ms) => ({
       ...ms,
       [m.projectId]: [...(ms[m.projectId] ?? []), { ...m, id, ts: new Date().toISOString(), status: 'Sent' }],
     }));
-    // Simulated acknowledgement from government office
+    if (!DEMO_MODE) return;
+    // Demo-only acknowledgement from government office
     window.setTimeout(() => {
       setMessages((ms) => {
         const list = (ms[m.projectId] ?? []).map((x) => (x.id === id ? { ...x, status: 'Read' as const } : x));
@@ -323,7 +276,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }, 2600);
   }, []);
 
-  const [documents, setDocuments] = useState<Record<string, ProjectDoc[]>>(() => clone(INITIAL_DOCS));
+  const [documents, setDocuments] = useState<Record<string, ProjectDoc[]>>(() => DEMO_MODE ? clone(INITIAL_DOCS) : {});
   const addDocument = useCallback((projectId: string, d: Omit<ProjectDoc, 'id' | 'uploaded' | 'by'>) => {
     setDocuments((ds) => ({
       ...ds,
@@ -334,7 +287,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const [bids, setBids] = useState<Record<string, Bid>>(() => clone(INITIAL_BIDS));
+  const [bids, setBids] = useState<Record<string, Bid>>(() => DEMO_MODE ? clone(INITIAL_BIDS) : {});
   const saveBidDraft = useCallback((tenderId: string, step: number, data: Record<string, unknown>) => {
     setBids((bs) => ({
       ...bs,
@@ -366,7 +319,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return ref;
   }, []);
 
-  const [savedTenders, setSavedTenders] = useState<string[]>(['t2', 't7']);
+  const [savedTenders, setSavedTenders] = useState<string[]>([]);
   const toggleSaveTender = useCallback((id: string) => {
     setSavedTenders((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }, []);

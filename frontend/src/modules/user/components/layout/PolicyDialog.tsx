@@ -11,15 +11,15 @@ interface Policy {
 const POLICIES: Record<PolicyKey, Policy> = {
   privacy: {
     title: "Privacy Policy",
-    body: "Nirikshan collects only the minimum personal data required for grievance processing: your name, mobile number, ward and optional email. Evidence you upload is shared only with the concerned department for verification. Your identity is never published on community issue pages — confirmations are shown as aggregate counts. Photos taken with Nirikshan Vision are processed to identify infrastructure and are stored only in your on-device history unless you attach them to a report. Data is retained per the Public Records Retention schedule and is never sold or shared with third parties."
+    body: "NIRIKSHAK collects only the minimum personal data required for grievance processing: your name, mobile number, ward and optional email. Evidence you upload is shared only with the concerned department for verification. Your identity is never published on community issue pages — confirmations are shown as aggregate counts. Photos taken with NIRIKSHAK Vision are processed to identify infrastructure and are stored only in your on-device history unless you attach them to a report. Data is retained per the Public Records Retention schedule and is never sold or shared with third parties."
   },
   terms: {
     title: "Terms of Service",
-    body: "By using Nirikshan you agree to file truthful reports. False or malicious complaints are liable for action under Section 182 of the applicable legal framework. Content on this portal is for public transparency and does not constitute a legal notice by itself. AI-assisted observations (including Nirikshan Vision) are advisory and never constitute an official determination or a structural safety certification. Departments respond within the published SLA windows; escalations follow the CPGRAMS linkage."
+    body: "By using NIRIKSHAK you agree to file truthful reports. False or malicious complaints are liable for action under Section 182 of the applicable legal framework. Content on this portal is for public transparency and does not constitute a legal notice by itself. AI-assisted observations (including NIRIKSHAK Vision) are advisory and never constitute an official determination or a structural safety certification. Departments respond within the published SLA windows; escalations follow the CPGRAMS linkage."
   },
   hyperlink: {
     title: "Hyperlink Policy",
-    body: "Links to external sites are provided for convenience. Nirikshan does not endorse external content and is not responsible for its availability. External sites open in a new context and are governed by their own policies."
+    body: "Links to external sites are provided for convenience. NIRIKSHAK does not endorse external content and is not responsible for its availability. External sites open in a new context and are governed by their own policies."
   },
   accessibility: {
     title: "Accessibility Statement",

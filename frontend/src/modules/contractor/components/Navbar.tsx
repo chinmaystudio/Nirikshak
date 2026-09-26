@@ -5,15 +5,17 @@ import { useStore } from '../lib/store';
 import { CONTRACTOR } from '../lib/data';
 import { Avatar } from './ui';
 import Logo from './Logo';
+import { useAuth } from '@/core/auth/useAuth';
 
 const NAV = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+  { label: 'Tenders', to: '/tenders', icon: Gavel },
   { label: 'My Projects', to: '/projects', icon: Folders },
-  { label: 'My Performance', to: '/performance', icon: Gauge },
+  { label: 'Progress & Reports', to: '/projects', icon: Folders },
   { label: 'Calendar', to: '/calendar', icon: Calendar },
-  { label: 'AI Assist', to: '/ai-assist', icon: Sparkles },
+  { label: 'Performance', to: '/performance', icon: Gauge },
   { label: 'Notifications', to: '/notifications', icon: Bell },
-  { label: 'Tender Management', to: '/tenders', icon: Gavel },
+  { label: 'AI Assist', to: '/ai-assist', icon: Sparkles },
 ];
 
 export default function Navbar() {
@@ -21,7 +23,7 @@ export default function Navbar() {
   const { unread } = useStore();
 
   return (
-    <nav className="fixed top-16 left-0 right-0 z-40 h-12 bg-white border-b border-slate-200 shadow-sm dark:bg-sidebar dark:border-slate-800" aria-label="Primary navigation">
+    <nav className="fixed top-16 left-0 right-0 z-40 hidden h-12 bg-white border-b border-slate-200 shadow-sm dark:bg-sidebar dark:border-slate-800 lg:block" aria-label="Primary navigation">
       <div className="h-full w-full px-4 lg:px-6 flex items-center">
         <div className="flex-1" />
         <div className="flex items-center h-full gap-1 overflow-x-auto shrink-0 whitespace-nowrap">
@@ -56,6 +58,8 @@ export default function Navbar() {
 export function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePath();
   const { unread } = useStore();
+  const { session } = useAuth();
+  const accountName = session?.organization?.name || session?.profile?.full_name || 'Contractor account';
 
   return (
     <div className={cls('fixed inset-0 z-[60] lg:hidden', open ? '' : 'pointer-events-none')} aria-hidden={!open}>
@@ -92,10 +96,10 @@ export function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () 
         </div>
         <div className="border-t border-slate-200 p-3 dark:border-slate-800">
           <Link to="/performance" onClick={onClose} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 transition-colors dark:hover:bg-slate-800">
-            <Avatar name={CONTRACTOR.name} className="w-9 h-9" />
+            <Avatar name={accountName} className="w-9 h-9" />
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-slate-800 truncate dark:text-slate-100">{CONTRACTOR.short}</p>
-              <p className="text-[10px] text-slate-500 font-semibold mt-0.5 dark:text-slate-400">{CONTRACTOR.class} • {CONTRACTOR.registered}</p>
+              <p className="text-[13px] font-bold text-slate-800 truncate dark:text-slate-100">{accountName}</p>
+              <p className="text-[10px] text-slate-500 font-semibold mt-0.5 dark:text-slate-400">{session?.role?.replace(/_/g, ' ') || 'Role not available'}</p>
             </div>
           </Link>
         </div>

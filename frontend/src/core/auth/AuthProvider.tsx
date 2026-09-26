@@ -10,6 +10,7 @@ interface AuthContextValue {
   role: AppRole | null;
   loading: boolean;
   error: string | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AppSession>;
   register: (payload: {
     email: string;
@@ -20,6 +21,7 @@ interface AuthContextValue {
     metadata?: Record<string, any>;
   }) => Promise<any>;
   logout: () => Promise<void>;
+  signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
 
@@ -126,9 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: session?.role || null,
       loading,
       error,
+      isAuthenticated: Boolean(session?.user),
       login,
       register,
       logout,
+      signOut: logout,
       refreshSession,
     }),
     [session, loading, error, login, register, logout, refreshSession]

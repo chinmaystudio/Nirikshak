@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc -p tsconfig.government.json && tsc -p tsconfig.contractor.json && tsc -p tsconfig.user.json",
     "build": "vite build",
     "preview": "vite preview"
   },

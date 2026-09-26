@@ -4,6 +4,7 @@ import { useAppState, appStore } from "@/app/providers/store";
 import { initialChatMessage, respond } from "@/services/assistant/assistantService";
 import { ROUTES } from "@/constants/routes";
 import type { ChatMessage } from "@/types/api";
+import { navigate } from "@/app/router";
 
 export function useAssistantChat(): {
   messages: ChatMessage[];
@@ -58,7 +59,7 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
 
   const runAction = (a: { route?: string; action?: string }): void => {
     if (a.route) {
-      window.location.hash = a.route;
+      navigate(a.route);
       if (!embedded) window.dispatchEvent(new CustomEvent("nirikshan:close-assistant"));
       return;
     }
@@ -66,9 +67,9 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
       appStore.setState({
         locationPrefill: { address: "Kothrud, Paud Road (current location)", ward: "Ward 12 — Kothrud West", gps: "18.5089, 73.8083" }
       });
-      window.location.hash = ROUTES.REPORT;
+      navigate(ROUTES.REPORT);
     } else if (a.action === "report-map") {
-      window.location.hash = ROUTES.REPORT;
+      navigate(ROUTES.REPORT);
     }
   };
 
@@ -80,7 +81,7 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
             <Icon name="smart_toy" className="text-[20px]" />
           </span>
           <div>
-            <div className={`text-headline-sm font-bold ${embedded ? "text-primary" : "text-surface-container-lowest"}`}>Nirikshan Civic Assistant</div>
+            <div className={`text-headline-sm font-bold ${embedded ? "text-primary" : "text-surface-container-lowest"}`}>NIRIKSHAK Civic Assistant</div>
             <div className={`text-label-sm ${embedded ? "text-outline" : "text-surface-variant"}`}>Public information • Guided services • Not an official decision</div>
           </div>
         </div>
@@ -96,7 +97,7 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
                 <span className="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center">
                   <Icon name="smart_toy" className="text-[14px]" />
                 </span>
-                <span className="text-label-sm font-label-sm text-outline">Nirikshan Assistant is thinking</span>
+                <span className="text-label-sm font-label-sm text-outline">NIRIKSHAK Assistant is thinking</span>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant/50 rounded-xl rounded-bl-sm px-4 py-3 flex gap-1.5 items-center">
                 <span className="typing-dot w-2 h-2 rounded-full bg-primary inline-block" />
@@ -146,7 +147,7 @@ function MessageView({ message, onAction, onChip }: { message: ChatMessage; onAc
           <span className="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center">
             <Icon name="smart_toy" className="text-[14px]" />
           </span>
-          <span className="text-label-sm font-label-sm text-outline">Nirikshan Assistant</span>
+          <span className="text-label-sm font-label-sm text-outline">NIRIKSHAK Assistant</span>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant/50 rounded-xl rounded-bl-sm px-3.5 py-2.5 text-body-md text-on-surface shadow-sm whitespace-pre-line">
           {message.text}
@@ -196,7 +197,7 @@ export function AssistantFab(): JSX.Element {
       <button
         data-vision-fab
         onClick={() => {
-          window.location.hash = ROUTES.VISION;
+          navigate(ROUTES.VISION);
         }}
         className="fixed right-[4.5rem] bottom-20 lg:bottom-6 lg:right-[4.75rem] z-[65] w-11 h-11 rounded-full bg-primary-container text-on-primary shadow-pop flex items-center justify-center hover:bg-primary active:scale-95 transition-all"
         aria-label="Identify Infrastructure with camera"
@@ -207,14 +208,14 @@ export function AssistantFab(): JSX.Element {
         data-assistant-fab
         onClick={() => setOpen((o) => !o)}
         className="fixed right-4 bottom-20 lg:bottom-6 z-[65] w-14 h-14 rounded-full bg-secondary text-on-secondary shadow-pop flex items-center justify-center hover:bg-on-secondary-container active:scale-95 transition-all"
-        aria-label="Open Nirikshan AI Assistant"
+        aria-label="Open NIRIKSHAK AI Assistant"
         aria-expanded={open}
       >
         <Icon name="smart_toy" className="text-[26px]" />
         <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-success border-2 border-white" />
       </button>
       {open ? (
-        <div className="fixed inset-0 z-[85] lg:left-auto lg:inset-y-0 lg:right-0 lg:w-[420px] lg:p-4" role="dialog" aria-label="Nirikshan AI Assistant">
+        <div className="fixed inset-0 z-[85] lg:left-auto lg:inset-y-0 lg:right-0 lg:w-[420px] lg:p-4" role="dialog" aria-label="NIRIKSHAK AI Assistant">
           <div className="absolute inset-0 bg-primary/50 lg:bg-transparent lg:pointer-events-none" onClick={() => setOpen(false)} />
           <div className="relative lg:absolute lg:inset-y-4 lg:right-4 lg:left-auto inset-y-0 left-0 w-full lg:w-[392px] bg-surface-container-lowest border border-outline-variant shadow-pop lg:rounded-xl overflow-hidden flex flex-col view-enter">
             <button

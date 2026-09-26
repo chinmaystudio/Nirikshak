@@ -30,14 +30,14 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
 
   if (/\b(hi|hello|hey|namaste|namaskar)\b/.test(q) && q.length < 30) {
     return make({
-      text: `${user ? `Hello ${user.name.split(" ")[0]}` : "Hello"}. I am your Nirikshan civic assistant. I can help you find nearby projects, explain budgets and delays, report an issue, or track your complaints.`,
+      text: `${user ? `Hello ${user.name.split(" ")[0]}` : "Hello"}. I am your NIRIKSHAK civic assistant. I can help you find nearby projects, explain budgets and delays, report an issue, or track your complaints.`,
       chips: ["What projects are near me?", "I want to report a pothole", "Show my complaints", "How much money has been spent in my ward?"]
     });
   }
 
   if (/(photo|picture|identify|what is this|vision|camera|scan)/.test(q)) {
     return make({
-      text: "Nirikshan Vision can identify public infrastructure from a photo — the road type, who maintains it, and whether it belongs to a registered project. Point your camera at it and I will take it from there.",
+      text: "NIRIKSHAK Vision can assist with identifying public infrastructure from a photo and matching it to published project records. Government verification remains authoritative.",
       actions: [{ label: "Identify Infrastructure", icon: "photo_camera", route: "#/vision" }],
       chips: ["I want to report a pothole", "What projects are near me?"]
     });
@@ -159,7 +159,7 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
 export function initialChatMessage(): ChatMessage {
   return {
     role: "assistant",
-    text: 'Namaste. I am your Nirikshan civic assistant. Choose a task below, or ask me anything about public infrastructure near you.',
+    text: 'Namaste. I am your NIRIKSHAK civic assistant. Choose a task below, or ask me anything about public infrastructure near you.',
     actions: [
       { label: "Find a project", icon: "search", route: "#/projects" },
       { label: "Report an issue", icon: "report", action: "report-map" },

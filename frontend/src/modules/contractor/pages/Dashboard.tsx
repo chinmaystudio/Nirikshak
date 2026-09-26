@@ -12,12 +12,14 @@ import { DataTable } from '../components/DataTable';
 import { StackedBar, HBars, GroupedBars } from '../components/charts';
 import { CONTRACTOR, pendingForProject } from '../lib/data';
 import type { Project } from '../lib/data';
+import { useAuth } from '@/core/auth/useAuth';
 import { cls, cr, fmtDate, fmtDateCompact, daysUntil, daysLeftLabel, money } from '../lib/utils';
 
 const FILTERS = ['All', 'Active', 'At Risk', 'Delayed', 'Completed'];
 
 export default function Dashboard() {
-  const { projects, invoices } = useStore();
+  const { projects, invoices, unread } = useStore();
+  const { session } = useAuth();
   const [filter, setFilter] = useState('All');
   const [expandedHealth, setExpandedHealth] = useState(false);
 
@@ -39,8 +41,11 @@ export default function Dashboard() {
     { label: 'Amount Received', value: cr(received), sub: totalValue > 0 ? `${Math.round((received / totalValue) * 100)}% of value` : '0% of value', icon: Banknote, iconClass: 'text-green-600' },
     { label: 'Pending Payments', value: money(pendingAmt), sub: `${invoices.filter((i) => ['Submitted', 'Under Verification', 'Approved'].includes(i.status)).length} bills in process`, icon: Banknote, iconClass: 'text-amber-500' },
     { label: 'Upcoming Inspections', value: String(upcomingInspections.length), sub: upcomingInspections[0]?.date ? `Next: ${fmtDate(upcomingInspections[0].date)}` : 'Scheduled', icon: CalendarClock, iconClass: 'text-amber-500' },
-    { label: 'Pending Actions', value: '6', sub: '2 urgent', icon: ListChecks, iconClass: 'text-amber-500', onClick: () => document.getElementById('action-center')?.scrollIntoView({ behavior: 'smooth' }) },
+    { label: 'Pending Actions', value: String(unread), sub: unread ? 'from notifications' : 'No pending notifications', icon: ListChecks, iconClass: 'text-amber-500', onClick: () => document.getElementById('action-center')?.scrollIntoView({ behavior: 'smooth' }) },
   ];
+  const assignedProject = active[0] ?? projects[0];
+  const displayName = session?.profile?.full_name || session?.organization?.name || 'Contractor user';
+  const organization = session?.organization?.name || 'Organization not available';
 
   const filtered = projects.filter((p) => {
     if (filter === 'All') return true;
@@ -56,14 +61,14 @@ export default function Dashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="font-display text-2xl lg:text-3xl text-slate-800 tracking-tight font-bold dark:text-slate-100">
-            Good Morning, {CONTRACTOR.short}
+            Good Morning, {displayName}
           </h1>
           <p className="text-xs text-slate-500 mt-1 font-medium dark:text-slate-400">
-            {CONTRACTOR.id} • {CONTRACTOR.class} • {CONTRACTOR.registered} • FY 2026-2027 • Sync: 10:42 AM IST
+            {organization} • {session?.role?.replace(/_/g, ' ') || 'Role not available'} • Supabase assignment data
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 mt-2 lg:mt-0">
-          <Link to="/projects/p1/update">
+          <Link to={assignedProject ? `/projects/${assignedProject.id}/update` : '/projects'}>
             <button className="btn btn-primary">
               <FileSignature className="w-4 h-4" />
               Submit Progress Update
@@ -86,7 +91,7 @@ export default function Dashboard() {
           <SectionTitle icon={BarChart2} title="Contractor Project Overview" right={<Link to="/projects" className="link text-sm flex items-center gap-1">All projects <ArrowRight className="w-4 h-4" /></Link>} />
           <p className="text-sm text-slate-700 leading-relaxed mb-6 dark:text-slate-300">
             Portfolio of {active.length} active works worth <strong>{cr(active.reduce((s, p) => s + (p.value || 0), 0))}</strong> in execution this FY.
-            <strong> {atRisk.length} works</strong> need attention and <strong>3 bills</strong> are pending with government offices.
+            <strong> {atRisk.length} works</strong> need attention and <strong>{invoices.filter((i) => ['Submitted', 'Under Verification', 'Approved'].includes(i.status)).length} bills</strong> are pending with government offices.
           </p>
           <StackedBar
             segments={[
@@ -297,8 +302,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* AI Alerts */}
-      <Card className="p-5">
+      {/* Demonstration-only alerts are never shown in production. */}
+      {(import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true') ? <Card className="p-5">
         <SectionTitle icon={Sparkles} title="AI Alerts" right={<Link to="/ai-assist" className="link text-sm flex items-center gap-1">Ask AI Assist <ArrowRight className="w-4 h-4" /></Link>} />
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           <AlertItem
@@ -350,10 +355,10 @@ export default function Dashboard() {
             linkLabel="View compliance"
           />
         </div>
-      </Card>
+      </Card> : null}
 
       {/* Action Center */}
-      <ActionCenter />
+      {(import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true') ? <ActionCenter /> : null}
     </div>
   );
 }

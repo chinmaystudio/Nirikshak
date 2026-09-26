@@ -3,6 +3,7 @@ import { latency, offlineGuard } from "@/services/api/client";
 import { alerts } from "@/data/alerts";
 import { appStore } from "@/app/providers/store";
 import { ALERT_SEVERITY_ORDER } from "@/constants/alertSeverities";
+import { environment } from "@/config/environment";
 
 export interface AlertFilters {
   severity?: AlertSeverity | "all";
@@ -16,6 +17,7 @@ function withRead(a: GovernmentAlert): GovernmentAlertView {
 
 export async function getAlerts(filters: AlertFilters = {}): Promise<GovernmentAlertView[]> {
   offlineGuard();
+  if (!environment.demoMode) return [];
   await latency(300, 600);
   let out = alerts.map(withRead);
   if (filters.severity && filters.severity !== "all") out = out.filter((a) => a.severity === filters.severity);
@@ -28,6 +30,7 @@ export async function getAlerts(filters: AlertFilters = {}): Promise<GovernmentA
 
 export async function getAlertById(id: string): Promise<GovernmentAlertView> {
   offlineGuard();
+  if (!environment.demoMode) return Promise.reject(new Error("No published public alert was found."));
   await latency(250, 500);
   const found = alerts.find((a) => a.id === id);
   if (!found) {
@@ -48,11 +51,13 @@ export function markAllAlertsRead(): void {
 }
 
 export function unreadAlertCount(): number {
+  if (!environment.demoMode) return 0;
   const readAlerts = appStore.getState().readAlerts;
   return alerts.filter((a) => !readAlerts.includes(a.id)).length;
 }
 
 export function criticalUnreadAlerts(): GovernmentAlertView[] {
+  if (!environment.demoMode) return [];
   return alerts
     .filter((a) => a.severity === "critical" && !appStore.getState().readAlerts.includes(a.id))
     .map(withRead);

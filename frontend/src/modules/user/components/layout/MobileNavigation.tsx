@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/common/Icon";
-import { useLocation } from "@/app/router";
+import { useLocation, navigate } from "@/app/router";
 import { ROUTES } from "@/constants/routes";
 import { useT } from "@/hooks/useT";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,7 +123,7 @@ export function MobileNavigation(): JSX.Element {
                   onClick={() => {
                     setOpen(false);
                     void auth.logout().then(() => {
-                      window.location.hash = ROUTES.HOME;
+                      navigate(ROUTES.HOME);
                     });
                   }}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded border border-error/40 text-error text-label-md font-label-md hover:bg-error-container/30"

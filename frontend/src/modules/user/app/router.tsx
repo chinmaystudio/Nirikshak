@@ -14,43 +14,19 @@ function onLocationChange(): void {
 }
 
 export function parseHash(): RouteLocation {
-  let h = window.location.hash.replace(/^#/, "");
-  
-  // If hash is missing or empty, check if user landed on a pathname like /projects or /user
-  if (!h || h === "/" || h.trim() === "") {
-    let p = window.location.pathname.replace(/\\/g, '/');
-    if (p && p !== "/" && p !== "/index.html") {
-      if (p === "/user" || p === "/user/") {
-        h = "/";
-      } else if (p.startsWith("/user/")) {
-        h = p.slice(5);
-      } else {
-        h = p;
-      }
-      if (h && h !== "/" && window.location.hash !== `#${h}`) {
-        try {
-          window.location.hash = `#${h}`;
-        } catch {
-          /* ignore */
-        }
-      }
-    } else {
-      h = "/";
-    }
-  }
-
-  if (h === "/user" || h === "/user/") {
-    h = "/";
-  } else if (h.startsWith("/user/")) {
-    h = h.slice(5);
-  }
+  const pathname = window.location.pathname.replace(/\\/g, "/");
+  let h = pathname === "/" || pathname === "/user" || pathname === "/user/"
+    ? "/"
+    : pathname.startsWith("/user/")
+      ? pathname.slice(5)
+      : pathname;
 
   const qIdx = h.indexOf("?");
   const pathPart = qIdx === -1 ? h : h.slice(0, qIdx);
   const query: Record<string, string> = {};
   
   // Also parse query from window.location.search if not in hash
-  const queryString = qIdx !== -1 ? h.slice(qIdx + 1) : window.location.search.replace(/^\?/, "");
+  const queryString = window.location.search.replace(/^\?/, "");
   if (queryString) {
     queryString.split("&").forEach((pair) => {
       if (!pair) return;
@@ -67,12 +43,15 @@ export function navigate(to: string): void {
   if (!to) return;
   // Clean leading hash if present to normalize
   const clean = to.startsWith("#") ? to.slice(1) : to;
-  const target = `#${clean.startsWith("/") ? clean : `/${clean}`}`;
-  
-  if (window.location.hash === target) {
+  const [rawPath, query = ""] = (clean.startsWith("/") ? clean : `/${clean}`).split("?");
+  const path = rawPath === "/user" ? "/" : rawPath.replace(/^\/user(?=\/)/, "");
+  const target = path === "/" ? "/user" : `/user${path}`;
+  const url = `${target}${query ? `?${query}` : ""}`;
+  if (`${window.location.pathname}${window.location.search}` === url) {
     onLocationChange();
   } else {
-    window.location.hash = target;
+    window.history.pushState(null, "", url);
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }
 }
 
@@ -110,7 +89,7 @@ if (typeof document !== "undefined") {
       return;
     }
 
-    // Handle hash links (#/projects or #projects)
+    // Legacy hash links are normalized into canonical /user paths.
     if (href.startsWith("#/")) {
       e.preventDefault();
       navigate(href.slice(1));
@@ -119,7 +98,7 @@ if (typeof document !== "undefined") {
 
     // Handle standard relative paths (/projects, /complaints)
     if (href.startsWith("/") && !href.startsWith("//")) {
-      if (href.startsWith("/government") || href.startsWith("/contractor")) {
+      if (href.startsWith("/government") || href.startsWith("/contractor") || href.startsWith("/user")) {
         return;
       }
       e.preventDefault();

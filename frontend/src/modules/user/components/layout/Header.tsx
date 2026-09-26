@@ -7,6 +7,7 @@ import { navigate } from "@/app/router";
 import { ROUTES } from "@/constants/routes";
 import { DesktopNav } from "./Navigation";
 import { LanguageMenu } from "./Navigation";
+import { RealtimeStatusIndicator } from "@/core/realtime/RealtimeStatusIndicator";
 
 export function Header(): JSX.Element {
   const auth = useAuth();
@@ -64,6 +65,7 @@ export function Header(): JSX.Element {
           </div>
 
           <div className="flex items-center gap-2.5 flex-shrink-0">
+            <RealtimeStatusIndicator className="hidden text-on-surface-variant xl:inline-flex" />
             <div className="hidden lg:flex items-center relative">
               <input
                 value={search}
@@ -183,6 +185,9 @@ function MenuLink({ icon, label, to, onGo }: { icon: string; label: string; to: 
 }
 
 export function NewsTicker(): JSX.Element {
+  const { data } = useAlerts();
+  const current = data?.[0];
+  if (!current) return <></>;
   return (
     <div className="bg-primary-container text-on-primary py-1.5 px-4 text-body-sm flex items-center gap-3 overflow-hidden">
       <div className="max-w-7xl mx-auto w-full flex items-center gap-3">
@@ -191,14 +196,7 @@ export function NewsTicker(): JSX.Element {
         </a>
         <div className="overflow-hidden whitespace-nowrap w-full relative ticker-wrap">
           <div className="ticker-track text-surface-container-high">
-            {[0, 1].map((dup) => (
-              <span key={dup}>
-                <span className="mr-10">⚠️ Pune Metro Line-3 night girder erection: Hinjawadi Phase 2 → Infosys Circle closed 23:00–05:00, 12–20 Sep 2026.</span>
-                <span className="mr-10">🚧 Katraj–Kondhwa Road service carriageway closed 08:00–20:00 till 25 Sep for utility pole shifting.</span>
-                <span className="mr-10">📷 NEW: Identify any public infrastructure with your camera — Nirikshan Vision is live on the portal.</span>
-                <span className="mr-10">📋 Q1 FY 2026-27 public audit report published — see each project's Documents tab.</span>
-              </span>
-            ))}
+            <span className="mr-10">{current.title} — {current.area} • Updated {new Date(current.postedAt).toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>

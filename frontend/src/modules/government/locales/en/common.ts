@@ -4,7 +4,7 @@ export const common: Record<string, string> = {
   'common.tagline': 'Transparent Projects • Stronger India',
   'common.demoBanner':
     'Demonstration build — all data shown is mock data. Not connected to a live government backend.',
-  'common.mockDataNote': 'All figures on this page are mock data for demonstration.',
+  'common.mockDataNote': (import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true') ? 'All figures on this page are mock data for demonstration.' : '',
   'common.search': 'Search',
   'common.searchPlaceholder': 'Search projects, tenders, grievances…',
   'common.view': 'View',

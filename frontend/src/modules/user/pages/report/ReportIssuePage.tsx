@@ -46,7 +46,7 @@ export function ReportIssuePage(): JSX.Element {
   const navigate = useNavigate();
   const auth = useAuth();
   const { projects } = useProjects();
-  const projectParam = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("project");
+  const projectParam = new URLSearchParams(window.location.search).get("project");
   const [draft, setDraft] = useState<ReportDraft>(() => {
     const d = initialDraft(projectParam);
     d.ward = auth.user?.ward ?? "Ward 12 — Kothrud West";
@@ -63,14 +63,14 @@ export function ReportIssuePage(): JSX.Element {
               size: "1.2 MB",
               kind: "image",
               thumb: prefill.imageThumb,
-              meta: `Nirikshan Vision • ${prefill.summary}`,
+              meta: `NIRIKSHAK Vision • ${prefill.summary}`,
               fromVision: true
             }
           ]
         : [];
       d.title = prefill.summary.split(" — ")[0] + " issue";
       d.step = 1;
-      window.setTimeout(() => toast("Photo and details prefilled from Nirikshan Vision — review and submit.", "success"), 100);
+      window.setTimeout(() => toast("Photo and details prefilled from NIRIKSHAK Vision — review and submit.", "success"), 100);
     }
     return d;
   });
@@ -351,7 +351,7 @@ export function ReportIssuePage(): JSX.Element {
                   Submit Complaint
                 </Button>
               ) : (
-                <Button onClick={draft.step === 4 ? runAI : next}>{draft.step === 4 ? (draft.aiResult ? "Continue" : "Skip to Continue") : draft.step === 3 ? "Continue to AI Verification" : "Next"}</Button>
+                <Button onClick={draft.step === 4 ? runAI : next}>{draft.step === 4 ? (draft.aiResult ? "Continue" : "Skip to Continue") : draft.step === 3 ? "Continue to AI-Assisted Review" : "Next"}</Button>
               )}
             </div>
           </div>

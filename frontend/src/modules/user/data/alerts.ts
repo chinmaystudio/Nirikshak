@@ -101,7 +101,7 @@ export const alerts: GovernmentAlert[] = [
     endTime: null,
     postedAt: ago(3 * DAY),
     projectId: null,
-    contact: "Nirikshan Helpdesk 1800-11-2026"
+    contact: "NIRIKSHAK Helpdesk 1800-11-2026"
   },
   {
     id: "ALT-2026-812",

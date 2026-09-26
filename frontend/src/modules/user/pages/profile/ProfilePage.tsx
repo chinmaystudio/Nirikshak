@@ -50,7 +50,7 @@ export function ProfilePage(): JSX.Element {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <PageHeader title="My Profile" sub="Your citizen identity on the Nirikshan transparency network." />
+      <PageHeader title="My Profile" sub="Your citizen identity on the NIRIKSHAK transparency network." />
 
       <section className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm overflow-hidden">
         <div className="bg-primary-container text-on-primary p-6 flex items-center gap-4">
@@ -80,7 +80,7 @@ export function ProfilePage(): JSX.Element {
           {cell("location_on", "City / Ward", `${user.city} • ${user.ward}`)}
           {cell("translate", "Preferred Language", LANGUAGES[user.preferredLanguage])}
           {cell("calendar_today", "Member Since", shortDate(user.joinedAt))}
-          {cell("fingerprint", "Identity Mode", "Mobile OTP + Aadhaar-ready")}
+          {cell("fingerprint", "Identity Mode", "Supabase email account")}
         </dl>
       </section>
 
@@ -93,9 +93,9 @@ export function ProfilePage(): JSX.Element {
 
       <section className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm divide-y divide-outline-variant/30">
         {linkRow("#/complaints", "receipt_long", "My Complaints", "Track SLA status, reopen or escalate")}
-        {linkRow("#/vision/history", "photo_camera", "My Infrastructure Checks", "Reopen Nirikshan Vision results")}
+        {linkRow("/user/vision/history", "photo_camera", "My Infrastructure Checks", "Reopen NIRIKSHAK Vision results")}
         {linkRow("#/settings", "settings", "Settings", "Notifications, language and accessibility")}
-        {linkRow("#/report", "report", "Report a New Issue", "Guided flow with AI verification")}
+        {linkRow("/user/report", "report", "Report a New Issue", "Guided flow with AI-assisted classification")}
       </section>
 
       <div className="flex justify-center pt-2 pb-6">

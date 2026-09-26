@@ -132,7 +132,7 @@ export function VisionHistoryList({
       <EmptyState
         icon="photo_camera"
         title="No infrastructure checks yet"
-        text="Photos you analyze with Nirikshan Vision will appear here so you can reopen results anytime."
+        text="Photos you analyze with NIRIKSHAK Vision will appear here so you can reopen results anytime."
         ctaLabel="Identify Infrastructure"
         ctaRoute={ROUTES.VISION}
       />

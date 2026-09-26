@@ -10,16 +10,17 @@ import Logo from './Logo';
 import { Avatar, Dropdown } from './ui';
 import { CONTRACTOR } from '../lib/data';
 import { useAuth } from '@/core/auth/useAuth';
+import { RealtimeStatusIndicator } from '@/core/realtime/RealtimeStatusIndicator';
 
 
 const LANGS = ['English', 'मराठी', 'हिंदी'];
 
 export default function Header({ onMenu }: { onMenu: () => void }) {
-  const { theme, toggleTheme, fontScale, stepFont, a11y, toggleA11y, lang, setLang, notifications, unread, markRead } = useStore();
+  const { theme, toggleTheme, fontScale, stepFont, a11y, toggleA11y, lang, setLang, notifications, unread, markRead, projects } = useStore();
   const { session, signOut } = useAuth();
-  const contractorName = session?.profile?.full_name || session?.organization?.name || CONTRACTOR.name;
-  const contractorOrg = session?.organization?.name || 'Contractor Infrastructure Agency';
-  const contractorId = session?.organization?.id ? `ORG-${session.organization.id.slice(0, 8).toUpperCase()}` : CONTRACTOR.id;
+  const contractorName = session?.profile?.full_name || session?.organization?.name || 'Contractor user';
+  const contractorOrg = session?.organization?.name || 'Organization not available';
+  const contractorId = session?.organization?.id ? `ORG-${session.organization.id.slice(0, 8).toUpperCase()}` : 'Organization ID not available';
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [q, setQ] = useState('');
@@ -52,10 +53,12 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     return r
       .filter((x) => x.label.toLowerCase().includes(term))
       .concat(
-        SEARCH_ENTITIES.filter((e) => e.label.toLowerCase().includes(term) || e.sub.toLowerCase().includes(term))
+        projects
+          .map((project) => ({ label: project.name, sub: project.code || 'Project', to: `/projects/${project.id}/details` }))
+          .filter((e) => e.label.toLowerCase().includes(term) || e.sub.toLowerCase().includes(term))
       )
       .slice(0, 8);
-  }, [q]);
+  }, [q, projects]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b border-slate-200 dark:bg-slate-900 dark:border-slate-800">
@@ -123,6 +126,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
 
         {/* Right actions */}
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+          <RealtimeStatusIndicator className="hidden text-slate-500 xl:inline-flex" />
           <div className="hidden sm:flex items-center bg-slate-50 rounded-md p-1 border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
             <button className="px-2 py-1 text-xs font-bold text-slate-600 hover:bg-white rounded hover:shadow-sm transition-all cursor-pointer dark:text-slate-300 dark:hover:bg-slate-700" onClick={() => stepFont(-1)} aria-label="Decrease text size" disabled={fontScale <= 0.875}>
               A-
@@ -269,7 +273,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                   <p className="text-[11px] text-slate-500 mt-0.5 dark:text-slate-400">{contractorOrg}</p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">{contractorId}</p>
                   <span className="inline-flex mt-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-300">
-                    {session?.role ? session.role.replace(/_/g, ' ').toUpperCase() : 'VERIFIED CONTRACTOR'}
+                    {session?.role ? session.role.replace(/_/g, ' ').toUpperCase() : 'ROLE NOT AVAILABLE'}
                   </span>
                 </div>
                 {[
@@ -312,18 +316,3 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     </header>
   );
 }
-
-const SEARCH_ENTITIES: { label: string; sub: string; to: string }[] = [
-  { label: 'Pune Road Development', sub: 'Project', to: '/projects/p1/details' },
-  { label: 'Municipal Water Pipeline Upgrade', sub: 'Project', to: '/projects/p2/details' },
-  { label: 'District Hospital Expansion', sub: 'Project', to: '/projects/p3/details' },
-  { label: 'Urban Drainage Improvement', sub: 'Project', to: '/projects/p4/details' },
-  { label: 'Rural Bridge Construction', sub: 'Project', to: '/projects/p5/details' },
-  { label: 'Amravati School Complex', sub: 'Project', to: '/projects/p6/details' },
-  { label: 'NH-548C Widening — Satara', sub: 'Tender', to: '/tenders/t1' },
-  { label: 'Sub-District Hospital Latur', sub: 'Tender', to: '/tenders/t2' },
-  { label: 'Water Supply Solapur', sub: 'Tender', to: '/tenders/t3' },
-  { label: 'Storm Water Drains Kolhapur', sub: 'Tender', to: '/tenders/t4' },
-  { label: 'PMGSY-IV Nashik', sub: 'Tender', to: '/tenders/t6' },
-  { label: 'Polytechnic Academic Block Pune', sub: 'Tender', to: '/tenders/t7' },
-];

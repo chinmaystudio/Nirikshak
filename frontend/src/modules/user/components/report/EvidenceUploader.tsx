@@ -74,7 +74,7 @@ export function EvidenceUploader({ draft, onChange }: EvidenceUploaderProps): JS
           <Icon name="auto_awesome" className="text-[16px] text-secondary" /> Want help identifying the problem?
         </span>
         <Button variant="primary" size="sm" icon="photo_camera" onClick={() => window.location.assign(`${ROUTES.VISION}?next=report`)}>
-          Analyze with Nirikshan Vision
+          Analyze with NIRIKSHAK Vision
         </Button>
       </div>
       <div id="evidence-grid" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -90,7 +90,7 @@ export function EvidenceUploader({ draft, onChange }: EvidenceUploaderProps): JS
             )}
             {e.fromVision ? (
               <span className="absolute bottom-0 inset-x-0 bg-primary/85 text-surface-container-lowest text-[9px] font-bold px-1.5 py-0.5 text-center">
-                FROM NIRIKSHAN VISION
+                FROM NIRIKSHAK VISION
               </span>
             ) : null}
             <button
