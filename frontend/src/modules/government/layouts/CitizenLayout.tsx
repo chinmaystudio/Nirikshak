@@ -31,10 +31,6 @@ export function CitizenLayout() {
         {t('common.skipToContent')}
       </a>
 
-      <div className="nk-demo-banner px-3 py-1 text-center" role="note">
-        {t('common.demoBanner')}
-      </div>
-
       <header className="sticky top-0 z-header border-b border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-content items-center gap-3 px-4">
           <Logo variant="full" to="/citizen" className="h-8" alt={t('common.appName')} />

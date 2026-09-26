@@ -18,9 +18,6 @@ export function AuthLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
-      <div className="nk-demo-banner px-3 py-1 text-center" role="note">
-        {t('common.demoBanner')}
-      </div>
       <main
         id="main-content"
         className="flex flex-1 items-center justify-center p-4"

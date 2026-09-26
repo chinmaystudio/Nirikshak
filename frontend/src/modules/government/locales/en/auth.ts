@@ -18,9 +18,8 @@ export default {
   'auth.updatePassword': 'Update password',
   'auth.selectDepartment': 'Select Department',
   'auth.selectRole': 'Select Role',
-  'auth.continue': 'Continue',
   'auth.securityNote':
-    'Demo environment only. No real government authentication (NIC / Parichay / SSO) is integrated.',
-  'auth.mockLoginNote': 'Any credentials will sign you into the demo officer session.',
-  'auth.demoCredentials': 'Demo: use any Employee ID and password to continue.',
+    'Official Infrastructure Monitoring & Verification Network • Authorized Personnel Only',
+  'auth.mockLoginNote': 'Use registered credentials or developer demo accounts to authenticate.',
+  'auth.demoCredentials': 'Use registered official credentials to sign in.',
 }

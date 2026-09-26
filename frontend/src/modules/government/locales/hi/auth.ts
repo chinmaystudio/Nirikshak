@@ -19,7 +19,7 @@ export default {
   'auth.selectDepartment': 'विभाग चुनें',
   'auth.selectRole': 'भूमिका चुनें',
   'auth.continue': 'जारी रखें',
-  'auth.securityNote': 'केवल डेमो वातावरण। कोई वास्तविक सरकारी प्रमाणीकरण (NIC / Parichay / SSO) एकीकृत नहीं है।',
+  'auth.securityNote': 'आधिकारिक अवसंरचना निगरानी एवं सत्यापन नेटवर्क • केवल अधिकृत कर्मी',
   'auth.mockLoginNote': 'कोई भी क्रेडेंशियल आपको डेमो अधिकारी सत्र में लॉगिन कर देगा।',
   'auth.demoCredentials': 'डेमो: जारी रखने के लिए कोई भी कर्मचारी आईडी और पासवर्ड उपयोग करें।',
 }

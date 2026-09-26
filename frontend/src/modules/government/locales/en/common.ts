@@ -1,9 +1,8 @@
-﻿/** Common strings shared across the whole application (English). */
+/** Common strings shared across the whole application (English). */
 export const common: Record<string, string> = {
   'common.appName': 'NIRIKSHAK',
   'common.tagline': 'Transparent Projects • Stronger India',
-  'common.demoBanner':
-    'Demonstration build — all data shown is mock data. Not connected to a live government backend.',
+  'common.demoBanner': '',
   'common.mockDataNote': (import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true') ? 'All figures on this page are mock data for demonstration.' : '',
   'common.search': 'Search',
   'common.searchPlaceholder': 'Search projects, tenders, grievances…',

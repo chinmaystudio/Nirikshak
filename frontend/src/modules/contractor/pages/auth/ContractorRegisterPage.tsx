@@ -55,54 +55,93 @@ export default function ContractorRegisterPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-center items-center px-4 py-12">
-        <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 text-center shadow-xl">
-          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-            🏢
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">Onboarding Application Submitted</h1>
-          <p className="text-xs text-slate-600 mt-2">
-            Your contractor registration for <strong className="text-slate-900">{companyName}</strong> has been received and logged in the NIRIKSHAK vendor registry.
-          </p>
-          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 text-left space-y-2">
-            <div className="font-bold flex items-center gap-2">
-              <span>⏳</span> Status: PENDING VERIFICATION
-            </div>
-            <p className="text-[11px] text-amber-800 leading-relaxed">
-              In accordance with government procurement compliance guidelines, contractor privileges (bidding on tenders, receiving contract awards, submitting progress claims) require physical document and GSTIN cross-verification by the Public Works Department authority.
+      <div
+        className="flex min-h-screen flex-col items-center justify-center p-4"
+        style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
+      >
+        <div className="w-full max-w-md">
+          <div className="mb-6 flex flex-col items-center gap-3 text-center">
+            <img
+              src="/logo/nirikshak-logo.png"
+              alt="NIRIKSHAK"
+              className="h-12 w-auto object-contain"
+              width={1937}
+              height={532}
+            />
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              Transparent Projects • Stronger India
             </p>
           </div>
-          <div className="mt-6">
-            <a
-              href="/contractor/login"
-              className="inline-flex items-center justify-center w-full h-11 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors"
-            >
-              Return to Contractor Login
-            </a>
+
+          <div className="rounded-xl border border-slate-200/90 bg-white p-6 sm:p-8 text-center shadow-sm">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <span className="material-symbols-outlined text-[28px]">verified</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 font-display">
+              Onboarding Application Submitted
+            </h1>
+            <p className="mt-2 text-xs text-slate-600">
+              Your contractor registration for <strong className="text-slate-900">{companyName}</strong> has been received and logged in the NIRIKSHAK vendor registry.
+            </p>
+            <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 text-left space-y-2">
+              <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+                <span>Status: PENDING VERIFICATION</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                In accordance with government procurement compliance guidelines, contractor privileges (bidding on tenders, receiving contract awards, submitting progress claims) require physical document and GSTIN cross-verification by the Public Works Department authority.
+              </p>
+            </div>
+            <div className="mt-6">
+              <a
+                href="/contractor/login"
+                className="inline-flex items-center justify-center w-full h-10 bg-[#1e40af] hover:bg-[#1d4ed8] text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+              >
+                Return to Contractor Login
+              </a>
+            </div>
           </div>
+
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Official Infrastructure Monitoring &amp; Verification Network • Authorized Personnel Only
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-center items-center px-4 py-12">
+    <div
+      className="flex min-h-screen flex-col items-center justify-center p-4 py-12"
+      style={{ backgroundColor: '#f8fafc', color: '#0f172a' }}
+    >
       <div className="w-full max-w-xl">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 mb-4 shadow-sm">
-            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold font-display tracking-tight text-slate-900">Contractor Onboarding</h1>
-          <p className="text-xs font-semibold tracking-wider uppercase text-blue-600 mt-1">Vendor Enrolment &amp; Compliance Portal</p>
-          <p className="text-xs text-slate-500 mt-1">Register your infrastructure agency for state and municipal procurement</p>
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <img
+            src="/logo/nirikshak-logo.png"
+            alt="NIRIKSHAK"
+            className="h-12 w-auto object-contain"
+            width={1937}
+            height={532}
+          />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+            Transparent Projects • Stronger India
+          </p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div className="rounded-xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-sm">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-display">
+            Contractor Onboarding
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-slate-500">
+            Official NIRIKSHAK Contractor Execution Portal • Vendor Registration
+          </p>
+
           {errorMsg && (
-            <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 flex items-start gap-2">
-              <span className="shrink-0 mt-0.5 font-bold">⚠️</span>
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-start gap-2">
+              <span className="material-symbols-outlined text-[18px] text-red-600 shrink-0 mt-0.5">
+                error
+              </span>
               <span>{errorMsg}</span>
             </div>
           )}
@@ -247,26 +286,33 @@ export default function ContractorRegisterPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full h-11 mt-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1e40af] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1d4ed8] disabled:opacity-50 cursor-pointer"
             >
               {busy ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   <span>Submitting Enrolment Application...</span>
                 </>
               ) : (
-                'Submit Contractor Enrolment'
+                <>
+                  <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                  <span>Submit Contractor Enrolment</span>
+                </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-between text-xs">
+          <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 text-xs sm:text-sm">
             <span className="text-slate-500">Already registered?</span>
-            <a href="/contractor/login" className="font-semibold text-blue-600 hover:text-blue-500 hover:underline">
+            <a href="/contractor/login" className="font-semibold text-[#1e40af] hover:text-[#1d4ed8] hover:underline">
               Sign In to Portal
             </a>
           </div>
         </div>
+
+        <p className="mt-6 text-center text-xs text-slate-500">
+          Official Infrastructure Monitoring &amp; Verification Network • Authorized Personnel Only
+        </p>
       </div>
     </div>
   );

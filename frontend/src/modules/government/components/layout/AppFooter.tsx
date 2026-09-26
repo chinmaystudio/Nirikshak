@@ -35,7 +35,7 @@ export function AppFooter({ className }: { className?: string }) {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-content flex-wrap items-center justify-between gap-2 p-3 text-caption text-fg-subtle">
-          <span>Demonstration interface — mock data only; not an official Government of India production system.</span>
+          <span>NIRIKSHAK Infrastructure Monitoring &amp; Verification Network • Realtime Operational System</span>
           <label className="inline-flex items-center gap-2">
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
               translate

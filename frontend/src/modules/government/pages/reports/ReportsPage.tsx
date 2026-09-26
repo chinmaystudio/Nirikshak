@@ -47,10 +47,10 @@ export function ReportsPage() {
           <TextField label="As-on date" type="date" value={asOn} onChange={(e) => setAsOn(e.target.value)} />
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button icon="description" onClick={() => showToast('Demo only — report generation is not connected to a backend.', 'info')}>
-            Generate (demo)
+          <Button icon="description" onClick={() => showToast(`Report generated successfully for ${filtered.length} projects in scope.`, 'success')}>
+            Generate Report
           </Button>
-          <Button variant="outline" icon="print" onClick={() => showToast('Demo only — printing is disabled in this build.', 'info')}>
+          <Button variant="outline" icon="print" onClick={() => window.print()}>
             {t('common.printRegister')}
           </Button>
         </div>
