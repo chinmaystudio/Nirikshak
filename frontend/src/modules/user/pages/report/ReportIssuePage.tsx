@@ -10,6 +10,7 @@ import { EvidenceUploader } from "@/components/report/EvidenceUploader";
 import { AIVerification } from "@/components/report/AIVerification";
 import { useNavigate } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjects } from "@/hooks/useProjects";
 import { toast } from "@/hooks/useToast";
 import { createComplaint } from "@/services/complaints/complaintsService";
 import { analyzeReport } from "@/services/reporting/reportingService";
@@ -44,6 +45,7 @@ function initialDraft(projectParam: string | null): ReportDraft {
 export function ReportIssuePage(): JSX.Element {
   const navigate = useNavigate();
   const auth = useAuth();
+  const { projects } = useProjects();
   const projectParam = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("project");
   const [draft, setDraft] = useState<ReportDraft>(() => {
     const d = initialDraft(projectParam);
@@ -269,7 +271,7 @@ export function ReportIssuePage(): JSX.Element {
                   className="w-full px-3 py-2 border border-outline-variant rounded text-body-md bg-surface-container-lowest"
                 >
                   <option value="">Not linked to a specific project</option>
-                  {projectsData.map((p) => (
+                  {(projects.length > 0 ? projects : projectsData).map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>

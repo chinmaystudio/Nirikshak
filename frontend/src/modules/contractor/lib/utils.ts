@@ -16,33 +16,53 @@ export function money(n: number): string {
 
 export const cr = (n: number) => `₹ ${inr(n)} Cr`;
 
-export function fmtDate(d: string | Date): string {
-  const dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : d;
+export function parseSafeDate(d: string | Date | null | undefined): Date | null {
+  if (!d) return null;
+  if (d instanceof Date) return Number.isNaN(d.getTime()) ? null : d;
+  const s = String(d).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const dt = new Date(s + 'T00:00:00');
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  const dt = new Date(s);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+export function fmtDate(d: string | Date | null | undefined): string {
+  const dt = parseSafeDate(d);
+  if (!dt) return '—';
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-export function fmtDateShort(d: string | Date): string {
-  const dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : d;
+export function fmtDateShort(d: string | Date | null | undefined): string {
+  const dt = parseSafeDate(d);
+  if (!dt) return '—';
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 }
 
-export function fmtDateCompact(d: string | Date): string {
-  const dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : d;
+export function fmtDateCompact(d: string | Date | null | undefined): string {
+  const dt = parseSafeDate(d);
+  if (!dt) return '—';
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
 }
 
-export function fmtDateTime(d: string | Date): string {
-  const dt = typeof d === 'string' ? new Date(d) : d;
+export function fmtDateTime(d: string | Date | null | undefined): string {
+  const dt = parseSafeDate(d);
+  if (!dt) return '—';
   return dt.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
-export function daysUntil(d: string): number {
-  const dt = new Date(d + 'T00:00:00');
+export function daysUntil(d: string | null | undefined): number {
+  const dt = parseSafeDate(d);
+  if (!dt) return 0;
   const now = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
-  return Math.round((dt.getTime() - now.getTime()) / 86400000);
+  const target = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  return Math.round((target.getTime() - now.getTime()) / 86400000);
 }
 
-export function daysLeftLabel(d: string): string {
+export function daysLeftLabel(d: string | null | undefined): string {
+  if (!d) return '—';
   const n = daysUntil(d);
   if (n === 0) return 'Today';
   if (n === 1) return 'Tomorrow';

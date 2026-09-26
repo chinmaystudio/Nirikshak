@@ -18,17 +18,17 @@ export default function Projects() {
   const filtered = useMemo(() => {
     let rows = projects.filter((p) => {
       const term = q.trim().toLowerCase();
-      if (term && !(p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term) || p.location.toLowerCase().includes(term))) return false;
+      if (term && !((p.name || '').toLowerCase().includes(term) || (p.code || '').toLowerCase().includes(term) || (p.location || '').toLowerCase().includes(term))) return false;
       if (status !== 'All Statuses' && p.status !== status) return false;
       if (risk !== 'All Risks' && p.risk !== risk) return false;
       return true;
     });
     rows = [...rows].sort((a, b) => {
       switch (sort) {
-        case 'Progress': return b.progress - a.progress;
-        case 'Contract Value': return b.value - a.value;
-        case 'Project Name': return a.name.localeCompare(b.name);
-        default: return a.deadline.localeCompare(b.deadline);
+        case 'Progress': return (b.progress || 0) - (a.progress || 0);
+        case 'Contract Value': return (b.value || 0) - (a.value || 0);
+        case 'Project Name': return (a.name || '').localeCompare(b.name || '');
+        default: return (a.deadline || '').localeCompare(b.deadline || '');
       }
     });
     return rows;

@@ -22,15 +22,15 @@ export function useProjects() {
       return list.filter((p) => {
         if (query.q) {
           const q = query.q.toLowerCase();
-          const hay = `${p.name} ${p.code} ${p.city} ${p.contractor.name} ${p.department}`.toLowerCase();
+          const hay = `${p.name || ''} ${p.code || ''} ${p.city || ''} ${p.contractor?.name || ''} ${p.department || ''}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         if (query.categories.length > 0 && !query.categories.includes(p.category)) return false;
         if (query.statuses.length > 0 && !query.statuses.includes(p.status)) return false;
         if (query.departments.length > 0 && !query.departments.includes(p.department)) return false;
-        if (query.contractor !== "all" && !p.contractor.name.includes(query.contractor)) return false;
+        if (query.contractor !== "all" && !(p.contractor?.name || '').includes(query.contractor)) return false;
         if (query.distanceKm != null && !(p.distanceKm != null && p.distanceKm <= query.distanceKm)) return false;
-        if (query.scope === "ward" && !p.ward.includes("Ward 12")) return false;
+        if (query.scope === "ward" && !(p.ward || '').includes("Ward 12")) return false;
         if (query.scope === "pune" && p.city !== "Pune") return false;
         return true;
       });

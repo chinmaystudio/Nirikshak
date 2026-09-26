@@ -29,7 +29,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [path]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 dark:bg-[#0b1120] dark:text-slate-100">
       <Header onMenu={() => setNavOpen(true)} />
       <Navbar />
       <MobileNavDrawer open={navOpen} onClose={() => setNavOpen(false)} />

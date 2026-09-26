@@ -22,7 +22,7 @@ import { cls, cr, fmtDate, daysUntil, daysLeftLabel } from '../../lib/utils';
 
 export default function ProjectLayout({ projectId, section }: { projectId: string; section: string }) {
   const { projects, documents, addDocument, toast } = useStore();
-  const project = getProject(projectId);
+  const project = projects.find((p) => p.id === projectId || p.code === projectId) || getProject(projectId) || projects[0];
   const [uploadOpen, setUploadOpen] = useState(false);
   const [docType, setDocType] = useState('QA Report');
   const [docs, setDocs] = useState<UploadDoc[]>([]);

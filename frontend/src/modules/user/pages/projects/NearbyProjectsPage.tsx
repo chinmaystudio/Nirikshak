@@ -38,8 +38,8 @@ export function NearbyProjectsPage(): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const departmentOptions = Array.from(new Set(projects.map((p) => p.department))).sort();
-  const contractors = ["all", ...Array.from(new Set(projects.map((p) => p.contractor.name))).sort()];
+  const departmentOptions = Array.from(new Set(projects.map((p) => p.department).filter(Boolean) as string[])).sort();
+  const contractors = ["all", ...Array.from(new Set(projects.map((p) => p.contractor?.name).filter(Boolean) as string[])).sort()];
 
   const filtered = filterProjects(projects, {
     q: query.q,

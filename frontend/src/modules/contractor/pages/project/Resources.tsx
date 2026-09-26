@@ -28,7 +28,7 @@ export default function Resources({ project }: { project: Project }) {
     () =>
       list.filter((w) => {
         const t = q.trim().toLowerCase();
-        if (t && !(w.name.toLowerCase().includes(t) || w.role.toLowerCase().includes(t) || w.area.toLowerCase().includes(t))) return false;
+        if (t && !((w.name || '').toLowerCase().includes(t) || (w.role || '').toLowerCase().includes(t) || (w.area || '').toLowerCase().includes(t))) return false;
         if (catF !== 'All Categories' && w.category !== catF) return false;
         if (statusF !== 'All Statuses' && w.status !== statusF) return false;
         return true;
@@ -52,7 +52,7 @@ export default function Resources({ project }: { project: Project }) {
     () =>
       resList.filter((r) => {
         const t = q.trim().toLowerCase();
-        if (t && !r.name.toLowerCase().includes(t)) return false;
+        if (t && !(r.name || '').toLowerCase().includes(t)) return false;
         if (catF !== 'All Categories' && r.category !== catF) return false;
         return true;
       }),

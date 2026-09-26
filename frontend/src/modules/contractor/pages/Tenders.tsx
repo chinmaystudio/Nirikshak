@@ -26,7 +26,7 @@ export default function Tenders() {
   const openFiltered = useMemo(() => {
     return TENDERS.filter((t) => {
       const term = q.trim().toLowerCase();
-      if (term && !(t.title.toLowerCase().includes(term) || t.code.toLowerCase().includes(term) || t.department.toLowerCase().includes(term))) return false;
+      if (term && !((t.title || '').toLowerCase().includes(term) || (t.code || '').toLowerCase().includes(term) || (t.department || '').toLowerCase().includes(term))) return false;
       if (dept !== 'All Departments' && t.department !== dept) return false;
       if (loc !== 'All Locations' && t.location !== loc) return false;
       if (cat !== 'All Categories' && t.category !== cat) return false;

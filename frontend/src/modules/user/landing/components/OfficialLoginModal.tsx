@@ -26,7 +26,15 @@ export const OfficialLoginModal: React.FC<OfficialLoginModalProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
       setLoginSuccess(true);
-    }, 800);
+      setTimeout(() => {
+        onClose();
+        if (role === 'officer') {
+          window.location.href = '/government';
+        } else {
+          window.location.href = '/contractor';
+        }
+      }, 700);
+    }, 600);
   };
 
   return (
@@ -76,11 +84,15 @@ export const OfficialLoginModal: React.FC<OfficialLoginModalProps> = ({
                 onClick={() => {
                   setLoginSuccess(false);
                   onClose();
-                  window.location.hash = '#/home';
+                  if (role === 'officer') {
+                    window.location.href = '/government';
+                  } else {
+                    window.location.href = '/contractor';
+                  }
                 }}
                 className="px-6 py-2.5 rounded-full bg-[#eefc55] border border-[#d6e838] text-neutral-950 text-xs font-bold shadow-md hover:bg-[#e2f23e] cursor-pointer"
               >
-                Enter Portal
+                {role === 'officer' ? 'Enter Government Portal' : 'Enter Contractor Portal'}
               </button>
             </div>
           ) : (

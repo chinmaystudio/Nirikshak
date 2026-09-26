@@ -94,7 +94,24 @@ export function LandingPage(): JSX.Element {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <a
+            href="/government"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-neutral-200 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer"
+            title="Government Officer Portal"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+            <span>Gov Portal</span>
+          </a>
+
+          <a
+            href="/contractor"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold text-neutral-200 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all cursor-pointer"
+            title="Contractor & Vendor Portal"
+          >
+            <span>Contractor</span>
+          </a>
+
           <button
             id="nav-enter-citizen-portal"
             onClick={goToPortal}

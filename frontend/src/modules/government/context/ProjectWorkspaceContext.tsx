@@ -84,7 +84,7 @@ export function ProjectWorkspaceProvider({
       grievances: (grievancesAll ?? []).filter((x) => x.projectId === id),
       documents: (documentsAll ?? []).filter((x) => x.projectId === id),
       approvals: (approvalsAll ?? []).filter((x) => x.projectId === id),
-      insights: (insightsAll ?? []).filter((x) => x.relatedProjectIds.includes(id)),
+      insights: (insightsAll ?? []).filter((x) => (x.relatedProjectIds ?? []).includes(id)),
       findings: (findingsAll ?? []).filter((x) => x.projectId === id),
       alerts: (alertsAll ?? []).filter((x) => x.projectId === id),
       tenders: (tendersAll ?? []).filter((x) => x.projectId === id),

@@ -36,7 +36,7 @@ export function ComplaintDetailsPage(): JSX.Element {
 
   const complaint = state.data;
   const closed = complaint.status === "resolved" || complaint.status === "closed";
-  const breached = complaint.sla.deadline - Date.now() <= 0;
+  const breached = complaint.sla?.deadline ? (Number(complaint.sla.deadline) - Date.now() <= 0) : false;
   const createdComplaint = useCreatedComplaint(complaint.id);
 
   const refresh = (): void => {

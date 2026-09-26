@@ -12,12 +12,17 @@ export function getHash(): string {
       h = '/dashboard';
     }
   }
+  if (h && !h.startsWith('/')) {
+    h = '/' + h;
+  }
   return h;
 }
 
 export function navigate(to: string) {
-  if (getHash() === to) return;
-  window.location.hash = to;
+  const norm = to.startsWith('#') ? to.slice(1) : to;
+  const target = norm.startsWith('/') ? norm : `/${norm}`;
+  if (getHash() === target) return;
+  window.location.hash = target;
 }
 
 export function usePath(): string {

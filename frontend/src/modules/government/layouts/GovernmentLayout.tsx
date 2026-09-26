@@ -49,7 +49,7 @@ export function GovernmentLayout() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-screen bg-canvas text-fg">
       {/* Skip link */}
       <a
         href="#main-content"

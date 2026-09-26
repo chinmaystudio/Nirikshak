@@ -143,7 +143,7 @@ export function App(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#F5F7FA] text-[#0d1c2e]">
       <button
         id="skip-link"
         type="button"

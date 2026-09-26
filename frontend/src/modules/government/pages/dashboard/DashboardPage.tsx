@@ -42,7 +42,7 @@ export function DashboardPage() {
     if (budget === '100') rows = rows.filter((p) => p.sanctionedAmountCr > 100)
     if (keyword.trim()) {
       const k = keyword.trim().toLowerCase()
-      rows = rows.filter((p) => p.name.toLowerCase().includes(k) || p.id.toLowerCase().includes(k))
+      rows = rows.filter((p) => (p.name || '').toLowerCase().includes(k) || (p.id || '').toLowerCase().includes(k))
     }
     return rows
   }, [projects, division, health, budget, keyword])
