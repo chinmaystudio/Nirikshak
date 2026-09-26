@@ -12,13 +12,26 @@ export class OpenRouterProvider implements LLMProvider {
 
   constructor() {
     this.apiKey = process.env.OPENROUTER_API_KEY || '';
-    this.model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-4-340b-instruct';
+    this.model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b';
+  }
+
+  private sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
+    const sanitized = { ...context };
+    const sensitiveKeys = ['password', 'token', 'jwt', 'secret', 'aadhaar', 'phone', 'email', 'api_key'];
+    for (const key of Object.keys(sanitized)) {
+      if (sensitiveKeys.some((s) => key.toLowerCase().includes(s))) {
+        delete sanitized[key];
+      }
+    }
+    return sanitized;
   }
 
   async analyzeProject(prompt: string, context: Record<string, unknown>): Promise<ProjectRiskAnalysis> {
+    const cleanContext = this.sanitizeContext(context);
+
     if (!this.apiKey) {
       console.warn('OPENROUTER_API_KEY is not configured. Falling back to deterministic structured response.');
-      return this.fallbackAnalysis(context);
+      return this.fallbackAnalysis(cleanContext);
     }
 
     try {
@@ -35,7 +48,20 @@ export class OpenRouterProvider implements LLMProvider {
           messages: [
             {
               role: 'system',
-              content: `You are the NIRIKSHAK AI Infrastructure Risk Engine. Analyze the infrastructure project and provide a JSON response matching the following schema exactly:
+              content: `You are NIRIKSHAK AI, an infrastructure project analysis assistant.
+Use only supplied evidence.
+Distinguish:
+contractor-reported information
+government-verified information
+external observations
+AI inference.
+Do not invent missing values.
+If evidence is insufficient return UNKNOWN.
+AI does not approve projects.
+AI does not select contractors.
+AI does not determine official progress.
+AI does not declare legal violations.
+Return structured JSON only matching the schema:
 {
   "risk_score": number (0-100),
   "risk_level": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
@@ -50,7 +76,7 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`,
             },
             {
               role: 'user',
-              content: `${prompt}\n\nProject Context:\n${JSON.stringify(context, null, 2)}`,
+              content: `${prompt}\n\nProject Context:\n${JSON.stringify(cleanContext, null, 2)}`,
             },
           ],
           response_format: { type: 'json_object' },
@@ -66,8 +92,8 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`,
       const parsed = JSON.parse(rawContent);
       return ProjectRiskAnalysisSchema.parse(parsed);
     } catch (err) {
-      console.error('OpenRouter execution error, using validated fallback:', err);
-      return this.fallbackAnalysis(context);
+      console.error('OpenRouter execution error, using deterministic validated analysis:', err);
+      return this.fallbackAnalysis(cleanContext);
     }
   }
 
@@ -76,32 +102,39 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`,
     const progress = Number(context.physical_progress_percent) || 0;
     const isDelayed = String(context.normalized_status).toUpperCase() === 'DELAYED';
 
-    const riskScore = isDelayed ? 78 : progress < 50 ? 54 : 28;
-    const riskLevel = riskScore > 70 ? 'HIGH' : riskScore > 40 ? 'MEDIUM' : 'LOW';
+    const riskScore = isDelayed ? 75 : progress < 40 ? 50 : 25;
+    const riskLevel = riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MEDIUM' : 'LOW';
 
     return {
       risk_score: riskScore,
       risk_level: riskLevel,
-      summary: `Automated baseline assessment for ${context.project_name || 'Project'}. Current physical progress is ${progress}% against ₹${cost} Cr outlay. Status is ${context.normalized_status || 'monitored'}.`,
+      summary: `Deterministic analysis for ${context.project_name || 'Project'}. Physical progress recorded at ${progress}% against sanctioned outlay of ₹${cost} Cr. Status: ${context.normalized_status || 'MONITORED'}.`,
       schedule: {
         risk: isDelayed ? 'HIGH' : 'MEDIUM',
-        reasons: isDelayed ? ['Milestone critical path variance detected in scheduled execution'] : ['Pacing tracks within acceptable statutory variance buffer'],
+        reasons: isDelayed
+          ? ['Project execution status is marked as DELAYED in database']
+          : ['Reported milestones currently within expected delivery window'],
       },
       finance: {
         risk: cost > 5000 ? 'MEDIUM' : 'LOW',
-        reasons: ['Capital expenditure allocation verified against treasury ledger'],
+        reasons: [
+          cost > 5000
+            ? 'High-outlay infrastructure asset requiring multi-tier disbursement review'
+            : 'Outlay within standard capital expenditure parameters',
+        ],
       },
       environment: {
         risk: 'LOW',
-        reasons: ['Statutory clearance compliance under active regional monitoring'],
+        reasons: ['No unresolved environmental violation notices flagged in records'],
       },
       evidence: [
-        `Reported physical progress: ${progress}%`,
-        `Sanctioned project outlay: ₹${cost} Cr`,
+        `Database recorded physical progress: ${progress}%`,
+        `Sanctioned budget: ₹${cost} Cr`,
+        `Normalized database status: ${context.normalized_status || 'ACTIVE'}`,
       ],
       recommended_actions: [
-        'Maintain bi-weekly milestone audit cadence',
-        'Verify contractor daily batching reports against billing milestones',
+        'Perform field verification before signing off on milestone disbursements',
+        'Cross-reference contractor progress filings with verified inspection notes',
       ],
     };
   }

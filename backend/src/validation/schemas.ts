@@ -60,20 +60,22 @@ export const SubmitBidSchema = z.object({
   financial_score: z.number().min(0).max(100).optional(),
 });
 
+export const RiskLevelEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'UNKNOWN']);
+
 export const ProjectRiskAnalysisSchema = z.object({
-  risk_score: z.number().min(0).max(100),
-  risk_level: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  risk_score: z.number().min(0).max(100).nullable().optional(),
+  risk_level: RiskLevelEnum,
   summary: z.string(),
   schedule: z.object({
-    risk: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    risk: RiskLevelEnum,
     reasons: z.array(z.string()),
   }),
   finance: z.object({
-    risk: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    risk: RiskLevelEnum,
     reasons: z.array(z.string()),
   }),
   environment: z.object({
-    risk: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    risk: RiskLevelEnum,
     reasons: z.array(z.string()),
   }),
   evidence: z.array(z.string()),
