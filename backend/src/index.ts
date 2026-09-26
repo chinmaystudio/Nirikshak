@@ -1,12 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { projectsRouter } from './routes/projects.js';
 import { progressRouter } from './routes/progress.js';
 import { complaintsRouter } from './routes/complaints.js';
 import { aiRouter } from './routes/ai.js';
-
-dotenv.config();
 
 export const app = express();
 
@@ -28,8 +26,10 @@ app.use('/api/progress', progressRouter);
 app.use('/api/complaints', complaintsRouter);
 app.use('/api/ai', aiRouter);
 
-const PORT = process.env.PORT || 4000;
-if (process.env.NODE_ENV !== 'production') {
+const PORT = Number(process.env.PORT) || 4000;
+// When deployed as a serverless function on Vercel, the export `app` is used directly.
+// In standalone environments (development, local node/tsx, container), start the HTTP server.
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`NIRIKSHAK Backend API listening on port ${PORT}`);
   });
