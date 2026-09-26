@@ -450,7 +450,6 @@ progressRouter.post('/review', async (req, res) => {
       p_decision: decision,
       p_verified_progress: verified_progress,
       p_review_notes: review_notes,
-      p_reviewer_id: '11111111-1111-1111-1111-111111111111',
     });
 
     if (error) throw error;

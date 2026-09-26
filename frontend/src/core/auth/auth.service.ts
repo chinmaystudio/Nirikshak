@@ -9,12 +9,13 @@ export class AuthService {
   static async resolveUserSession(user: User): Promise<AppSession> {
     try {
       // 1. Fetch Profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .maybeSingle();
 
+      if (profileError) throw profileError;
       const profile: Profile = profileData || {
         id: user.id,
         full_name: (user.user_metadata?.full_name || user.email?.split('@')[0]) ?? 'User',
@@ -25,12 +26,13 @@ export class AuthService {
       };
 
       // 2. Fetch Active Organization Membership
-      const { data: memberData } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from('organization_members')
         .select('*, organizations(*)')
         .eq('user_id', user.id)
-        .eq('status', 'ACTIVE')
+        .eq('status', 'active')
         .maybeSingle();
+      if (memberError) throw memberError;
 
       let role: AppRole = 'citizen';
       let organization: Organization | null = null;
@@ -39,12 +41,6 @@ export class AuthService {
         role = memberData.role as AppRole;
         if (memberData.organizations) {
           organization = memberData.organizations as Organization;
-        }
-      } else {
-        // Check user_metadata for initial/invited role or citizen
-        const metaRole = user.user_metadata?.role as AppRole | undefined;
-        if (metaRole) {
-          role = metaRole;
         }
       }
 
@@ -70,20 +66,7 @@ export class AuthService {
       };
     } catch (err) {
       console.error('Failed to resolve user session, falling back:', err);
-      return {
-        user,
-        profile: {
-          id: user.id,
-          full_name: user.email?.split('@')[0] || 'User',
-          phone: null,
-          avatar_url: null,
-          city: null,
-          state: null,
-        },
-        organization: null,
-        role: (user.user_metadata?.role as AppRole) || 'citizen',
-        permissions: ['citizen:access'],
-      };
+      throw err;
     }
   }
 
@@ -139,12 +122,13 @@ export class AuthService {
 
     if (data.user) {
       // Upsert profile in DB
-      await supabase.from('profiles').upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: data.user.id,
         full_name: fullName,
         phone: phone || null,
         updated_at: new Date().toISOString(),
       });
+      if (profileError) throw new Error(`Account created, but profile setup failed: ${profileError.message}`);
     }
 
     return data;
@@ -172,6 +156,8 @@ export class AuthService {
           department,
           designation,
           employee_id: employeeId,
+          state,
+          district,
           requested_role: 'government_engineer',
         },
       },
@@ -183,31 +169,6 @@ export class AuthService {
 
     if (!data.user) {
       throw new Error('Registration failed to create user.');
-    }
-
-    // 2. Ensure profile exists
-    await supabase.from('profiles').upsert({
-      id: data.user.id,
-      full_name: fullName,
-      state,
-      city: district,
-      updated_at: new Date().toISOString(),
-    });
-
-    // 3. Insert into government_access_requests with PENDING status
-    const { error: reqErr } = await supabase.from('government_access_requests').insert({
-      user_id: data.user.id,
-      employee_id: employeeId,
-      department,
-      designation,
-      official_email: officialEmail,
-      state,
-      district,
-      status: 'PENDING',
-    });
-
-    if (reqErr) {
-      console.warn('Could not insert government_access_requests:', reqErr.message);
     }
 
     return {
@@ -239,6 +200,11 @@ export class AuthService {
           full_name: fullName,
           phone,
           company_name: companyName,
+          registration_cin: registrationCin,
+          gstin,
+          contractor_class: contractorClass,
+          state,
+          district,
           requested_role: 'contractor_admin',
         },
       },
@@ -250,33 +216,6 @@ export class AuthService {
 
     if (!data.user) {
       throw new Error('Registration failed to create user.');
-    }
-
-    // 2. Ensure profile exists
-    await supabase.from('profiles').upsert({
-      id: data.user.id,
-      full_name: fullName,
-      phone,
-      state,
-      city: district,
-      updated_at: new Date().toISOString(),
-    });
-
-    // 3. Insert into contractor_access_requests with PENDING status
-    const { error: reqErr } = await supabase.from('contractor_access_requests').insert({
-      user_id: data.user.id,
-      company_name: companyName,
-      registration_cin: registrationCin,
-      gstin,
-      contractor_class: contractorClass,
-      state,
-      district,
-      phone,
-      status: 'PENDING',
-    });
-
-    if (reqErr) {
-      console.warn('Could not insert contractor_access_requests:', reqErr.message);
     }
 
     return {

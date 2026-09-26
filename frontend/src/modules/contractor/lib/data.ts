@@ -1933,7 +1933,15 @@ export const AI_ANSWERS: AIAnswer[] = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export const getProject = (id: string) => PROJECTS.find((p) => p.id === id);
-export const getTender = (id: string) => TENDERS.find((t) => t.id === id);
+export const getTender = (id: string) => {
+  if (typeof sessionStorage !== 'undefined') {
+    const cached = sessionStorage.getItem(`nirikshak:tender:${id}`);
+    if (cached) {
+      try { return JSON.parse(cached) as Tender; } catch { sessionStorage.removeItem(`nirikshak:tender:${id}`); }
+    }
+  }
+  return TENDERS.find((t) => t.id === id);
+};
 
 export function pendingForProject(projectId: string, invoices: Invoice[]): number {
   return invoices

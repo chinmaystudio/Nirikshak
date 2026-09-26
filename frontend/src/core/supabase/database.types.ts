@@ -2702,10 +2702,9 @@ export type Database = {
       approve_progress_update: {
         Args: {
           p_decision: string
-          p_review_notes: string
-          p_reviewer_id: string
+          p_review_notes?: string | null
           p_update_id: string
-          p_verified_progress: number
+          p_verified_progress?: number | null
         }
         Returns: Json
       }
@@ -2719,6 +2718,15 @@ export type Database = {
       is_citizen: { Args: never; Returns: boolean }
       is_contractor_user: { Args: never; Returns: boolean }
       is_government_user: { Args: never; Returns: boolean }
+      save_tender_bid: {
+        Args: {
+          p_bid_amount: number
+          p_status?: string
+          p_technical_proposal: string
+          p_tender_id: string
+        }
+        Returns: Database["public"]["Tables"]["tender_bids"]["Row"]
+      }
       seed_projects_batch: { Args: { projects_data: Json }; Returns: number }
     }
     Enums: {

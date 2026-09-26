@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabaseAdmin } from '../services/supabase.js';
+import { createAuthenticatedClient, supabaseAdmin } from '../services/supabase.js';
 import { SubmitProgressSchema, ReviewProgressSchema } from '../validation/schemas.js';
 
 export const progressRouter = Router();
@@ -40,14 +40,18 @@ progressRouter.post('/submit', async (req, res) => {
 
 progressRouter.post('/review', async (req, res) => {
   try {
+    const authorization = req.header('authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Bearer token required' } });
+    }
+    const supabaseUser = await createAuthenticatedClient(authorization.slice(7));
     const { progress_update_id, decision, verified_progress, review_notes } = ReviewProgressSchema.parse(req.body);
 
-    const { data, error } = await supabaseAdmin.rpc('approve_progress_update', {
+    const { data, error } = await supabaseUser.rpc('approve_progress_update', {
       p_update_id: progress_update_id,
       p_decision: decision,
       p_verified_progress: verified_progress,
       p_review_notes: review_notes,
-      p_reviewer_id: '11111111-1111-1111-1111-111111111111',
     });
 
     if (error) throw error;

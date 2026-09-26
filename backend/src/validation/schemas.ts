@@ -35,8 +35,8 @@ export const SubmitProgressSchema = z.object({
 
 export const ReviewProgressSchema = z.object({
   progress_update_id: z.string().uuid(),
-  decision: z.enum(['APPROVED', 'REJECTED', 'REQUEST_CLARIFICATION']),
-  verified_progress: z.number().min(0).max(100),
+  decision: z.enum(['APPROVED', 'REJECTED']),
+  verified_progress: z.number().min(0).max(100).nullable().optional(),
   review_notes: z.string().min(2),
 });
 

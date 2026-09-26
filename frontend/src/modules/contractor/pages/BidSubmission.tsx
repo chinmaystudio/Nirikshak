@@ -10,6 +10,7 @@ import { useStore } from '../lib/store';
 import { getTender, CONTRACTOR, BID_STEPS } from '../lib/data';
 import { eligibilityStatus } from '../lib/eligibility';
 import { cr, money, fmtDate, cls } from '../lib/utils';
+import { ContractorTenderService } from '../services/tender.service';
 
 interface BidData {
   contact: string;
@@ -126,14 +127,33 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
 
   const saveDraft = (silent?: boolean) => {
     saveBidDraft(tender.id, step, data as unknown as Record<string, unknown>);
+    if (amountNum > 0) {
+      void ContractorTenderService.saveDraft({
+        tenderId: tender.id,
+        bidAmount: amountNum,
+        technicalProposal: data.methodology,
+      }).catch((error) => {
+        console.error('Unable to save bid draft:', error);
+        if (!silent) toast('warn', 'Database draft not saved', error.message || 'Please retry.');
+      });
+    }
     if (!silent) toast('success', 'Draft saved', `Bid for ${tender.code} saved. Continue anytime from My Bids.`);
   };
 
-  const doSubmit = () => {
-    const ref = submitBid(tender.id, amountNum);
-    saveDraft(true);
-    setSubmittedRef(ref);
-    toast('success', 'Bid submitted successfully', `Reference: ${ref}`);
+  const doSubmit = async () => {
+    try {
+      const bid = await ContractorTenderService.submitBid({
+        tenderId: tender.id,
+        bidAmount: amountNum,
+        technicalProposal: data.methodology,
+      });
+      submitBid(tender.id, amountNum);
+      setSubmittedRef(bid.bid_reference);
+      setConfirmOpen(false);
+      toast('success', 'Bid submitted successfully', `Reference: ${bid.bid_reference}`);
+    } catch (error: any) {
+      toast('warn', 'Bid submission failed', error.message || 'Please retry.');
+    }
   };
 
   const go = (s: number) => {

@@ -1,20 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bookmark, BookmarkCheck, ArrowRight } from 'lucide-react';
 import { PageHeader, Card, Tabs, StatusBadge, Select, SearchInput, EmptyState } from '../components/ui';
 import { DataTable } from '../components/DataTable';
 import { Link } from '../lib/router';
 import { useStore } from '../lib/store';
-import { TENDERS, PAST_BIDS } from '../lib/data';
+import { PAST_BIDS } from '../lib/data';
 import type { Tender } from '../lib/data';
 import { eligibilityStatus } from '../lib/eligibility';
 import { cls, cr, daysUntil, fmtDate, timeAgo } from '../lib/utils';
-
-const DEPTS = ['All Departments', ...new Set(TENDERS.map((t) => t.department))];
-const LOCS = ['All Locations', ...new Set(TENDERS.map((t) => t.location))];
-const CATS = ['All Categories', ...new Set(TENDERS.map((t) => t.category))];
+import { ContractorTenderService } from '../services/tender.service';
 
 export default function Tenders() {
   const { bids, savedTenders, toggleSaveTender, toast } = useStore();
+  const [tenders, setTenders] = useState<Tender[]>([]);
   const [tab, setTab] = useState('open');
   const [q, setQ] = useState('');
   const [dept, setDept] = useState('All Departments');
@@ -22,9 +20,28 @@ export default function Tenders() {
   const [cat, setCat] = useState('All Categories');
   const [minVal, setMinVal] = useState('Any Value');
   const [elig, setElig] = useState('All');
+  const DEPTS = useMemo(() => ['All Departments', ...new Set(tenders.map((t) => t.department))], [tenders]);
+  const LOCS = useMemo(() => ['All Locations', ...new Set(tenders.map((t) => t.location))], [tenders]);
+  const CATS = useMemo(() => ['All Categories', ...new Set(tenders.map((t) => t.category))], [tenders]);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const rows = await ContractorTenderService.getOpenTenders();
+        if (active) setTenders(rows.map(ContractorTenderService.toTender));
+      } catch (error) {
+        console.error('Unable to load tenders:', error);
+        if (active) toast('warn', 'Tender data unavailable', 'No database fallback data was substituted.');
+      }
+    };
+    void load();
+    const unsubscribe = ContractorTenderService.subscribeTenderEvents(load);
+    return () => { active = false; unsubscribe(); };
+  }, [toast]);
 
   const openFiltered = useMemo(() => {
-    return TENDERS.filter((t) => {
+    return tenders.filter((t) => {
       const term = q.trim().toLowerCase();
       if (term && !((t.title || '').toLowerCase().includes(term) || (t.code || '').toLowerCase().includes(term) || (t.department || '').toLowerCase().includes(term))) return false;
       if (dept !== 'All Departments' && t.department !== dept) return false;
@@ -34,10 +51,10 @@ export default function Tenders() {
       if (elig !== 'All' && eligibilityStatus(t) !== elig) return false;
       return true;
     });
-  }, [q, dept, loc, cat, minVal, elig]);
+  }, [tenders, q, dept, loc, cat, minVal, elig]);
 
-  const saved = TENDERS.filter((t) => savedTenders.includes(t.id));
-  const bidRows = TENDERS.filter((t) => bids[t.id]).map((t) => ({ ...bids[t.id], tender: t, id: t.id }));
+  const saved = tenders.filter((t) => savedTenders.includes(t.id));
+  const bidRows = tenders.filter((t) => bids[t.id]).map((t) => ({ ...bids[t.id], tender: t, id: t.id }));
 
   const toggleSave = (t: Tender) => {
     const wasSaved = savedTenders.includes(t.id);
@@ -109,7 +126,7 @@ export default function Tenders() {
       <Card className="overflow-hidden">
         <Tabs
           tabs={[
-            { key: 'open', label: 'Open Tenders', count: TENDERS.filter((t) => t.status === 'Open').length },
+            { key: 'open', label: 'Open Tenders', count: tenders.filter((t) => t.status === 'Open').length },
             { key: 'saved', label: 'Saved', count: saved.length },
             { key: 'bids', label: 'My Bids', count: bidRows.length },
             { key: 'past', label: 'Past Bids', count: PAST_BIDS.length },

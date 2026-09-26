@@ -275,17 +275,19 @@ export const approvalsApi = {
     await supabase.rpc('approve_progress_update', {
       p_update_id: id,
       p_decision: 'APPROVED',
-      p_verified_progress: 95.0,
+      p_verified_progress: null,
       p_review_notes: notes,
-      p_reviewer_id: '11111111-1111-1111-1111-111111111111',
     });
   },
 
   async reject(id: string, notes = 'Rejected.'): Promise<void> {
-    await supabase.from('progress_updates').update({
-      verification_status: 'REJECTED',
-      review_notes: notes,
-    }).eq('id', id);
+    const { error } = await supabase.rpc('approve_progress_update', {
+      p_update_id: id,
+      p_decision: 'REJECTED',
+      p_verified_progress: null,
+      p_review_notes: notes,
+    });
+    if (error) throw error;
   },
 };
 
@@ -447,27 +449,28 @@ export const tendersApi = {
         .from('tenders')
         .select('*')
         .order('publication_date', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (error) throw error;
+      if (data) {
         return data.map((t: any) => ({
           id: t.tender_number || t.id,
-          title: t.title || 'Infrastructure Tender',
-          department: 'Public Works Department',
-          district: 'Pune',
+          title: t.title || 'Unknown',
+          department: 'Unknown',
+          district: 'Unknown',
           status: (t.status || 'PUBLISHED').toLowerCase() as any,
-          estimatedCostCr: Number(t.estimated_value_inr_crore) || 50,
-          publishedOn: t.publication_date || '2026-01-15',
-          submissionDeadline: t.bid_due_date || '2026-03-30',
-          openingDate: t.bid_due_date || '2026-03-31',
-          bidsReceived: 4,
-          category: 'Civil Infrastructure',
+          estimatedCostCr: t.estimated_value_inr_crore == null ? 0 : Number(t.estimated_value_inr_crore),
+          publishedOn: t.publication_date || '',
+          submissionDeadline: t.bid_due_date || '',
+          openingDate: '',
+          bidsReceived: 0,
+          category: 'Unknown',
           mode: 'e-Tender' as const,
           projectId: t.project_id,
         }));
       }
     } catch (err) {
-      console.warn('Error fetching tenders from Supabase, using mock fallback:', err);
+      console.error('Error fetching tenders from Supabase:', err);
+      throw err;
     }
-    return TENDERS;
   },
   async list(q?: ListQuery): Promise<Paginated<Tender>> {
     const all = await this.all();

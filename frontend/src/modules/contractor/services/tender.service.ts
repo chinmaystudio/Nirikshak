@@ -1,5 +1,6 @@
 import { supabase } from '@/core/supabase/client';
 import { realtimeService } from '@/core/realtime/realtime.service';
+import type { Tender } from '../lib/data';
 
 export interface DbTender {
   id: string;
@@ -41,6 +42,37 @@ export interface DbBid {
 }
 
 export class ContractorTenderService {
+  static toTender(row: DbTender): Tender {
+    const documents = Array.isArray(row.documents) ? row.documents : [];
+    const split = (value?: string | null) => value ? value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean) : [];
+    return {
+      id: row.id,
+      code: row.tender_number,
+      title: row.title,
+      department: 'Unknown',
+      location: row.projects?.location_text || 'Unknown',
+      value: row.estimated_value_inr_crore == null ? 0 : Number(row.estimated_value_inr_crore),
+      deadline: row.bid_due_date,
+      emd: 0,
+      category: row.projects?.sector || 'Unknown',
+      durationMonths: 0,
+      opened: row.publication_date,
+      preBid: '',
+      status: row.status === 'PUBLISHED' ? 'Open' : 'Closed',
+      summary: row.description || 'Unknown',
+      scopePoints: split(row.description),
+      eligibility: { label: 'Eligibility criteria', required: row.eligibility_criteria || 'Unknown' },
+      techReq: split(row.technical_requirements),
+      finReq: [],
+      docs: documents.map((item: any) => typeof item === 'string' ? item : item?.name).filter(Boolean),
+      timeline: [
+        ...(row.publication_date ? [{ label: 'Published', date: row.publication_date }] : []),
+        ...(row.bid_due_date ? [{ label: 'Bid deadline', date: row.bid_due_date }] : []),
+      ],
+      contact: { name: 'Unknown', role: 'Unknown', phone: 'Unknown', email: 'Unknown' },
+    };
+  }
+
   /**
    * Fetches published, open tenders from Supabase PostgreSQL.
    */
@@ -57,7 +89,11 @@ export class ContractorTenderService {
       throw error;
     }
 
-    return (data || []) as DbTender[];
+    const rows = (data || []) as DbTender[];
+    if (typeof sessionStorage !== 'undefined') {
+      rows.forEach((row) => sessionStorage.setItem(`nirikshak:tender:${row.id}`, JSON.stringify(this.toTender(row))));
+    }
+    return rows;
   }
 
   /**
@@ -81,13 +117,10 @@ export class ContractorTenderService {
   /**
    * Fetches bids submitted by the contractor's authenticated organization.
    */
-  static async getMyBids(contractorOrgId: string): Promise<DbBid[]> {
-    if (!contractorOrgId) return [];
-
+  static async getMyBids(): Promise<DbBid[]> {
     const { data, error } = await supabase
       .from('tender_bids')
       .select('*, tenders(id, tender_number, title, estimated_value_inr_crore, status, bid_due_date, projects(project_name))')
-      .eq('contractor_organization_id', contractorOrgId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -99,70 +132,27 @@ export class ContractorTenderService {
   }
 
   /**
-   * Generates server-side compliant unique bid reference: NIR-BID-2026-XXXXXX
-   */
-  private static generateBidReference(): string {
-    const randomHex = Math.floor(100000 + Math.random() * 900000).toString();
-    return `NIR-BID-2026-${randomHex}`;
-  }
-
-  /**
    * Submits a formal bid for a tender.
    */
   static async submitBid(payload: {
     tenderId: string;
-    contractorOrgId: string;
     bidAmount: number;
     technicalProposal: string;
-    userId: string;
   }): Promise<DbBid> {
-    const { tenderId, contractorOrgId, bidAmount, technicalProposal, userId } = payload;
-    const bidReference = this.generateBidReference();
-
-    // Insert bid into tender_bids
+    const { tenderId, bidAmount, technicalProposal } = payload;
     const { data: bid, error: insertErr } = await supabase
-      .from('tender_bids')
-      .insert({
-        tender_id: tenderId,
-        contractor_organization_id: contractorOrgId,
-        bid_reference: bidReference,
-        bid_amount: bidAmount,
-        technical_proposal: technicalProposal,
-        status: 'SUBMITTED',
-        submitted_by: userId,
-        submitted_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+      .rpc('save_tender_bid', { p_tender_id: tenderId, p_bid_amount: bidAmount, p_technical_proposal: technicalProposal, p_status: 'SUBMITTED' });
 
     if (insertErr) {
       console.error('Error submitting bid:', insertErr);
       throw insertErr;
     }
 
-    // Insert notification for Government Authorities
-    try {
-      await supabase.from('notifications').insert({
-        type: 'BID_SUBMITTED',
-        title: 'New Tender Bid Submitted',
-        message: `Bid ${bidReference} (₹${bidAmount} Cr) submitted for evaluation.`,
-        entity_type: 'tender_bids',
-        entity_id: bid.id,
-        metadata: {
-          tender_id: tenderId,
-          contractor_organization_id: contractorOrgId,
-          bid_reference: bidReference,
-        },
-      });
-    } catch (notifErr) {
-      console.warn('Could not dispatch notification:', notifErr);
-    }
-
     // Broadcast realtime event
     await realtimeService.broadcast('government:tenders', 'BID_SUBMITTED', {
       tender_id: tenderId,
       bid_id: bid.id,
-      bid_reference: bidReference,
+      bid_reference: bid.bid_reference,
     });
 
     return bid as DbBid;
@@ -173,27 +163,12 @@ export class ContractorTenderService {
    */
   static async saveDraft(payload: {
     tenderId: string;
-    contractorOrgId: string;
     bidAmount: number;
     technicalProposal: string;
-    userId: string;
   }): Promise<DbBid> {
-    const { tenderId, contractorOrgId, bidAmount, technicalProposal, userId } = payload;
-    const bidReference = this.generateBidReference();
-
+    const { tenderId, bidAmount, technicalProposal } = payload;
     const { data: bid, error } = await supabase
-      .from('tender_bids')
-      .upsert({
-        tender_id: tenderId,
-        contractor_organization_id: contractorOrgId,
-        bid_reference: bidReference,
-        bid_amount: bidAmount,
-        technical_proposal: technicalProposal,
-        status: 'DRAFT',
-        submitted_by: userId,
-      })
-      .select()
-      .single();
+      .rpc('save_tender_bid', { p_tender_id: tenderId, p_bid_amount: bidAmount, p_technical_proposal: technicalProposal, p_status: 'DRAFT' });
 
     if (error) throw error;
     return bid as DbBid;
