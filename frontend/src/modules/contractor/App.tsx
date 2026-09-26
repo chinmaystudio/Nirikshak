@@ -21,33 +21,33 @@ function Router() {
   const path = usePath();
 
   useEffect(() => {
-    if (path === '/') navigate('/dashboard');
+    if (path === '/' || path === '') navigate('/dashboard');
   }, [path]);
 
-  if (path === '/' || path === '') return null;
+  const activePath = path === '/' || path === '' ? '/dashboard' : path;
 
   // Tender routes
-  let m = match('/tenders/:tenderId/bid/ai-assist', path);
+  let m = match('/tenders/:tenderId/bid/ai-assist', activePath);
   if (m) return <Layout><BidAIAssist tenderId={m.tenderId} /></Layout>;
-  m = match('/tenders/:tenderId/bid', path);
+  m = match('/tenders/:tenderId/bid', activePath);
   if (m) return <Layout><BidSubmission tenderId={m.tenderId} /></Layout>;
-  m = match('/tenders/:tenderId', path);
+  m = match('/tenders/:tenderId', activePath);
   if (m) return <Layout><TenderDetails tenderId={m.tenderId} /></Layout>;
-  m = match('/tenders', path);
+  m = match('/tenders', activePath);
   if (m) return <Layout><Tenders /></Layout>;
 
   // Project workspace routes
-  m = match('/projects/:projectId/:section', path);
+  m = match('/projects/:projectId/:section', activePath);
   if (m && PROJECT_SECTIONS.includes(m.section)) {
     return <Layout><ProjectLayout projectId={m.projectId} section={m.section} /></Layout>;
   }
-  m = match('/projects/:projectId', path);
+  m = match('/projects/:projectId', activePath);
   if (m) return <Layout><ProjectLayout projectId={m.projectId} section="details" /></Layout>;
-  m = match('/projects', path);
+  m = match('/projects', activePath);
   if (m) return <Layout><Projects /></Layout>;
 
   // Top-level routes
-  switch (path) {
+  switch (activePath) {
     case '/dashboard':
       return <Layout><Dashboard /></Layout>;
     case '/performance':

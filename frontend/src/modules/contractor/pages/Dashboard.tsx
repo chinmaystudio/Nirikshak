@@ -386,7 +386,8 @@ function AlertItem({
 
 function ActionCenter() {
   const { projects } = useStore();
-  const p5 = projects.find((p) => p.id === 'p5')!;
+  const p5 = projects.find((p) => p.id === 'p5') || projects[4] || projects[0];
+  const p1 = projects.find((p) => p.id === 'p1') || projects[0];
   return (
     <Card className="p-5" >
       <div id="action-center" />
@@ -396,9 +397,9 @@ function ActionCenter() {
           tone="red"
           icon={AlertTriangle}
           title="Respond to show-cause notice"
-          project={p5.name}
+          project={p5?.name ?? 'Rural Bridge Construction'}
           due="Due 16 Sep 2026"
-          to="/projects/p5/communication"
+          to={`/projects/${p5?.id ?? 'p5'}/communication`}
           cta="Respond now"
         />
         <ActionRow
@@ -407,7 +408,7 @@ function ActionCenter() {
           title="Submit progress update"
           project="Rural Bridge Construction — last update 12 Jul 2026"
           due="Overdue 61 days"
-          to="/projects/p5/update"
+          to={`/projects/${p5?.id ?? 'p5'}/update`}
           cta="Submit update"
         />
         <ActionRow
@@ -416,7 +417,7 @@ function ActionCenter() {
           title="Insurance document expires in 12 days"
           project="Pune Road Development — CAR Policy"
           due="22 Sep 2026"
-          to="/projects/p1/inspection"
+          to={`/projects/${p1?.id ?? 'p1'}/inspection`}
           cta="Renew"
         />
         <ActionRow
@@ -425,7 +426,7 @@ function ActionCenter() {
           title="Payment approved"
           project="Pune Road Development — INV-2026-0184"
           due="₹ 42.5 Lakh"
-          to="/projects/p1/finance"
+          to={`/projects/${p1?.id ?? 'p1'}/finance`}
           cta="Track payment"
         />
         <ActionRow
@@ -443,7 +444,7 @@ function ActionCenter() {
           title="Upcoming inspection"
           project="Pune Road Development — Structural Work Zone 1"
           due="15 Sep 2026, 10:30"
-          to="/projects/p1/inspection"
+          to={`/projects/${p1?.id ?? 'p1'}/inspection`}
           cta="Prepare"
         />
       </div>

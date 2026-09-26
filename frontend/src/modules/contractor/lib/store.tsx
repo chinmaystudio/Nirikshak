@@ -142,8 +142,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               st === 'COMPLETED' ? 'Completed' : st === 'DELAYED' ? 'Delayed' : progress < 50 ? 'At Risk' : 'Active';
 
             const projId = p.nirikshak_project_id || p.id;
+            const slotId = idx < 6 ? `p${idx + 1}` : projId;
             return {
-              id: projId,
+              id: slotId,
               code: projId,
               name: p.project_name || 'Infrastructure Project',
               department: p.project_authority || p.implementing_agency || 'Pune Municipal Corporation',
