@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/common/Icon";
 import { Button } from "@/components/common/Button";
 import { Modal } from "@/components/common/Modal";
@@ -6,11 +6,8 @@ import { useNavigate } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
 import { useT } from "@/hooks/useT";
 import { toast } from "@/hooks/useToast";
-import { sendOtp, verifyOtp, DEMO_OTP } from "@/services/auth/authService";
-import { isValidMobile, isValidEmail, isValidOtp } from "@/utils/validation";
+import { loginWithEmail } from "@/services/auth/authService";
 import { ROUTES } from "@/constants/routes";
-import { LANGUAGES, LANGUAGE_ORDER } from "@/constants/i18n";
-import type { Language } from "@/types/user";
 
 export function LoginPage(): JSX.Element {
   const navigate = useNavigate();
@@ -18,77 +15,48 @@ export function LoginPage(): JSX.Element {
   const next = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("next");
   const decodedNext = next ? decodeURIComponent(next) : null;
 
-  const [mode, setMode] = useState<"mobile" | "email">("mobile");
-  const [identity, setIdentity] = useState("");
-  const [step, setStep] = useState<"identity" | "otp">("identity");
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
-  const [expiry, setExpiry] = useState(300);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const timerRef = useRef<number | null>(null);
   const { t } = useT();
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
-    };
-  }, []);
+  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === "true";
 
-  const startCountdown = (): void => {
-    setResendIn(30);
-    setExpiry(300);
-    if (timerRef.current !== null) window.clearInterval(timerRef.current);
-    timerRef.current = window.setInterval(() => {
-      setResendIn((v) => (v <= 1 ? 0 : v - 1));
-      setExpiry((v) => (v <= 1 ? 0 : v - 1));
-    }, 1000);
-  };
-
-  const maskedTarget = (): string =>
-    mode === "mobile" && identity.length >= 10 ? `+91 ${identity.slice(0, 2)}XXX XX${identity.slice(8)}` : identity;
-
-  const dispatchOtp = (): void => {
-    const valid = mode === "mobile" ? isValidMobile(identity) : isValidEmail(identity);
-    if (!valid) {
-      toast(mode === "mobile" ? "Enter a valid 10-digit mobile number." : "Enter a valid email address.", "error");
+  const handleLogin = async (e?: React.FormEvent): Promise<void> => {
+    if (e) e.preventDefault();
+    if (!email.trim() || !password) {
+      toast("Please enter your registered email and password.", "error");
       return;
     }
-    setBusy(true);
-    void sendOtp(identity)
-      .then(() => {
-        setStep("otp");
-        startCountdown();
-        toast("OTP dispatched successfully.", "success");
-      })
-      .catch((e: Error) => toast(e.message, "error"))
-      .finally(() => setBusy(false));
-  };
 
-  const verify = (): void => {
-    if (!isValidOtp(otp)) {
-      setOtpError("Enter the complete 4-digit OTP.");
-      return;
+    setBusy(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await loginWithEmail(email.trim(), password, decodedNext);
+      toast(`Welcome, ${res.user.name.split(" ")[0]}. Secure login successful.`, "success");
+      navigate(res.next ?? ROUTES.HOME);
+    } catch (err: any) {
+      console.error("Citizen login error:", err);
+      const msg = err.message || "Invalid credentials. Please verify your email and password.";
+      setErrorMsg(msg);
+      toast(msg, "error");
+    } finally {
+      setBusy(false);
     }
-    setOtpError(null);
-    setBusy(true);
-    void verifyOtp(otp, decodedNext)
-      .then((res) => {
-        toast(`Welcome, ${res.user.name.split(" ")[0]}. Secure login successful.`, "success");
-        navigate(res.next ?? ROUTES.HOME);
-      })
-      .catch((e: Error) => {
-        setOtpError(e.message);
-        setBusy(false);
-      });
   };
 
-  const expiryLabel = `0${Math.floor(expiry / 60)}:${String(expiry % 60).padStart(2, "0")}`;
+  const fillDemo = (): void => {
+    setEmail("citizen.test@nirikshak.local");
+    setPassword("NirikshakCitizen#2026");
+    setErrorMsg(null);
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
-      <button onClick={() => navigate(ROUTES.HOME)} className="inline-flex items-center gap-1.5 text-label-md text-primary hover:text-secondary mb-4 font-semibold">
+      <button onClick={() => navigate(ROUTES.HOME)} className="inline-flex items-center gap-1.5 text-label-md text-primary hover:text-secondary mb-4 font-semibold cursor-pointer">
         <Icon name="arrow_back" className="text-[18px]" /> Back to portal
       </button>
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden grid grid-cols-1 md:grid-cols-12">
@@ -98,37 +66,25 @@ export function LoginPage(): JSX.Element {
               <Icon name="fingerprint" className="text-[28px]" />
             </div>
             <h2 className="text-headline-md font-headline-md font-bold text-surface-container-lowest">Civic Oversight Identity Gateway</h2>
-            <p className="text-body-sm font-body-sm text-surface-variant">
-              Login with your verified citizen credentials or mobile OTP to report issues, track complaints and participate in ward-level
-              accountability.
+            <p className="text-body-md text-on-primary-container leading-relaxed">
+              Login with your verified citizen credentials to report issues, track complaints and participate in ward-level public infrastructure audits with full transparency.
             </p>
-            <div className="pt-2">
-              <label htmlFor="auth-lang" className="block text-label-sm font-label-sm text-surface-variant mb-1">
-                Preferred language
-              </label>
-              <select
-                id="auth-lang"
-                value={auth.lang}
-                onChange={(e) => auth.setLang(e.target.value as Language)}
-                className="w-full px-3 py-2 rounded bg-primary-container/60 border border-surface-variant/30 text-body-sm text-surface-container-lowest"
-              >
-                {LANGUAGE_ORDER.map((lang: Language) => (
-                  <option key={lang} value={lang}>
-                    {LANGUAGES[lang]}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
-          <div className="space-y-3 pt-6 border-t border-surface-variant/20 text-label-sm font-label-sm text-surface-variant">
-            {["Aadhaar OTP / DigiLocker verification supported", "End-to-end cryptographic audit trail", "Direct linkage to Municipal Commissioner redressal"].map(
-              (line) => (
-                <div key={line} className="flex items-center gap-2">
-                  <Icon name="check_circle" className="text-[16px] text-secondary" />
-                  <span>{line}</span>
+
+          <div className="space-y-3 pt-6 border-t border-outline-variant/30">
+            {[
+              { icon: "security", title: "Supabase Auth Security", sub: "Enterprise cryptographic session management" },
+              { icon: "verified", title: "Direct Public Audit", sub: "Verify official physical progress directly" },
+              { icon: "location_city", title: "Ward-Level Tracking", sub: "Geo-fenced infrastructure grievance logging" }
+            ].map((f) => (
+              <div key={f.title} className="flex items-start gap-3">
+                <Icon name={f.icon} className="text-secondary text-[20px] mt-0.5" />
+                <div>
+                  <div className="text-label-md font-bold text-surface-container-lowest">{f.title}</div>
+                  <div className="text-label-sm text-on-primary-container">{f.sub}</div>
                 </div>
-              )
-            )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -142,117 +98,106 @@ export function LoginPage(): JSX.Element {
             </a>
           </div>
 
-          {step === "identity" ? (
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="login-id" className="block text-label-md font-label-md text-primary mb-1">
-                  Registered {mode === "mobile" ? "Mobile Number" : "Email"} <span className="text-error">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    id="login-id"
-                    type={mode === "mobile" ? "text" : "email"}
-                    inputMode={mode === "mobile" ? "numeric" : undefined}
-                    maxLength={mode === "mobile" ? 10 : undefined}
-                    value={identity}
-                    onChange={(e) => setIdentity(e.target.value)}
-                    className={`w-full pl-10 pr-3 py-2 border border-outline-variant rounded focus:ring-2 focus:ring-primary-container focus:border-transparent text-body-md ${
-                      mode === "mobile" ? "tracking-wider font-mono" : ""
-                    }`}
-                    placeholder={mode === "mobile" ? "10-digit mobile number" : "name@example.com"}
-                  />
-                  <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">smartphone</span>
-                </div>
-                <p className="text-label-sm text-outline mt-1">
-                  Prefer email?{" "}
-                  <button
-                    className="text-secondary font-semibold hover:underline"
-                    onClick={() => {
-                      setMode(mode === "mobile" ? "email" : "mobile");
-                      setIdentity(mode === "mobile" ? "aarav.deshmukh@example.in" : "");
-                    }}
-                  >
-                    {mode === "mobile" ? "Login with Email instead" : "Login with Mobile instead"}
-                  </button>
-                </p>
-              </div>
-              <label className="flex items-center gap-2 text-body-sm text-on-surface-variant">
-                <input type="checkbox" defaultChecked className="rounded text-primary" /> Remember this session on this device
-              </label>
-              <Button className="w-full" icon="login" size="lg" loading={busy} onClick={dispatchOtp}>
-                Send Secure OTP
-              </Button>
-              <div className="text-center pt-1 space-y-1">
-                <button onClick={() => setHelpOpen(true)} className="text-label-sm text-secondary font-bold hover:underline">
-                  Login Assistance / Forgot credentials?
-                </button>
-                <div>
-                  <span className="text-body-sm text-on-surface-variant">Authorised government inspector? </span>
-                  <button
-                    onClick={() => toast("Official SSO is available to authorised government staff via the NIC intranet portal.", "info")}
-                    className="text-label-sm text-outline font-semibold underline decoration-dotted"
-                  >
-                    Official Nodal SSO
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-body-sm text-amber-900 flex items-start gap-2">
-                <Icon name="info" className="text-[18px] flex-shrink-0" />
-                <span>
-                  OTP sent to <strong className="font-mono">{maskedTarget()}</strong>.
-                  <span className="block text-label-sm mt-0.5">
-                    Demo environment: use OTP <strong className="font-mono">{DEMO_OTP}</strong>. In production this arrives by SMS.
-                  </span>
-                </span>
-              </div>
-              <div>
-                <label htmlFor="login-otp" className="block text-label-md font-label-md text-primary mb-1">
-                  Enter 4-digit OTP <span className="text-error">*</span>
-                </label>
-                <input
-                  id="login-otp"
-                  inputMode="numeric"
-                  maxLength={4}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  className="w-full px-3 py-2.5 border border-outline-variant rounded text-center text-headline-md font-mono tracking-[0.6em] focus:ring-2 focus:ring-primary-container focus:border-transparent"
-                  placeholder="••••"
-                />
-              </div>
-              <div className="flex items-center justify-between text-label-sm">
-                <span className="text-outline">
-                  OTP valid for <span className="font-mono font-bold text-primary">{expiryLabel}</span>
-                </span>
-                <button
-                  disabled={resendIn > 0}
-                  onClick={dispatchOtp}
-                  className="text-secondary font-bold hover:underline disabled:text-outline disabled:no-underline"
-                >
-                  {resendIn > 0 ? `Resend OTP (${resendIn}s)` : "Resend OTP"}
-                </button>
-              </div>
-              {otpError ? <p className="text-body-sm text-error font-semibold">{otpError}</p> : null}
-              <Button className="w-full" icon="verified_user" size="lg" loading={busy} onClick={verify}>
-                Verify &amp; Login
-              </Button>
-              <button
-                onClick={() => setStep("identity")}
-                className="w-full py-2 border border-outline-variant rounded text-label-md text-on-surface-variant hover:bg-surface-container"
-              >
-                Change {mode === "mobile" ? "number" : "email"}
-              </button>
+          {errorMsg && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-body-sm flex items-start gap-2">
+              <Icon name="error" className="text-[18px] flex-shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
             </div>
           )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="login-email" className="block text-label-md font-label-md text-primary mb-1">
+                Citizen Email Address <span className="text-error">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="login-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-outline-variant rounded focus:ring-2 focus:ring-primary-container focus:border-transparent text-body-md"
+                  placeholder="citizen@example.in"
+                  autoComplete="email"
+                />
+                <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">mail</span>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="login-password" className="block text-label-md font-label-md text-primary mb-1">
+                Password <span className="text-error">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-outline-variant rounded focus:ring-2 focus:ring-primary-container focus:border-transparent text-body-md"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[20px]">lock</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-body-sm text-on-surface-variant cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded text-primary" /> Remember this session
+              </label>
+              <button
+                type="button"
+                onClick={() => setHelpOpen(true)}
+                className="text-label-sm text-secondary font-bold hover:underline"
+              >
+                Help &amp; Support
+              </button>
+            </div>
+
+            <Button className="w-full cursor-pointer" icon="login" size="lg" loading={busy} type="submit">
+              Sign In to Citizen Portal
+            </Button>
+          </form>
+
+          {isDev && (
+            <div className="mt-5 rounded-lg border border-outline-variant bg-surface-container p-3.5 text-xs text-on-surface-variant">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-bold text-primary flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Demo Citizen Credentials (Dev Only)
+                </span>
+                <button
+                  type="button"
+                  onClick={fillDemo}
+                  className="text-[11px] font-semibold text-secondary hover:underline bg-secondary/10 px-2 py-0.5 rounded cursor-pointer"
+                >
+                  Fill Demo
+                </button>
+              </div>
+              <div className="font-mono text-[11px] space-y-0.5">
+                <div>Email: <span className="text-primary font-bold">citizen.test@nirikshak.local</span></div>
+                <div>Pass: <span className="text-primary font-bold">NirikshakCitizen#2026</span></div>
+                <div>Profile: Aarav Deshmukh (Pune Citizen)</div>
+              </div>
+            </div>
+          )}
+
+          <div className="text-center pt-4 text-body-sm text-on-surface-variant">
+            Don't have an account yet?{" "}
+            <a href={ROUTES.REGISTER} className="text-secondary font-bold hover:underline">
+              Register as Citizen
+            </a>
+          </div>
         </div>
       </div>
 
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Help & Support">
         <div className="p-5 text-body-md text-on-surface-variant leading-relaxed">
           Toll-free citizen helpdesk: <strong className="text-primary">1800-11-2026</strong> (Mon–Sat, 9 AM–9 PM). Email:
-          support@nirikshan.gov.in. For OTP issues, confirm your registered mobile is active and retry after 60 seconds.
+          support@nirikshak.gov.in. For login assistance or credentials recovery, contact municipal nodal support.
         </div>
         <div className="px-5 pb-5">
           <Button className="w-full" onClick={() => setHelpOpen(false)}>

@@ -19,6 +19,7 @@ const FILTERS = ['All', 'Active', 'At Risk', 'Delayed', 'Completed'];
 export default function Dashboard() {
   const { projects, invoices } = useStore();
   const [filter, setFilter] = useState('All');
+  const [expandedHealth, setExpandedHealth] = useState(false);
 
   const active = projects.filter((p) => p.status !== 'Completed');
   const atRisk = projects.filter((p) => p.status === 'At Risk' || p.status === 'Delayed');
@@ -109,19 +110,47 @@ export default function Dashboard() {
         </Card>
 
         <Card className="p-5 lg:col-span-2 flex flex-col">
-          <SectionTitle icon={ShieldAlert} title="My Project Health" />
-          <HBars
-            items={projects.map((p) => {
-              const score = p.health?.score ?? Math.round(p.progress || 60);
-              return {
-                label: p.name,
-                value: score,
-                num: score,
-                color: score >= 75 ? 'bg-green-600' : score >= 55 ? 'bg-amber-500' : 'bg-red-600',
-              };
-            })}
-            showNum
+          <SectionTitle
+            icon={ShieldAlert}
+            title="My Project Health"
+            right={
+              projects.length > 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setExpandedHealth(!expandedHealth)}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1 cursor-pointer"
+                >
+                  {expandedHealth ? 'Show Top 5' : `Expand All (${projects.length})`}
+                </button>
+              ) : undefined
+            }
           />
+          <div className={cls(expandedHealth && 'max-h-[460px] overflow-y-auto pr-2 custom-scrollbar')}>
+            <HBars
+              items={(expandedHealth ? projects : projects.slice(0, 5)).map((p) => {
+                const score = p.health?.score ?? Math.round(p.progress || 60);
+                return {
+                  label: p.name,
+                  value: score,
+                  num: score,
+                  color: score >= 75 ? 'bg-green-600' : score >= 55 ? 'bg-amber-500' : 'bg-red-600',
+                };
+              })}
+              showNum
+              labelWidth="w-48 sm:w-64"
+            />
+          </div>
+          {projects.length > 5 && (
+            <div className="mt-3 flex justify-center border-t border-slate-100 dark:border-slate-800 pt-2.5">
+              <button
+                type="button"
+                onClick={() => setExpandedHealth(!expandedHealth)}
+                className="text-xs font-semibold px-3 py-1 rounded border border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+              >
+                {expandedHealth ? 'Collapse to Top 5' : `Expand All ${projects.length} Projects`}
+              </button>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
             <div className="p-4 rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 flex items-center justify-between">
               <div className="flex flex-col w-full">

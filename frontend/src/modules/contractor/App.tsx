@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { usePath, navigate, match } from './lib/router';
 import { StoreProvider } from './lib/store';
 import Layout from './components/Layout';
+import { useAuth } from '@/core/auth/useAuth';
+import { CONTRACTOR_ROLES } from '@/core/auth/auth.types';
+import { AccessDeniedPage } from '@/core/auth/AccessDeniedPage';
 
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -15,10 +18,15 @@ import BidSubmission from './pages/BidSubmission';
 import BidAIAssist from './pages/BidAIAssist';
 import ProjectLayout from './pages/project/ProjectLayout';
 
+import ContractorLoginPage from './pages/auth/ContractorLoginPage';
+import ContractorRegisterPage from './pages/auth/ContractorRegisterPage';
+import ContractorForgotPasswordPage from './pages/auth/ContractorForgotPasswordPage';
+
 const PROJECT_SECTIONS = ['details', 'resources', 'finance', 'ai-guide', 'bills', 'analytics', 'inspection', 'update', 'ai-analysis', 'ai-completion', 'communication'];
 
 function Router() {
   const path = usePath();
+  const { session, role, loading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (path === '/' || path === '' || path === '/contractor' || path === '/contractor/' || path === 'contractor') {
@@ -27,6 +35,37 @@ function Router() {
   }, [path]);
 
   const activePath = (path === '/' || path === '' || path === '/contractor' || path === '/contractor/' || path === 'contractor') ? '/dashboard' : path;
+
+  // Public Contractor Auth Routes
+  if (activePath === '/login' || activePath.endsWith('/login')) {
+    return <ContractorLoginPage />;
+  }
+  if (activePath === '/register' || activePath.endsWith('/register')) {
+    return <ContractorRegisterPage />;
+  }
+  if (activePath === '/forgot-password' || activePath.endsWith('/forgot-password')) {
+    return <ContractorForgotPasswordPage />;
+  }
+
+  // Authentication & Role clearance check
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0b1120] text-slate-100 flex flex-col items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          Validating contractor clearance…
+        </span>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !session) {
+    return <ContractorLoginPage />;
+  }
+
+  if (!role || !CONTRACTOR_ROLES.includes(role)) {
+    return <AccessDeniedPage currentRole={role} allowedRoles={CONTRACTOR_ROLES} />;
+  }
 
   // Tender routes
   let m = match('/tenders/:tenderId/bid/ai-assist', activePath);

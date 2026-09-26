@@ -8,12 +8,17 @@ import { LoadingBlock } from '@/components/feedback/Feedback'
 
 /* ---------- Auth screens (code-split) ---------- */
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then((m) => ({ default: m.LoginPage })))
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage').then((m) => ({ default: m.RegisterPage })))
 const OtpVerificationPage = lazy(() => import('@/pages/auth/OtpVerificationPage').then((m) => ({ default: m.OtpVerificationPage })))
 const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
 const TwoFactorPage = lazy(() => import('@/pages/auth/TwoFactorPage').then((m) => ({ default: m.TwoFactorPage })))
 const SelectDepartmentPage = lazy(() => import('@/pages/auth/SelectDepartmentPage').then((m) => ({ default: m.SelectDepartmentPage })))
 const SelectRolePage = lazy(() => import('@/pages/auth/SelectRolePage').then((m) => ({ default: m.SelectRolePage })))
+
+import { RoleGuard } from '@/core/auth/RoleGuard'
+import { GOVERNMENT_ROLES } from '@/core/auth/auth.types'
+
 
 /* ---------- Government global screens (code-split) ---------- */
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
@@ -99,8 +104,12 @@ export function AppRoutes() {
         {/* Auth suite */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/government/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/government/register" element={<RegisterPage />} />
           <Route path="/otp-verification" element={<OtpVerificationPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/government/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/2fa" element={<TwoFactorPage />} />
           <Route path="/select-department" element={<SelectDepartmentPage />} />
@@ -108,7 +117,14 @@ export function AppRoutes() {
         </Route>
 
         {/* Government (officer) suite */}
-        <Route path="/government" element={<GovernmentLayout />}>
+        <Route
+          path="/government"
+          element={
+            <RoleGuard allowedRoles={GOVERNMENT_ROLES} loginPath="/government/login">
+              <GovernmentLayout />
+            </RoleGuard>
+          }
+        >
           <Route index element={<Navigate to="/government/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
 

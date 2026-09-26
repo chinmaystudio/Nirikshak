@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../core/auth/AuthProvider';
 
 const GovernmentModule = React.lazy(() => import('../modules/government/App'));
 const ContractorModule = React.lazy(() => import('../modules/contractor/App'));
@@ -106,32 +107,34 @@ export function App() {
   }, []);
 
   return (
-    <React.Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-xs font-bold tracking-widest uppercase text-slate-400">Loading NIRIKSHAK...</p>
-        </div>
-      }
-    >
-      {currentPortal === 'government' && (
-        <RootErrorBoundary portal="Government">
-          <BrowserRouter>
-            <GovernmentModule />
-          </BrowserRouter>
-        </RootErrorBoundary>
-      )}
-      {currentPortal === 'contractor' && (
-        <RootErrorBoundary portal="Contractor">
-          <ContractorModule />
-        </RootErrorBoundary>
-      )}
-      {currentPortal === 'user' && (
-        <RootErrorBoundary portal="Citizen">
-          <UserModule />
-        </RootErrorBoundary>
-      )}
-    </React.Suspense>
+    <AuthProvider>
+      <React.Suspense
+        fallback={
+          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-xs font-bold tracking-widest uppercase text-slate-400">Loading NIRIKSHAK...</p>
+          </div>
+        }
+      >
+        {currentPortal === 'government' && (
+          <RootErrorBoundary portal="Government">
+            <BrowserRouter>
+              <GovernmentModule />
+            </BrowserRouter>
+          </RootErrorBoundary>
+        )}
+        {currentPortal === 'contractor' && (
+          <RootErrorBoundary portal="Contractor">
+            <ContractorModule />
+          </RootErrorBoundary>
+        )}
+        {currentPortal === 'user' && (
+          <RootErrorBoundary portal="Citizen">
+            <UserModule />
+          </RootErrorBoundary>
+        )}
+      </React.Suspense>
+    </AuthProvider>
   );
 }
 

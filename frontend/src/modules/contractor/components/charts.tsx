@@ -317,17 +317,19 @@ export function HBars({
   max = 100,
   showValue = true,
   showNum = false,
+  labelWidth = 'w-48 sm:w-60',
 }: {
   items: { label: string; value: number; num?: string | number; color?: string }[];
   max?: number;
   showValue?: boolean;
   showNum?: boolean;
+  labelWidth?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
       {items.map((it) => (
-        <div key={it.label} className="flex items-center gap-4 text-sm">
-          <span className="w-44 truncate text-slate-700 font-medium dark:text-slate-300" title={it.label}>
+        <div key={it.label} className="flex items-center gap-4 text-sm group">
+          <span className={cls('shrink-0 truncate text-slate-700 font-medium dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white', labelWidth)} title={it.label}>
             {it.label}
           </span>
           <div className="flex-1 bg-slate-100 h-3.5 rounded-sm overflow-hidden dark:bg-slate-800">

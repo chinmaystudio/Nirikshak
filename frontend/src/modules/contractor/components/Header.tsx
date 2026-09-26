@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search, Moon, Sun, Bell, ChevronDown, Contrast, Accessibility, Menu, Check,
-  FileText, ArrowRight, Circle,
+  FileText, ArrowRight, Circle, LogOut,
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { Link, navigate } from '../lib/router';
@@ -9,12 +9,19 @@ import { cls } from '../lib/utils';
 import Logo from './Logo';
 import { Avatar, Dropdown } from './ui';
 import { CONTRACTOR } from '../lib/data';
+import { useAuth } from '@/core/auth/useAuth';
+
 
 const LANGS = ['English', 'मराठी', 'हिंदी'];
 
 export default function Header({ onMenu }: { onMenu: () => void }) {
   const { theme, toggleTheme, fontScale, stepFont, a11y, toggleA11y, lang, setLang, notifications, unread, markRead } = useStore();
+  const { session, signOut } = useAuth();
+  const contractorName = session?.profile?.full_name || session?.organization?.name || CONTRACTOR.name;
+  const contractorOrg = session?.organization?.name || 'Contractor Infrastructure Agency';
+  const contractorId = session?.organization?.id ? `ORG-${session.organization.id.slice(0, 8).toUpperCase()}` : CONTRACTOR.id;
   const searchRef = useRef<HTMLInputElement>(null);
+
   const [q, setQ] = useState('');
   const [focused, setFocused] = useState(false);
 
@@ -250,7 +257,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
             buttonClass="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200 ml-1 cursor-pointer dark:border-slate-800"
             button={
               <>
-                <Avatar name={CONTRACTOR.name} />
+                <Avatar name={contractorName} />
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </>
             }
@@ -258,11 +265,11 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
             {() => (
               <div className="py-2" role="menu" aria-label="Contractor account">
                 <div className="px-4 pb-2.5">
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{CONTRACTOR.name}</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5 dark:text-slate-400">ID: {CONTRACTOR.id}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">GSTIN: {CONTRACTOR.gstin}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{contractorName}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 dark:text-slate-400">{contractorOrg}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{contractorId}</p>
                   <span className="inline-flex mt-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-300">
-                    {CONTRACTOR.class}
+                    {session?.role ? session.role.replace(/_/g, ' ').toUpperCase() : 'VERIFIED CONTRACTOR'}
                   </span>
                 </div>
                 {[
@@ -276,6 +283,16 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                   </Link>
                 ))}
                 <div className="border-t border-slate-100 my-1 pt-1 dark:border-slate-800">
+                  <button
+                    onClick={async () => {
+                      await signOut();
+                      navigate('/login');
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 text-left cursor-pointer transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-red-500" />
+                    Sign Out
+                  </button>
                   <a href="/government" className="flex items-center gap-2.5 px-4 py-1.5 text-xs text-blue-700 hover:bg-slate-50 dark:text-blue-400 dark:hover:bg-slate-800 font-medium">
                     Government Portal
                   </a>
@@ -288,7 +305,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
           </Dropdown>
 
           <div className="lg:hidden">
-            <Avatar name={CONTRACTOR.name} />
+            <Avatar name={contractorName} />
           </div>
         </div>
       </div>
