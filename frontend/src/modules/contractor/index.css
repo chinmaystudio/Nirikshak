@@ -117,7 +117,8 @@ body {
   font-family: var(--font-sans);
 }
 
-.dark body {
+/* Scoped contractor dark theme applied via container classes instead of global body */
+.dark .contractor-scope {
   background-color: #0b1120;
   color: #e5e7eb;
 }

@@ -30,16 +30,16 @@ function systemPrefersDark(): boolean {
 }
 
 function applyClass(mode: ThemeMode) {
-  const dark = mode === 'dark' || (mode === 'system' && systemPrefersDark())
-  document.documentElement.classList.toggle('dark', dark)
-  return dark ? 'dark' : 'light'
+  const dark = mode === 'dark';
+  document.documentElement.classList.toggle('dark', dark);
+  return dark ? 'dark' : 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(readStoredTheme)
+  const [theme, setThemeState] = useState<ThemeMode>(readStoredTheme);
   const [resolved, setResolved] = useState<'light' | 'dark'>(() =>
-    theme === 'dark' || (theme === 'system' && systemPrefersDark()) ? 'dark' : 'light',
-  )
+    theme === 'dark' ? 'dark' : 'light'
+  );
 
   useEffect(() => {
     setResolved(applyClass(theme))
@@ -48,6 +48,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+    return () => {
+      document.documentElement.classList.remove('dark');
+    };
   }, [theme])
 
   useEffect(() => {

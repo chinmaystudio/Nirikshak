@@ -91,8 +91,15 @@ export function App() {
 
   useEffect(() => {
     const handleLocation = () => {
-      setCurrentPortal(detectPortal());
+      const nextPortal = detectPortal();
+      setCurrentPortal(nextPortal);
+      // Clean up dark mode from previous portal
+      document.documentElement.classList.remove('dark');
+      document.body.className = `portal-root portal-root-${nextPortal}`;
     };
+
+    // Initialize body class
+    document.body.className = `portal-root portal-root-${detectPortal()}`;
 
     window.addEventListener('popstate', handleLocation);
     window.addEventListener('hashchange', handleLocation);
@@ -106,28 +113,34 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <React.Suspense
-        fallback={
-          <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-xs font-bold tracking-widest uppercase text-slate-400">Loading NIRIKSHAK...</p>
-          </div>
-        }
-      >
-        {currentPortal === 'government' && (
-          <RootErrorBoundary portal="Government">
-            <GovernmentModule />
-          </RootErrorBoundary>
-        )}
-        {currentPortal === 'contractor' && (
-          <RootErrorBoundary portal="Contractor">
-            <ContractorModule />
-          </RootErrorBoundary>
-        )}
-        {currentPortal === 'user' && (
-          <RootErrorBoundary portal="Citizen">
-            <UserModule />
-          </RootErrorBoundary>
-        )}
+          fallback={
+            <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-800">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Loading NIRIKSHAK...</p>
+            </div>
+          }
+        >
+          {currentPortal === 'government' && (
+            <div className="portal-government min-h-screen">
+              <RootErrorBoundary portal="Government">
+                <GovernmentModule />
+              </RootErrorBoundary>
+            </div>
+          )}
+          {currentPortal === 'contractor' && (
+            <div className="portal-contractor min-h-screen">
+              <RootErrorBoundary portal="Contractor">
+                <ContractorModule />
+              </RootErrorBoundary>
+            </div>
+          )}
+          {currentPortal === 'user' && (
+            <div className="portal-citizen min-h-screen">
+              <RootErrorBoundary portal="Citizen">
+                <UserModule />
+              </RootErrorBoundary>
+            </div>
+          )}
         </React.Suspense>
       </AuthProvider>
     </BrowserRouter>

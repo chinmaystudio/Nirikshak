@@ -30,7 +30,7 @@ export class AuthService {
         .from('organization_members')
         .select('*, organizations(*)')
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .ilike('status', 'active')
         .maybeSingle();
       if (memberError) throw memberError;
 

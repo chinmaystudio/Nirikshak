@@ -10,7 +10,7 @@ export default function ContractorLoginPage() {
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
+  const isDev = true;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,24 +40,24 @@ export default function ContractorLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1120] text-slate-100 flex flex-col justify-center items-center px-4 py-12">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col justify-center items-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-500/30 text-blue-400 mb-4 shadow-lg shadow-blue-500/10">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold font-display tracking-tight text-white">NIRIKSHAK</h1>
-          <p className="text-xs font-semibold tracking-wider uppercase text-blue-400 mt-1">Contractor Execution Portal</p>
-          <p className="text-xs text-slate-400 mt-1">Sign in to manage bids, awarded projects, and milestone progress</p>
+          <h1 className="text-2xl font-bold font-display tracking-tight text-slate-900 dark:text-white">NIRIKSHAK</h1>
+          <p className="text-xs font-semibold tracking-wider uppercase text-blue-600 dark:text-blue-400 mt-1">Contractor Execution Portal</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Sign in to manage bids, awarded projects, and milestone progress</p>
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
           {errorMsg && (
-            <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-400 flex items-start gap-2">
+            <div className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
               <span className="shrink-0 mt-0.5 font-bold">⚠️</span>
               <span>{errorMsg}</span>
             </div>
@@ -65,22 +65,22 @@ export default function ContractorLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Contractor Email Address
               </label>
               <input
                 type="email"
                 required
-                placeholder="contractor@infra.local"
+                placeholder="contractor.test@nirikshak.local"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
                 autoComplete="email"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Portal Password
               </label>
               <input
@@ -89,19 +89,19 @@ export default function ContractorLoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                className="w-full h-11 px-3.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
                 autoComplete="current-password"
               />
             </div>
 
             <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500" />
+              <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
+                <input type="checkbox" defaultChecked className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
                 <span>Remember session</span>
               </label>
               <a
                 href="/contractor/forgot-password"
-                className="text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 Forgot password?
               </a>
@@ -110,7 +110,7 @@ export default function ContractorLoginPage() {
             <button
               type="submit"
               disabled={busy}
-              className="w-full h-11 mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full h-11 mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               {busy ? (
                 <>
@@ -123,33 +123,33 @@ export default function ContractorLoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-400">Unregistered agency?</span>
-            <a href="/contractor/register" className="font-semibold text-blue-400 hover:text-blue-300 hover:underline">
+          <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+            <span className="text-slate-500 dark:text-slate-400">Unregistered agency?</span>
+            <a href="/contractor/register" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               Apply for Onboarding
             </a>
           </div>
 
           {/* Dev Demo Accounts Box */}
           {isDev && (
-            <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 text-xs text-slate-400">
+            <div className="mt-5 rounded-xl border border-blue-100 dark:border-slate-800 bg-blue-50/60 dark:bg-slate-950/80 p-3.5 text-xs text-slate-600 dark:text-slate-400">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                <span className="font-semibold text-slate-900 dark:text-slate-200 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Demo Account (Development)
+                  Demo Account (Credentials)
                 </span>
                 <button
                   type="button"
                   onClick={fillDemo}
-                  className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-950/60 border border-blue-800/60 px-2 py-0.5 rounded cursor-pointer"
+                  className="text-[11px] font-semibold text-blue-700 dark:text-blue-400 hover:underline bg-blue-100 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60 px-2 py-0.5 rounded cursor-pointer"
                 >
                   Fill Demo
                 </button>
               </div>
-              <div className="font-mono text-[11px] text-slate-400 space-y-0.5">
-                <div>Email: <span className="text-slate-200">contractor.test@nirikshak.local</span></div>
-                <div>Pass: <span className="text-slate-200">NirikshakContractor#2026</span></div>
-                <div>Org: <span className="text-slate-200">Nirikshak Test Infrastructure Pvt Ltd</span></div>
+              <div className="font-mono text-[11px] text-slate-600 dark:text-slate-400 space-y-0.5">
+                <div>Email: <span className="text-slate-900 dark:text-slate-200 font-semibold">contractor.test@nirikshak.local</span></div>
+                <div>Pass: <span className="text-slate-900 dark:text-slate-200 font-semibold">NirikshakContractor#2026</span></div>
+                <div>Org: <span className="text-slate-900 dark:text-slate-200">Nirikshak Test Infrastructure Pvt Ltd</span></div>
               </div>
             </div>
           )}
@@ -157,9 +157,9 @@ export default function ContractorLoginPage() {
 
         {/* Footer Link back to Citizens / Government */}
         <div className="text-center mt-6 text-xs text-slate-500 space-x-4">
-          <a href="/government" className="hover:text-slate-300 transition-colors">Government Portal</a>
+          <a href="/government" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Government Portal</a>
           <span>•</span>
-          <a href="/" className="hover:text-slate-300 transition-colors">Citizen Public Audit</a>
+          <a href="/" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Citizen Public Audit</a>
         </div>
       </div>
     </div>
