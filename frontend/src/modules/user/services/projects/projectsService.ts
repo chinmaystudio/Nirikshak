@@ -146,7 +146,8 @@ export async function getProjects(): Promise<Project[]> {
     const { data, error } = await supabase
       .from('public_projects_view')
       .select('*')
-      .order('total_cost_inr_crore', { ascending: false, nullsFirst: false });
+      .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
+      .limit(150);
 
     if (error || !data || data.length === 0) {
       console.warn('Supabase query empty, falling back to cached/mock');

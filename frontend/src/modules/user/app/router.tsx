@@ -27,11 +27,12 @@ export function parseHash(): RouteLocation {
       } else {
         h = p;
       }
-      // Normalize to hash so subsequent clicks and refreshes stay consistent
-      try {
-        window.history.replaceState(null, "", `/#${h}${window.location.search}`);
-      } catch {
-        /* ignore history errors */
+      if (h && h !== "/" && window.location.hash !== `#${h}`) {
+        try {
+          window.location.hash = `#${h}`;
+        } catch {
+          /* ignore */
+        }
       }
     } else {
       h = "/";
@@ -118,6 +119,9 @@ if (typeof document !== "undefined") {
 
     // Handle standard relative paths (/projects, /complaints)
     if (href.startsWith("/") && !href.startsWith("//")) {
+      if (href.startsWith("/government") || href.startsWith("/contractor")) {
+        return;
+      }
       e.preventDefault();
       navigate(href);
       return;
