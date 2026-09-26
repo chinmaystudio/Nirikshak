@@ -38,5 +38,5 @@ export function useProjects() {
     []
   );
 
-  return { ...state, projects, filterProjects, nearby: useMemo(() => nearbyProjects(8), [projects]) };
+  return { ...state, projects, filterProjects, nearby: useMemo(() => nearbyProjects(8, projects), [projects]) };
 }

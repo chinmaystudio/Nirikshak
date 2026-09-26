@@ -246,21 +246,21 @@ export function applyFilters(list: Project[], f: ProjectFilters): Project[] {
   });
 }
 
-export function nearbyProjects(limit = 8): Project[] {
-  const source = cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects;
+export function nearbyProjects(limit = 8, projectList?: Project[]): Project[] {
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
   return source
-    .filter((p) => p.city === "Pune" && p.mapPoint !== null)
+    .filter((p) => (p.city === "Pune" || !p.city) && p.mapPoint !== null)
     .sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))
     .slice(0, limit);
 }
 
-export function allContractors(): string[] {
-  const source = cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects;
+export function allContractors(projectList?: Project[]): string[] {
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
   return Array.from(new Set(source.map((p) => p.contractor?.name).filter(Boolean) as string[])).sort();
 }
 
-export function allDepartments(): string[] {
-  const source = cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects;
+export function allDepartments(projectList?: Project[]): string[] {
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
   return Array.from(new Set(source.map((p) => p.department).filter(Boolean) as string[])).sort();
 }
 

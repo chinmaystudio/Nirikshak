@@ -84,10 +84,18 @@ const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('nrk-theme') as 'light' | 'dark') || 'light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('nrk-theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return 'light';
+  });
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('nrk-theme', theme);
+    return () => {
+      // Clean up when navigating away from contractor portal
+      document.documentElement.classList.remove('dark');
+    };
   }, [theme]);
 
   const [fontScale, setFontScale] = useState(() => Number(localStorage.getItem('nrk-font')) || 1);
@@ -135,8 +143,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
           .limit(100);
 
-        if (!error && data && data.length > 0 && isMounted) {
-          const liveProjects: Project[] = data.map((p: any) => {
+        let records: any[] = (data as any[]) || [];
+
+        // If contractor has no direct contracts in view yet, load live major infrastructure projects
+        if ((!records || records.length === 0) && isMounted) {
+          const { data: publicProjects } = await supabase
+            .from('public_projects_view')
+            .select('*')
+            .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
+            .limit(10);
+          records = (publicProjects as any[]) || [];
+        }
+
+        if (records && records.length > 0 && isMounted) {
+          const liveProjects: Project[] = records.map((p: any) => {
             const cost = Number(p.contract_value ?? p.total_cost_inr_crore) || 0;
             const progress = Number(p.physical_progress_percent) || 0;
             const sharedStatus = normalizeProjectStatus(p.normalized_status);
@@ -184,7 +204,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [session?.user?.id, session?.organization?.id]);
 
   const [reports, setReports] = useState<ProgressReport[]>(() => DEMO_MODE ? clone(INITIAL_REPORTS) : []);
   const addReport = useCallback((r: Omit<ProgressReport, 'id' | 'submittedAt'>) => {
