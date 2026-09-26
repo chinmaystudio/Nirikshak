@@ -127,9 +127,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const { data, error } = await supabase
           .from('projects')
           .select('*, project_milestones(*), contracts(*)')
-          .or('city.eq.Pune,location_text.ilike.%Pune%')
+          .or('city.eq.Pune,location_text.ilike.%Pune%,state.ilike.%Maharashtra%')
           .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-          .limit(8);
+          .limit(100);
 
         if (!error && data && data.length > 0 && isMounted) {
           const liveProjects: Project[] = data.map((p: any, idx: number) => {

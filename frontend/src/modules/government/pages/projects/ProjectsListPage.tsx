@@ -133,6 +133,8 @@ export function ProjectsListPage() {
               minWidth={1000}
               rows={rows}
               rowKey={(p) => p.id}
+              paginated={true}
+              pageSize={15}
               columns={[
                 { key: 'id', header: 'ID', isRowHeader: true, render: (p) => <span className="nk-mono-id text-fg-muted">{p.id}</span> },
                 { key: 'name', header: 'Project', render: (p) => <span className="block max-w-80 truncate font-medium text-fg" title={p.name}>{p.name}</span> },

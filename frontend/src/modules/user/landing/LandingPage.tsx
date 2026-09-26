@@ -53,11 +53,13 @@ export function LandingPage(): JSX.Element {
       >
         <div className="flex items-center gap-6">
           <a href="#/" className="flex items-center gap-3 group">
-            <img
-              src="/nirikshak-logo-light.png"
-              alt="NIRIKSHAK Logo"
-              className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105"
-            />
+            <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-lg shadow-sm border border-white/20 transition-transform group-hover:scale-[1.02]">
+              <img
+                src="/logo/nirikshak-logo.png"
+                alt="NIRIKSHAK Logo"
+                className="h-7 sm:h-8 w-auto object-contain"
+              />
+            </div>
           </a>
 
           <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-neutral-300">

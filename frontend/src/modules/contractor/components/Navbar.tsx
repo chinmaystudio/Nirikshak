@@ -4,6 +4,7 @@ import { cls } from '../lib/utils';
 import { useStore } from '../lib/store';
 import { CONTRACTOR } from '../lib/data';
 import { Avatar } from './ui';
+import Logo from './Logo';
 
 const NAV = [
   { label: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
@@ -64,6 +65,14 @@ export function MobileNavDrawer({ open, onClose }: { open: boolean; onClose: () 
           role="dialog"
           aria-label="Navigation menu"
         >
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <Link to="/dashboard" onClick={onClose}>
+            <Logo />
+          </Link>
+          <button onClick={onClose} className="p-1 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Close menu">
+            <span className="text-xl leading-none">&times;</span>
+          </button>
+        </div>
         <div className="flex-1 overflow-y-auto px-3 pt-4">
           <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Main</p>
           <nav className="flex flex-col gap-1">

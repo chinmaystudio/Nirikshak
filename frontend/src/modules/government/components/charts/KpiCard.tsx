@@ -65,9 +65,9 @@ export function KpiCard({
           </span>
         )}
       </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-display tabular-nums text-fg">{value}</span>
-        {unit && <span className="text-label text-fg-subtle">{unit}</span>}
+      <div className="flex items-baseline gap-1.5 flex-wrap">
+        <span className="text-display tabular-nums text-fg whitespace-nowrap overflow-hidden text-ellipsis max-w-full" title={typeof value === 'string' ? value : undefined}>{value}</span>
+        {unit && <span className="text-label text-fg-subtle whitespace-nowrap">{unit}</span>}
       </div>
       {delta && <span className={cn('text-caption tabular-nums', deltaColor)}>{delta}</span>}
       {footer && <div className="mt-1 border-t border-border pt-2 text-caption text-fg-muted">{footer}</div>}

@@ -51,23 +51,15 @@ export function Header(): JSX.Element {
             >
               <Icon name="menu" />
             </button>
-            <a className="flex items-center gap-3 group min-w-0" href={ROUTES.HOME} aria-label="Nirikshan home">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-container to-primary flex items-center justify-center shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all flex-shrink-0 border border-white/10">
-                <svg className="w-6 h-6 fill-current text-secondary-fixed" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.41 0 8 3.59 8 8s-3.59 8-8 8-8-3.59-8-8 3.59-8 8-8zm-1 3v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <div className="text-[20px] leading-none font-extrabold tracking-tight text-primary flex items-center gap-1.5">
-                  NIRIKSHAN
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary/15 text-secondary border border-secondary/20">
-                    PORTAL
-                  </span>
-                </div>
-                <div className="text-[11px] leading-tight mt-1 font-semibold text-on-surface-variant tracking-wide whitespace-nowrap">
-                  Public Infrastructure Transparency &amp; Monitoring
-                </div>
-              </div>
+            <a className="flex items-center gap-3 group min-w-0" href={ROUTES.HOME} aria-label="NIRIKSHAK Home">
+              <img
+                src="/logo/nirikshak-logo.png"
+                alt="NIRIKSHAK — Government Project Monitoring & Accountability Platform"
+                className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              />
+              <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-primary-container/20 text-primary border border-primary/20">
+                Citizen Portal
+              </span>
             </a>
           </div>
 

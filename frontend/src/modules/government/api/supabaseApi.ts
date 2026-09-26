@@ -30,7 +30,16 @@ function mapDbProject(db: any): Project {
 
   const dept = db.department || db.project_authority || db.implementing_agency || 'Public Works Department';
   const dist = db.district || db.city || 'Pune';
-  const division = dist.toLowerCase().includes('pune') ? 'Pune' : 'Pune';
+  const distLower = dist.toLowerCase();
+  let division = 'Pune';
+  if (distLower.includes('nashik') || distLower.includes('ahmednagar') || distLower.includes('dhule') || distLower.includes('jalgaon')) division = 'Nashik';
+  else if (distLower.includes('nagpur') || distLower.includes('wardha') || distLower.includes('chandrapur') || distLower.includes('bhandara')) division = 'Nagpur';
+  else if (distLower.includes('amravati') || distLower.includes('akola') || distLower.includes('yavatmal') || distLower.includes('buldhana')) division = 'Amravati';
+  else if (distLower.includes('sambhajinagar') || distLower.includes('aurangabad') || distLower.includes('jalna') || distLower.includes('nanded') || distLower.includes('latur')) division = 'Chhatrapati Sambhajinagar';
+  else if (distLower.includes('mumbai') || distLower.includes('thane') || distLower.includes('palghar') || distLower.includes('raigad')) division = 'Konkan';
+  else if (distLower.includes('pune') || distLower.includes('satara') || distLower.includes('solapur') || distLower.includes('kolhapur') || distLower.includes('sangli')) division = 'Pune';
+  else if (db.state) division = db.state;
+
   const plannedEnd = db.original_completion_date || db.revised_completion_date || '2026-12-31';
   const delayDays = status === 'delayed' ? 45 : 0;
   const projId = db.nirikshak_project_id || db.id;
@@ -130,7 +139,7 @@ export const projectsApi = {
       .from('government_project_summary_view')
       .select('*')
       .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-      .limit(100);
+      .limit(4000);
 
     if (error) {
       console.error('Failed to fetch projects from Supabase:', error);

@@ -37,6 +37,7 @@ export function NearbyProjectsPage(): JSX.Element {
   const [view, setView] = useState<"map" | "list">("map");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const departmentOptions = Array.from(new Set(projects.map((p) => p.department).filter(Boolean) as string[])).sort();
   const contractors = ["all", ...Array.from(new Set(projects.map((p) => p.contractor?.name).filter(Boolean) as string[])).sort()];
@@ -282,10 +283,22 @@ export function NearbyProjectsPage(): JSX.Element {
           </div>
         </div>
       ) : sorted.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {sorted.map((p) => (
-            <ProjectCard key={p.id} project={p} onOpen={openProject} />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {sorted.slice(0, visibleCount).map((p) => (
+              <ProjectCard key={p.id} project={p} onOpen={openProject} />
+            ))}
+          </div>
+          {visibleCount < sorted.length && (
+            <div className="text-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setVisibleCount((c) => c + 24)}
+              >
+                Load More Projects (Showing {Math.min(visibleCount, sorted.length)} of {sorted.length})
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <EmptyState

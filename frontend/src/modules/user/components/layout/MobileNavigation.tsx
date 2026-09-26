@@ -59,12 +59,12 @@ export function MobileNavigation(): JSX.Element {
           >
             <div className="bg-primary-container text-on-primary p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center">
-                  <Icon name="fingerprint" className="text-[22px]" />
-                </div>
-                <div>
-                  <div className="text-headline-sm font-bold tracking-wide">NIRIKSHAN</div>
-                  <div className="text-[10px] text-surface-variant tracking-wider">CITIZEN PORTAL</div>
+                <div className="bg-white/95 px-2 py-1 rounded-md shadow-sm">
+                  <img
+                    src="/logo/nirikshak-logo.png"
+                    alt="NIRIKSHAK"
+                    className="h-7 w-auto object-contain"
+                  />
                 </div>
               </div>
               <button onClick={() => setOpen(false)} aria-label="Close menu">

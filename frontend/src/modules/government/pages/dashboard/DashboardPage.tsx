@@ -30,6 +30,7 @@ export function DashboardPage() {
   const [health, setHealth] = useState('')
   const [budget, setBudget] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [expandedDepts, setExpandedDepts] = useState(false)
 
   const list = useMemo(() => {
     let rows = projects ?? []
@@ -66,12 +67,14 @@ export function DashboardPage() {
       if (p.status === 'delayed' || p.status === 'at_risk') e.delayRisk += 1
       map.set(dept, e)
     }
-    return Array.from(map.entries()).map(([dept, v]) => ({
-      label: dept || 'Infrastructure',
-      value: v.count,
-      risk: v.delayRisk,
-      count: v.count,
-    }))
+    return Array.from(map.entries())
+      .map(([dept, v]) => ({
+        label: dept || 'Infrastructure',
+        value: v.count,
+        risk: v.delayRisk,
+        count: v.count,
+      }))
+      .sort((a, b) => b.count - a.count)
   }, [projects])
 
   const statusSplit = useMemo(() => {
@@ -109,7 +112,7 @@ export function DashboardPage() {
 
       {/* 8 KPI cards (Stitch grid: 1/2/4/7 cols) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard label={t('dash.kpi.activeProjects')} value={loading ? '—' : totals.active} icon="map" iconTone="primary" delta="+2 this quarter" deltaTone="success" />
+        <KpiCard label={t('dash.kpi.activeProjects')} value={loading ? '—' : totals.active.toLocaleString('en-IN')} icon="map" iconTone="primary" delta="+2 this quarter" deltaTone="success" />
         <KpiCard label={t('dash.kpi.totalOutlay')} value={loading ? '—' : formatCr(totals.outlay)} icon="account_balance" iconTone="primary" />
         <KpiCard label={t('dash.kpi.fundsUtilized')} value={loading ? '—' : formatCr(totals.utilized)} icon="payments" iconTone="success" delta={`${totals.outlay ? formatPct((totals.utilized / totals.outlay) * 100, 1) : '—'} of outlay`} deltaTone="neutral" />
         <KpiCard label={t('dash.kpi.avgPhysical')} value={loading ? '—' : formatPct(totals.avgPhys)} icon="trending_up" iconTone="neutral" />
@@ -137,17 +140,48 @@ export function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel title={t('dash.healthByDepartment')} icon="account_balance" className="xl:col-span-7">
-          <BarChart
-            ariaLabel="Projects by department"
-            data={byDepartment.map((d) => ({
-              label: d.label,
-              value: d.count,
-              tone: d.risk > 1 ? ('warning' as const) : ('primary' as const),
-            }))}
-            valueFormatter={(v) => `${v}`}
-            showValues
-          />
+        <Panel
+          title={t('dash.healthByDepartment')}
+          icon="account_balance"
+          className="xl:col-span-7"
+          actions={
+            byDepartment.length > 5 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={expandedDepts ? 'unfold_less' : 'unfold_more'}
+                onClick={() => setExpandedDepts(!expandedDepts)}
+              >
+                {expandedDepts ? 'Show Top 5' : `Expand All (${byDepartment.length})`}
+              </Button>
+            ) : undefined
+          }
+        >
+          <div className={cn(expandedDepts && 'max-h-[460px] overflow-y-auto pr-2 custom-scrollbar transition-all')}>
+            <BarChart
+              ariaLabel="Projects by department"
+              labelWidth="w-48 sm:w-64"
+              data={(expandedDepts ? byDepartment : byDepartment.slice(0, 5)).map((d) => ({
+                label: d.label,
+                value: d.count,
+                tone: d.risk > 1 ? ('warning' as const) : ('primary' as const),
+              }))}
+              valueFormatter={(v) => `${v}`}
+              showValues
+            />
+          </div>
+          {byDepartment.length > 5 && (
+            <div className="mt-3 flex justify-center border-t border-border pt-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={expandedDepts ? 'expand_less' : 'expand_more'}
+                onClick={() => setExpandedDepts(!expandedDepts)}
+              >
+                {expandedDepts ? 'Collapse to Top 5' : `Expand All ${byDepartment.length} Departments`}
+              </Button>
+            </div>
+          )}
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Card className="p-3">
               <p className="nk-label">{t('dash.pipelineAnalytics')}</p>
@@ -305,6 +339,8 @@ export function DashboardPage() {
           caption="Projects register"
           rows={list}
           rowKey={(p) => p.id}
+          paginated={true}
+          pageSize={10}
           columns={[
             { key: 'id', header: 'ID', isRowHeader: true, render: (p) => <span className="nk-mono-id text-fg-muted">{p.id}</span> },
             { key: 'name', header: 'Project', render: (p) => <span className="block max-w-80 truncate font-medium text-fg" title={p.name}>{p.name}</span> },

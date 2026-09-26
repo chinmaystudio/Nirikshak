@@ -12,6 +12,7 @@ export function BarChart({
   valueFormatter,
   maxValue,
   className,
+  labelWidth = 'w-44 sm:w-56',
   showValues = true,
 }: {
   data: { label: string; value: number; tone?: 'primary' | 'success' | 'warning' | 'danger' }[]
@@ -19,12 +20,13 @@ export function BarChart({
   valueFormatter?: (v: number) => string
   maxValue?: number
   className?: string
+  labelWidth?: string
   showValues?: boolean
 }) {
   const id = useId()
   const max = maxValue ?? Math.max(...data.map((d) => d.value), 1)
   return (
-    <div role="img" aria-label={ariaLabel} className={cn('flex flex-col gap-2', className)}>
+    <div role="img" aria-label={ariaLabel} className={cn('flex flex-col gap-2.5', className)}>
       {data.map((d, i) => {
         const pct = (d.value / max) * 100
         const color =
@@ -36,18 +38,21 @@ export function BarChart({
                 ? 'bg-danger'
                 : 'bg-primary'
         return (
-          <div key={`${id}-${i}`} className="flex items-center gap-3">
-            <span className="w-32 shrink-0 truncate text-caption text-fg-muted" title={d.label}>
+          <div key={`${id}-${i}`} className="flex items-center gap-3 group">
+            <span
+              className={cn('shrink-0 truncate text-caption font-medium text-fg-muted transition-colors group-hover:text-fg', labelWidth)}
+              title={d.label}
+            >
               {d.label}
             </span>
-            <div className="h-4 w-full overflow-hidden rounded-badge bg-surface-3">
+            <div className="h-4.5 w-full overflow-hidden rounded-badge bg-surface-3">
               <div
-                className={cn('h-full rounded-badge', color)}
+                className={cn('h-full rounded-badge transition-all duration-300', color)}
                 style={{ width: `${Math.max(pct, d.value > 0 ? 2 : 0)}%` }}
               />
             </div>
             {showValues && (
-              <span className="w-20 shrink-0 text-right text-caption tabular-nums text-fg">
+              <span className="w-16 shrink-0 text-right text-caption tabular-nums font-semibold text-fg">
                 {valueFormatter ? valueFormatter(d.value) : formatPct(d.value)}
               </span>
             )}
@@ -88,13 +93,17 @@ export function SegmentBar({
           />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-1 pt-2 border-t border-border/50">
         {segments.map((s, i) => (
-          <span key={i} className="inline-flex items-center gap-1.5 text-caption text-fg-muted">
-            <span className={cn('h-2.5 w-2.5 rounded-[2px]', s.className)} aria-hidden="true" />
-            {s.label}
-            <span className="tabular-nums text-fg-subtle">{((s.value / total) * 100).toFixed(1)}%</span>
-          </span>
+          <div key={i} className="flex items-center justify-between text-caption bg-surface-2/60 rounded px-2 py-1">
+            <span className="inline-flex items-center gap-1.5 truncate text-fg-muted min-w-0">
+              <span className={cn('h-2 w-2 rounded-full shrink-0', s.className)} aria-hidden="true" />
+              <span className="truncate">{s.label}</span>
+            </span>
+            <span className="tabular-nums font-semibold text-fg ml-1 text-[11px] shrink-0">
+              {((s.value / total) * 100).toFixed(1)}%
+            </span>
+          </div>
         ))}
       </div>
     </div>

@@ -188,7 +188,7 @@ export async function getProjects(): Promise<Project[]> {
       .from('public_projects_view')
       .select('*')
       .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-      .limit(150);
+      .limit(4000);
 
     if (error || !data || data.length === 0) {
       console.warn('Supabase query empty, falling back to cached/mock');
