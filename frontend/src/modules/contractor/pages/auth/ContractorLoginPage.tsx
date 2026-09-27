@@ -246,15 +246,7 @@ export default function ContractorLoginPage() {
           Official Infrastructure Monitoring &amp; Verification Network • Authorized Personnel Only
         </p>
 
-        <div className="mt-3 text-center text-xs text-slate-400 space-x-3">
-          <a href="/government" className="hover:text-slate-600 transition-colors">
-            Government Portal
-          </a>
-          <span>•</span>
-          <a href="/" className="hover:text-slate-600 transition-colors">
-            Citizen Public Audit
-          </a>
-        </div>
+
       </div>
     </div>
   );
