@@ -17,13 +17,19 @@ export type Database = {
       ai_insights: {
         Row: {
           ai_run_id: string | null
+          audience: string | null
           confidence: number | null
           created_at: string | null
           evidence: Json | null
+          government_status: string | null
           id: string
           insight_type: string
+          is_public: boolean | null
+          progress_update_id: string | null
           project_id: string
           recommended_actions: Json | null
+          risk_level: string | null
+          risk_score: number | null
           severity: string | null
           status: string | null
           summary: string
@@ -31,13 +37,19 @@ export type Database = {
         }
         Insert: {
           ai_run_id?: string | null
+          audience?: string | null
           confidence?: number | null
           created_at?: string | null
           evidence?: Json | null
+          government_status?: string | null
           id?: string
           insight_type: string
+          is_public?: boolean | null
+          progress_update_id?: string | null
           project_id: string
           recommended_actions?: Json | null
+          risk_level?: string | null
+          risk_score?: number | null
           severity?: string | null
           status?: string | null
           summary: string
@@ -45,13 +57,19 @@ export type Database = {
         }
         Update: {
           ai_run_id?: string | null
+          audience?: string | null
           confidence?: number | null
           created_at?: string | null
           evidence?: Json | null
+          government_status?: string | null
           id?: string
           insight_type?: string
+          is_public?: boolean | null
+          progress_update_id?: string | null
           project_id?: string
           recommended_actions?: Json | null
+          risk_level?: string | null
+          risk_score?: number | null
           severity?: string | null
           status?: string | null
           summary?: string
@@ -63,6 +81,13 @@ export type Database = {
             columns: ["ai_run_id"]
             isOneToOne: false
             referencedRelation: "ai_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_progress_update_id_fkey"
+            columns: ["progress_update_id"]
+            isOneToOne: false
+            referencedRelation: "progress_updates"
             referencedColumns: ["id"]
           },
           {
@@ -88,6 +113,83 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_insights_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "public_projects_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_jobs: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          input_hash: string | null
+          priority: number
+          project_id: string | null
+          source_entity_id: string
+          source_entity_type: string
+          started_at: string | null
+          status: string
+          task_type: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_hash?: string | null
+          priority?: number
+          project_id?: string | null
+          source_entity_id: string
+          source_entity_type: string
+          started_at?: string | null
+          status?: string
+          task_type?: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_hash?: string | null
+          priority?: number
+          project_id?: string | null
+          source_entity_id?: string
+          source_entity_type?: string
+          started_at?: string | null
+          status?: string
+          task_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_assigned_projects_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "government_project_summary_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_jobs_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "public_projects_view"
@@ -393,6 +495,65 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "public_projects_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_access_requests: {
+        Row: {
+          company_name: string
+          contractor_class: string
+          created_at: string
+          district: string | null
+          gstin: string
+          id: string
+          phone: string | null
+          registration_cin: string
+          requested_role: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          state: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          company_name: string
+          contractor_class: string
+          created_at?: string
+          district?: string | null
+          gstin: string
+          id?: string
+          phone?: string | null
+          registration_cin: string
+          requested_role?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          company_name?: string
+          contractor_class?: string
+          created_at?: string
+          district?: string | null
+          gstin?: string
+          id?: string
+          phone?: string | null
+          registration_cin?: string
+          requested_role?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_contractor_req_profiles"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1023,6 +1184,62 @@ export type Database = {
           },
         ]
       }
+      government_access_requests: {
+        Row: {
+          created_at: string
+          department: string
+          designation: string
+          district: string | null
+          employee_id: string
+          id: string
+          official_email: string
+          requested_role: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          state: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          designation: string
+          district?: string | null
+          employee_id: string
+          id?: string
+          official_email: string
+          requested_role?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          designation?: string
+          district?: string | null
+          employee_id?: string
+          id?: string
+          official_email?: string
+          requested_role?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_gov_req_profiles"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           completed_at: string | null
@@ -1193,6 +1410,7 @@ export type Database = {
           entity_type: string | null
           id: string
           message: string
+          metadata: Json | null
           organization_id: string | null
           read_at: string | null
           title: string
@@ -1205,6 +1423,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           message: string
+          metadata?: Json | null
           organization_id?: string | null
           read_at?: string | null
           title: string
@@ -1217,6 +1436,7 @@ export type Database = {
           entity_type?: string | null
           id?: string
           message?: string
+          metadata?: Json | null
           organization_id?: string | null
           read_at?: string | null
           title?: string
@@ -1276,11 +1496,13 @@ export type Database = {
           created_at: string | null
           department: string | null
           district: string | null
+          gstin: string | null
           id: string
           name: string
           parent_id: string | null
           registration_number: string | null
           state: string | null
+          status: string
           type: Database["public"]["Enums"]["org_type_enum"]
           updated_at: string | null
           verified: boolean | null
@@ -1289,11 +1511,13 @@ export type Database = {
           created_at?: string | null
           department?: string | null
           district?: string | null
+          gstin?: string | null
           id?: string
           name: string
           parent_id?: string | null
           registration_number?: string | null
           state?: string | null
+          status?: string
           type?: Database["public"]["Enums"]["org_type_enum"]
           updated_at?: string | null
           verified?: boolean | null
@@ -1302,11 +1526,13 @@ export type Database = {
           created_at?: string | null
           department?: string | null
           district?: string | null
+          gstin?: string | null
           id?: string
           name?: string
           parent_id?: string | null
           registration_number?: string | null
           state?: string | null
+          status?: string
           type?: Database["public"]["Enums"]["org_type_enum"]
           updated_at?: string | null
           verified?: boolean | null
@@ -1986,6 +2212,7 @@ export type Database = {
           duplicate_review: string | null
           executing_agency: string | null
           financial_progress_percent: number | null
+          government_organization_id: string | null
           id: string
           implementing_agency: string | null
           is_public: boolean | null
@@ -2040,6 +2267,7 @@ export type Database = {
           duplicate_review?: string | null
           executing_agency?: string | null
           financial_progress_percent?: number | null
+          government_organization_id?: string | null
           id?: string
           implementing_agency?: string | null
           is_public?: boolean | null
@@ -2094,6 +2322,7 @@ export type Database = {
           duplicate_review?: string | null
           executing_agency?: string | null
           financial_progress_percent?: number | null
+          government_organization_id?: string | null
           id?: string
           implementing_agency?: string | null
           is_public?: boolean | null
@@ -2131,7 +2360,15 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_government_organization_id_fkey"
+            columns: ["government_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       source_observations: {
         Row: {
@@ -2261,8 +2498,8 @@ export type Database = {
           bid_amount: number
           bid_reference: string | null
           contractor_organization_id: string
-          created_at: string | null
           deleted_at: string | null
+          documents: Json | null
           financial_score: number | null
           id: string
           status: string
@@ -2277,8 +2514,8 @@ export type Database = {
           bid_amount: number
           bid_reference?: string | null
           contractor_organization_id: string
-          created_at?: string | null
           deleted_at?: string | null
+          documents?: Json | null
           financial_score?: number | null
           id?: string
           status?: string
@@ -2293,8 +2530,8 @@ export type Database = {
           bid_amount?: number
           bid_reference?: string | null
           contractor_organization_id?: string
-          created_at?: string | null
           deleted_at?: string | null
+          documents?: Json | null
           financial_score?: number | null
           id?: string
           status?: string
@@ -2328,6 +2565,9 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           deleted_at: string | null
+          description: string | null
+          documents: Json | null
+          eligibility_criteria: string | null
           estimated_value_inr_crore: number | null
           id: string
           is_public: boolean | null
@@ -2336,6 +2576,7 @@ export type Database = {
           project_id: string
           publication_date: string | null
           status: string
+          technical_requirements: string | null
           tender_number: string
           title: string
           updated_at: string | null
@@ -2345,6 +2586,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
+          description?: string | null
+          documents?: Json | null
+          eligibility_criteria?: string | null
           estimated_value_inr_crore?: number | null
           id?: string
           is_public?: boolean | null
@@ -2353,6 +2597,7 @@ export type Database = {
           project_id: string
           publication_date?: string | null
           status?: string
+          technical_requirements?: string | null
           tender_number: string
           title: string
           updated_at?: string | null
@@ -2362,6 +2607,9 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           deleted_at?: string | null
+          description?: string | null
+          documents?: Json | null
+          eligibility_criteria?: string | null
           estimated_value_inr_crore?: number | null
           id?: string
           is_public?: boolean | null
@@ -2370,6 +2618,7 @@ export type Database = {
           project_id?: string
           publication_date?: string | null
           status?: string
+          technical_requirements?: string | null
           tender_number?: string
           title?: string
           updated_at?: string | null
@@ -2454,6 +2703,7 @@ export type Database = {
           duplicate_review: string | null
           executing_agency: string | null
           financial_progress_percent: number | null
+          government_organization_id: string | null
           high_risk_ai_count: number | null
           id: string | null
           implementing_agency: string | null
@@ -2512,6 +2762,7 @@ export type Database = {
           duplicate_review?: string | null
           executing_agency?: string | null
           financial_progress_percent?: number | null
+          government_organization_id?: string | null
           high_risk_ai_count?: never
           id?: string | null
           implementing_agency?: string | null
@@ -2570,6 +2821,7 @@ export type Database = {
           duplicate_review?: string | null
           executing_agency?: string | null
           financial_progress_percent?: number | null
+          government_organization_id?: string | null
           high_risk_ai_count?: never
           id?: string | null
           implementing_agency?: string | null
@@ -2611,7 +2863,15 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_government_organization_id_fkey"
+            columns: ["government_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_projects_view: {
         Row: {
@@ -2708,17 +2968,41 @@ export type Database = {
       }
     }
     Functions: {
+      approve_contractor_access_request: {
+        Args: {
+          approved_role?: Database["public"]["Enums"]["app_role_enum"]
+          request_id: string
+        }
+        Returns: Json
+      }
+      approve_government_access_request: {
+        Args: {
+          approved_role?: Database["public"]["Enums"]["app_role_enum"]
+          request_id: string
+        }
+        Returns: Json
+      }
       approve_progress_update: {
         Args: {
           p_decision: string
-          p_review_notes?: string | null
+          p_review_notes?: string
           p_update_id: string
-          p_verified_progress?: number | null
+          p_verified_progress?: number
         }
+        Returns: Json
+      }
+      award_contract: {
+        Args: { p_selected_bid_id: string; p_tender_id: string }
         Returns: Json
       }
       can_access_project: { Args: { p_id: string }; Returns: boolean }
       can_manage_project: { Args: { p_id: string }; Returns: boolean }
+      can_review_progress: { Args: { p_project_id: string }; Returns: boolean }
+      get_current_user_organization_id: { Args: never; Returns: string }
+      get_current_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["app_role_enum"]
+      }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_role: {
         Args: never
@@ -2727,6 +3011,40 @@ export type Database = {
       is_citizen: { Args: never; Returns: boolean }
       is_contractor_user: { Args: never; Returns: boolean }
       is_government_user: { Args: never; Returns: boolean }
+      register_contractor_account: {
+        Args: {
+          p_company_name: string
+          p_contractor_class?: string
+          p_district?: string
+          p_email: string
+          p_full_name: string
+          p_gstin: string
+          p_password: string
+          p_phone: string
+          p_registration_cin: string
+          p_requested_role?: string
+          p_state?: string
+        }
+        Returns: Json
+      }
+      register_government_account: {
+        Args: {
+          p_department: string
+          p_designation: string
+          p_district?: string
+          p_email: string
+          p_employee_id: string
+          p_full_name: string
+          p_password: string
+          p_requested_role?: string
+          p_state?: string
+        }
+        Returns: Json
+      }
+      reject_access_request: {
+        Args: { p_reason?: string; p_request_id: string; p_type: string }
+        Returns: Json
+      }
       save_tender_bid: {
         Args: {
           p_bid_amount: number
@@ -2734,9 +3052,62 @@ export type Database = {
           p_technical_proposal: string
           p_tender_id: string
         }
-        Returns: Database["public"]["Tables"]["tender_bids"]["Row"]
+        Returns: {
+          bid_amount: number
+          bid_reference: string | null
+          contractor_organization_id: string
+          deleted_at: string | null
+          documents: Json | null
+          financial_score: number | null
+          id: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          technical_proposal: string | null
+          technical_score: number | null
+          tender_id: string
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tender_bids"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       seed_projects_batch: { Args: { projects_data: Json }; Returns: number }
+      submit_progress_update: {
+        Args: {
+          p_description: string
+          p_milestone_id?: string
+          p_project_id: string
+          p_reported_progress: number
+        }
+        Returns: {
+          contractor_organization_id: string
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          milestone_id: string | null
+          project_id: string
+          reported_progress: number
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string | null
+          verification_status: string | null
+          verified_progress: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "progress_updates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role_enum:
@@ -2749,6 +3120,7 @@ export type Database = {
         | "contractor_admin"
         | "contractor_manager"
         | "contractor_site_engineer"
+        | "contractor_engineer"
       org_type_enum:
         | "government"
         | "contractor"
@@ -2908,6 +3280,7 @@ export const Constants = {
         "contractor_admin",
         "contractor_manager",
         "contractor_site_engineer",
+        "contractor_engineer",
       ],
       org_type_enum: [
         "government",

@@ -37,7 +37,7 @@ export interface DbBid {
   status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'QUALIFIED' | 'DISQUALIFIED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN';
   submitted_by?: string | null;
   submitted_at?: string | null;
-  created_at: string;
+  created_at?: string;
   tenders?: Partial<DbTender>;
 }
 
@@ -155,7 +155,7 @@ export class ContractorTenderService {
       bid_reference: bid.bid_reference,
     });
 
-    return bid as DbBid;
+    return bid as unknown as DbBid;
   }
 
   /**
@@ -171,7 +171,7 @@ export class ContractorTenderService {
       .rpc('save_tender_bid', { p_tender_id: tenderId, p_bid_amount: bidAmount, p_technical_proposal: technicalProposal, p_status: 'DRAFT' });
 
     if (error) throw error;
-    return bid as DbBid;
+    return bid as unknown as DbBid;
   }
 
   /**
