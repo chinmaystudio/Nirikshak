@@ -1,42 +1,43 @@
-.pragati-landing-scope {
+.nirikshak-landing-scope {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #ffffff;
   background-color: #09090b;
 }
 
-.pragati-landing-scope .font-display {
+.nirikshak-landing-scope .font-display {
   font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Crisp text contrast over moving background video canvas */
-.pragati-landing-scope p,
-.pragati-landing-scope span,
-.pragati-landing-scope div,
-.pragati-landing-scope li,
-.pragati-landing-scope h1,
-.pragati-landing-scope h2,
-.pragati-landing-scope h3,
-.pragati-landing-scope h4,
-.pragati-landing-scope h5,
-.pragati-landing-scope a,
-.pragati-landing-scope button {
+.nirikshak-landing-scope p,
+.nirikshak-landing-scope span,
+.nirikshak-landing-scope div,
+.nirikshak-landing-scope li,
+.nirikshak-landing-scope h1,
+.nirikshak-landing-scope h2,
+.nirikshak-landing-scope h3,
+.nirikshak-landing-scope h4,
+.nirikshak-landing-scope h5,
+.nirikshak-landing-scope a,
+.nirikshak-landing-scope button {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-.pragati-landing-scope canvas {
+.nirikshak-landing-scope canvas {
   text-shadow: none;
 }
 
 /* Top Nav overrides */
-.pragati-landing-scope #main-nav * {
+.nirikshak-landing-scope #main-nav * {
   text-shadow: none !important;
 }
 
-.pragati-landing-scope .hide-scrollbar::-webkit-scrollbar {
+.nirikshak-landing-scope .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-.pragati-landing-scope .hide-scrollbar {
+.nirikshak-landing-scope .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+

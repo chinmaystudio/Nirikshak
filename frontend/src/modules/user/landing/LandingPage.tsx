@@ -42,7 +42,7 @@ export function LandingPage(): JSX.Element {
   };
 
   return (
-    <div className="pragati-landing-scope min-h-screen flex flex-col bg-neutral-950/60 text-white selection:bg-[#eefc55] selection:text-black relative">
+    <div className="nirikshak-landing-scope min-h-screen flex flex-col bg-neutral-950/60 text-white selection:bg-[#eefc55] selection:text-black relative">
       {/* 266-Frame Scroll Canvas Animation in Fixed Background */}
       <ScrollCanvasBackground />
 

@@ -1,59 +1,68 @@
 import React from 'react';
+import { ShieldCheck } from 'lucide-react';
 
 export const AboutSection: React.FC = () => {
-  const pillars = [
+  const principles = [
     {
-      title: 'Why PRAGATI',
-      desc: 'Public infrastructure projects historically operated in silos: tenders separated from site execution, progress disjointed from payments, and delays unresolved until cost overruns peaked. PRAGATI connects the full spectrum into one synchronized national ecosystem.'
+      num: '01',
+      title: 'One Source of Truth',
+      desc: 'Every tender, sealed bid, contract award, milestone progress submission, inspection determination, and public update stays connected to the same project record in PostgreSQL.'
     },
     {
-      title: 'How PRAGATI Works',
-      desc: 'Through real-time telemetry from drones, satellites, and digital Measurement Books, PRAGATI converts raw ground activity into actionable evidence, structured recommendations, and verified milestone certifications.'
+      num: '02',
+      title: 'Role-Based Access',
+      desc: 'Government officers collaborate within authority workspaces; contractors work in secure organization-isolated workspaces protected by RLS; citizens access verified public views.'
     },
     {
-      title: 'Government ↔ Contractor Portal',
-      desc: 'A unified single-source-of-truth portal where contractors upload Daily Progress Reports and invoices, while government officers evaluate, sanction, and release milestone funds transparently without intermediary delays.'
+      num: '03',
+      title: 'Reported ≠ Verified',
+      desc: 'Contractor submissions remain reported evidence until an authorized government officer verifies them. Only verified values become official public progress.'
     },
     {
-      title: 'Evidence-Led Decision Making',
-      desc: 'Decisions are grounded in authenticated photogrammetric and sensor data rather than subjective paper reports, eliminating inflated completion figures and unwarranted claims.'
+      num: '04',
+      title: 'AI Assists — Humans Decide',
+      desc: 'NIRIKSHAK AI uses deterministic calculations and NVIDIA Nemotron to flag schedule risks and evidence gaps. Final administrative and financial decisions remain strictly with officers.'
     },
     {
-      title: 'AI as an Intelligence Layer',
-      desc: 'Machine learning algorithms continuously scan for contractor capacity bottlenecks, weather-induced schedule slippages, and payment anomalies, surfacing proactive early warnings 60-90 days in advance.'
+      num: '05',
+      title: 'Citizen Transparency',
+      desc: 'Citizens track verified project status, budgets, and milestones, while reporting ground issues that trigger contractor corrective actions verified by government.'
     },
     {
-      title: 'Human Approval at Every Decision Point',
-      desc: 'AI operates strictly as an assistive advisory layer. Final sanctioning, financial release, and contract amendments remain solely in the hands of competent constitutional government officers.'
+      num: '06',
+      title: 'Permanent Audit History',
+      desc: 'Every milestone update, officer review, rejection reason, and fund milestone creates an immutable timestamped event log ensuring complete public accountability.'
     }
   ];
 
   return (
-    <section id="about-section" className="py-20 bg-transparent text-white relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="about-section" className="min-h-screen py-24 bg-gradient-to-r from-neutral-950/90 via-neutral-950/60 to-transparent text-white relative flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+        {/* Section Header */}
         <div className="max-w-3xl mb-14">
           <span className="text-xs font-bold uppercase tracking-widest text-amber-400 font-display">
-            ✦ INSTITUTIONAL FOUNDATION
+            ✦ PLATFORM PHILOSOPHY &amp; ARCHITECTURE
           </span>
           <h2 className="text-4xl sm:text-6xl font-extrabold text-white font-display tracking-tight mt-2 mb-4 leading-tight">
-            About PRAGATI Platform
+            About NIRIKSHAK
           </h2>
-          <p className="text-lg text-slate-200 leading-relaxed">
-            PRAGATI is a government-led digital project intelligence platform designed to connect the complete public infrastructure project lifecycle.
+          <p className="text-lg text-slate-200 leading-relaxed font-medium">
+            NIRIKSHAK is an evidence-driven infrastructure monitoring and accountability platform connecting Government authorities, contractors and citizens through a shared project lifecycle.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {pillars.map((pillar, idx) => (
-            <div key={idx} className="pt-4 border-t border-white/20">
-              <div className="text-xs font-mono font-bold text-amber-400 mb-1">
-                PRINCIPLE 0{idx + 1}
+        {/* 6 Principles Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {principles.map((p) => (
+            <div key={p.num} className="p-6 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-sm relative">
+              <div className="text-xs font-mono font-bold text-amber-400 mb-2">
+                PRINCIPLE {p.num}
               </div>
               <h3 className="text-xl font-bold text-white mb-2 font-display">
-                {pillar.title}
+                {p.title}
               </h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {pillar.desc}
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {p.desc}
               </p>
             </div>
           ))}

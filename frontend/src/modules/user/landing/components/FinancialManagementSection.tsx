@@ -1,79 +1,129 @@
 import React from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ArrowDown, ArrowRight, CheckCircle2, IndianRupee, ShieldCheck } from 'lucide-react';
 
 export const FinancialManagementSection: React.FC = () => {
-  const financialCards = [
+  const financialFlow = [
     {
-      title: 'Payment & Bill Management',
-      stat: 'e-Measurement Book Linked',
-      desc: 'Digital Running Account (RA) bills directly mapped against authenticated Measurement Book records.',
-      tag: 'Zero Leakage'
+      step: '01',
+      value: '₹250 Cr',
+      label: 'SANCTIONED BUDGET',
+      desc: 'Legislative and administrative capital expenditure approval.'
     },
     {
-      title: 'Milestone-Based Payments',
-      stat: 'Strict 1:1 Linkage',
-      desc: 'Disbursements are released only when key physical milestones satisfy satellite/drone verification.',
-      tag: 'Evidence Guarded'
+      step: '02',
+      value: '₹220 Cr',
+      label: 'TENDER ESTIMATE',
+      desc: 'Detailed project report (DPR) engineering estimate baseline.'
     },
     {
-      title: 'Variation Orders',
-      stat: 'AI Clause Audit',
-      desc: 'Automatic scrutiny of scope additions against original contract limits and standard schedule of rates.',
-      tag: 'Rate Analysis'
+      step: '03',
+      value: '₹214 Cr',
+      label: 'AWARDED CONTRACT',
+      desc: 'Market-tested competitive contract price bound to contractor.'
     },
     {
-      title: 'Cost Overrun Analysis',
-      stat: 'Predictive Indexing',
-      desc: 'Early detection of steel and fuel price indices before they trigger uncontrolled budget revisions.',
-      tag: 'Predictive'
+      step: '04',
+      value: '37%',
+      label: 'VERIFIED PHYSICAL PROGRESS',
+      desc: 'Official certified ground execution audited by government PIU.'
     },
     {
-      title: 'Penalty / Liquidated Damages',
-      stat: 'Auto LD Calculation',
-      desc: 'Objective calculation of LD based on contractor-attributable delay days without subjective bias.',
-      tag: 'Impartial'
+      step: '05',
+      value: 'FINANCIAL REVIEW',
+      label: 'LINKED TO VERIFIED RECORDS',
+      desc: 'Running account bills reconciled directly with certified progress.'
+    }
+  ];
+
+  const fiscalPillars = [
+    {
+      title: 'Tender Baseline Reconciliation',
+      metric: 'Sanction to Award',
+      desc: 'Tracks variance between original administrative sanction, published tender estimate, and awarded contract value to maintain fiscal governance.'
+    },
+    {
+      title: 'Milestone Progress Correlation',
+      metric: 'Progress-Gated Review',
+      desc: 'Ensures milestone billing requests are evaluated strictly against verified physical completion records signed by field engineers.'
+    },
+    {
+      title: 'Physical vs Fiscal Divergence',
+      metric: 'Divergence Advisory',
+      desc: 'Algorithmic checks flag discrepancies if cumulative billing rate outpaces certified physical construction velocity.'
     }
   ];
 
   return (
-    <section id="finance-section" className="py-20 bg-transparent text-white relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="finance-section" className="min-h-screen py-24 bg-gradient-to-l from-neutral-950/90 via-neutral-950/60 to-transparent text-white relative flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+        {/* Section Header */}
         <div className="max-w-3xl mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Fiscal Discipline &amp; Transparency</span>
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-400 mb-2 font-display">
+            <IndianRupee className="w-4 h-4 text-emerald-400" />
+            <span>FISCAL DISCIPLINE &amp; PROJECT ACCOUNTS</span>
           </div>
           <h2 className="text-4xl sm:text-6xl font-extrabold text-white font-display tracking-tight leading-tight">
-            Connect Progress With Payment.
+            Follow the Money With the Work.
           </h2>
-
-          <div className="mt-3 text-sm font-bold text-amber-400">
-            Verified work → Certified milestone → Payment decision
-          </div>
+          <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed max-w-2xl">
+            Every rupee disbursed connects directly to a verified milestone in the project record. Sanctions, tenders, awards, and execution stay continuously aligned.
+          </p>
         </div>
 
-        {/* Plain Text Financial Grid (No cards) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pt-4 border-t border-white/15">
-          {financialCards.map((card, idx) => (
-            <div key={idx} className="pt-3 border-t border-white/20">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  {card.tag}
-                </span>
-                <span className="text-xs font-mono text-emerald-400 font-bold">
-                  {card.stat}
-                </span>
+        {/* 5-Step Financial Flow (Horizontal on desktop) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-14">
+          {financialFlow.map((item, idx) => (
+            <div
+              key={item.step}
+              className="p-6 rounded-xl bg-black/40 border border-white/10 backdrop-blur-sm relative flex flex-col justify-between"
+            >
+              <div>
+                <div className="text-[11px] font-mono font-bold text-amber-400 mb-2">
+                  STAGE {item.step}
+                </div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-[#eefc55] font-display mb-1">
+                  {item.value}
+                </div>
+                <div className="text-xs font-bold text-white uppercase tracking-wider mb-2">
+                  {item.label}
+                </div>
               </div>
-
-              <div className="text-xl font-bold text-white font-display mb-2">
-                {card.title}
-              </div>
-
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {card.desc}
+              <p className="text-xs text-slate-300 leading-relaxed mt-2 pt-2 border-t border-white/10">
+                {item.desc}
               </p>
             </div>
           ))}
+        </div>
+
+        {/* 3 Fiscal Integrity Pillars */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 border-t border-white/15">
+          {fiscalPillars.map((pillar, idx) => (
+            <div key={idx} className="p-5 rounded-xl bg-black/30 border border-white/10 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-mono font-bold text-emerald-400">
+                  {pillar.metric}
+                </span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white font-display mb-2">
+                {pillar.title}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {pillar.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer Note */}
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-400">
+          <div>
+            <strong className="text-slate-200">Financial Audit Principle: </strong>
+            Disbursement approvals require linked verification records signed by authorized engineers.
+          </div>
+          <span className="font-mono text-emerald-400 shrink-0">
+            Sanctioned → Contracted → Executed → Verified
+          </span>
         </div>
       </div>
     </section>

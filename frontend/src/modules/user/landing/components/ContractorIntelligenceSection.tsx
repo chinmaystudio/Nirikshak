@@ -1,141 +1,175 @@
 import React, { useState } from 'react';
-import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ShieldCheck, Briefcase } from 'lucide-react';
 
 export const ContractorIntelligenceSection: React.FC = () => {
-  const [activeDimension, setActiveDimension] = useState(0);
+  const [activeStep, setActiveStep] = useState(0);
 
-  const dimensions = [
+  const steps = [
     {
-      id: 'DIM-01',
-      title: 'Contractor Performance Score',
-      category: 'Delivery & Quality Index',
-      metricDescription: 'Normalized score (0-100) combining physical milestone speed, structural quality lab reports, and handover punctuality.',
-      algorithm: 'Weighted multi-factor score: 40% Milestone Adherence + 30% Third-Party Quality Tests + 20% Financial Billing Discipline + 10% Safety Audit.',
-      governanceValue: 'Eliminates subjective officer appraisals with standardized empirical track records across all central and state agencies.'
+      num: '01',
+      title: 'Discover Tender',
+      subtitle: 'Published Government Opportunities',
+      desc: 'Browse open tenders published by verified government authorities with detailed technical specs, milestone definitions, and budget estimates.',
+      details: [
+        'Filter tenders by sector, location, and eligibility criteria',
+        'Download official specifications and milestone expectations',
+        'Automated pre-bid clarification windows'
+      ],
+      stateText: 'Tender Public • Open for Bids'
     },
     {
-      id: 'DIM-02',
-      title: 'Contractor Benchmarking & Grading',
-      category: 'Prequalification Registry',
-      metricDescription: 'Dynamic peer comparison against all registered concessionaires across CPWD, NHAI, Railways, and state PWDs.',
-      algorithm: 'Percentile-based normalization factoring in complexity tier, project scale (₹500 Cr+ vs ₹5,000 Cr+), and geological terrain difficulty.',
-      governanceValue: 'Ensures bids are evaluated against contractors operating under comparable technical and geographical constraints.'
+      num: '02',
+      title: 'Submit Bid',
+      subtitle: 'Secure Organization-Linked Submission',
+      desc: 'Submit technical and financial bids through an isolated contractor workspace protected by PostgreSQL Row-Level Security.',
+      details: [
+        'Sealed bid architecture with cryptographic submission timestamps',
+        'Organization isolation: competitor bids are mathematically invisible',
+        'Validation of company registration and authorized signers'
+      ],
+      stateText: 'Bid Encrypted • Awaiting Evaluation'
     },
     {
-      id: 'DIM-03',
-      title: 'Bid vs Actual Variance Index',
-      category: 'Cost & Price Integrity',
-      metricDescription: 'Historic variance between the initial financial bid submission and the ultimate completed project billing.',
-      algorithm: 'Variance delta tracking identifying systematic low-balling patterns designed to recoup profits later through arbitrary variation claims.',
-      governanceValue: 'Alerts tender committees if an aggressive quote poses a high probability of future cost escalation or project abandonment.'
+      num: '03',
+      title: 'Receive Award',
+      subtitle: 'Selected Contractor Receives Assignment',
+      desc: 'Upon official government selection, the project workspace is automatically provisioned and assigned directly to the winning organization.',
+      details: [
+        'Instant contractor portal access upon letter of award',
+        'Project record bound to contractor organization ID',
+        'Milestone baseline schedule established in database'
+      ],
+      stateText: 'Award Certified • Workspace Provisioned'
     },
     {
-      id: 'DIM-04',
-      title: 'Historical Delay Profiling',
-      category: 'Schedule Variance Analysis',
-      metricDescription: 'Net milestone delay patterns logged across the contractor’s past 20 public infrastructure contracts.',
-      algorithm: 'Critical-path attribution model calculating median slippage days per kilometer of roadway or square meter of built area.',
-      governanceValue: 'Prevents awarding time-critical greenfield corridors to entities with persistent critical-path mobilization bottlenecks.'
+      num: '04',
+      title: 'Execute Project',
+      subtitle: 'Milestones & Project Workspace',
+      desc: 'Manage site execution against official milestone targets with real-time tracking of workfronts, resource deployment, and task completions.',
+      details: [
+        'Dedicated contractor dashboard with assigned project portfolio',
+        'Milestone progress decomposition and daily site logs',
+        'Real-time communication and notice management'
+      ],
+      stateText: 'Execution Active • Milestones Tracked'
     },
     {
-      id: 'DIM-05',
-      title: 'Disputes & Claims Frequency',
-      category: 'Contractual Litigation Risk',
-      metricDescription: 'Ratio of submitted Extension of Time (EoT) and cost variation claims versus escalations to arbitral tribunals or courts.',
-      algorithm: 'Litigation propensity index based on clause claim volume, average settlement duration, and commercial arbitration records.',
-      governanceValue: 'Protects public exchequers from contractors whose operational model relies heavily on protracted legal disputes.'
+      num: '05',
+      title: 'Report Progress',
+      subtitle: 'Progress + Evidence Submission',
+      desc: 'Submit reported physical completion percentages accompanied by geo-tagged photos, site documentation, and measurement notes.',
+      details: [
+        'Upload site documentation and measurement logs',
+        'Claimed progress flagged as "Reported" in system',
+        'AI pre-checks for schedule variance and documentation completeness'
+      ],
+      stateText: 'Evidence Submitted • Pending Verification'
     },
     {
-      id: 'DIM-06',
-      title: 'Statutory Compliance History',
-      category: 'Labour, Tax & Safety Audit',
-      metricDescription: 'Automated verification of EPFO/ESIC labour cess payments, GST returns, and safety compliance audits.',
-      algorithm: 'Real-time API reconciliation with Ministry of Labour, EPFO, GSTN, and field safety hazard incident logs.',
-      governanceValue: 'Ensures zero liability falls on public authorities for contractor labour defaults, wage withholding, or statutory arrears.'
+      num: '06',
+      title: 'Receive Review',
+      subtitle: 'Approved • Rejected • Clarification Required',
+      desc: 'Authorized government officers inspect site evidence and render official determinations: approved, rejected, or clarification needed.',
+      details: [
+        'Approved progress transitions to official "Verified" status',
+        'Rejected claims require resubmission with required rectification',
+        'Immutable audit entry created for every determination'
+      ],
+      stateText: 'Government Determination Rendered'
     }
   ];
 
+  const current = steps[activeStep];
+
   return (
-    <section id="contractor-section" className="py-20 bg-transparent text-white relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="contractor-section" className="min-h-screen py-24 bg-gradient-to-l from-neutral-950/90 via-neutral-950/60 to-transparent text-white relative flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+        {/* Section Header */}
         <div className="max-w-3xl mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
-            <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span>Pre-Award Intelligence &amp; Active Monitoring</span>
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400 mb-2 font-display">
+            <Briefcase className="w-4 h-4 text-amber-400" />
+            <span>CONTRACTOR LIFECYCLE</span>
           </div>
           <h2 className="text-4xl sm:text-6xl font-extrabold text-white font-display tracking-tight leading-tight">
-            Know the Contractor Before the Project.
+            From Bid to Build.
           </h2>
-          <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed">
-            Evaluate contractor capability, historical performance, previous delays, claims, compliance, and project completion records before and during project execution.
+          <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed max-w-2xl">
+            A secure, organization-isolated portal for contractor enterprises to discover opportunities, manage assigned projects, and submit verifiable execution evidence.
           </p>
         </div>
 
-        {/* Plain Text Dimension Grid (No cards) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12 pb-10 border-b border-white/15">
-          {dimensions.map((item, idx) => {
-            const isSelected = activeDimension === idx;
+        {/* 6 Steps Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          {steps.map((item, idx) => {
+            const isSelected = activeStep === idx;
             return (
               <div
-                key={item.id}
-                onClick={() => setActiveDimension(idx)}
-                className="pt-4 border-t border-white/20 cursor-pointer transition-all"
+                key={item.num}
+                onClick={() => setActiveStep(idx)}
+                className={`p-6 rounded-xl border cursor-pointer transition-all duration-200 backdrop-blur-sm ${
+                  isSelected
+                    ? 'bg-black/60 border-[#eefc55] shadow-lg scale-[1.02]'
+                    : 'bg-black/30 border-white/10 hover:border-amber-400/50 hover:bg-black/40'
+                }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono font-bold text-amber-400">
-                    {item.id}
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`text-xs font-mono font-bold ${isSelected ? 'text-[#eefc55]' : 'text-amber-400'}`}>
+                    {item.num}
                   </span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#eefc55]">
-                    {item.category}
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    STEP {item.num}
                   </span>
                 </div>
 
-                <h3 className={`text-lg font-bold font-display mb-2 ${isSelected ? 'text-[#eefc55]' : 'text-white'}`}>
+                <h3 className={`text-xl font-bold font-display mb-1 ${isSelected ? 'text-white' : 'text-slate-100'}`}>
                   {item.title}
                 </h3>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  {item.metricDescription}
-                </p>
-
-                <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-400">
-                  <span>Inspect Methodology</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                <div className="text-xs font-bold uppercase tracking-wide text-amber-400 mb-2">
+                  {item.subtitle}
                 </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {item.desc}
+                </p>
               </div>
             );
           })}
         </div>
 
-        {/* Selected Dimension Plain Text Breakdown */}
-        <div className="pt-6">
-          <div className="mb-6">
-            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-              Audited Algorithmic Framework
-            </span>
-            <h4 className="text-2xl font-bold text-white font-display mt-1">
-              {dimensions[activeDimension].title} • Methodology &amp; Public Value
-            </h4>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="pt-3 border-t border-white/20">
+        {/* Selected Step Detailed View */}
+        <div className="bg-black/40 p-6 sm:p-8 rounded-2xl border border-white/10 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10 mb-6">
+            <div>
               <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-                Algorithmic Formulation
+                STAGE {current.num} WORKFLOW SPECIFICATION
               </div>
-              <p className="text-xs text-slate-200 leading-relaxed font-mono">
-                {dimensions[activeDimension].algorithm}
-              </p>
+              <h4 className="text-2xl font-bold text-white font-display">
+                {current.title} — {current.subtitle}
+              </h4>
             </div>
-
-            <div className="pt-3 border-t border-white/20">
-              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
-                Public Governance Safeguard
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed">
-                {dimensions[activeDimension].governanceValue}
-              </p>
+            <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-400 text-xs font-bold self-start md:self-auto">
+              ✓ {current.stateText}
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {current.details.map((detail, idx) => (
+              <div key={idx} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-[#eefc55] shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Security / Privacy Banner */}
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-300">
+          <div>
+            <strong className="text-white">RLS Privacy Guarantee: </strong>
+            Contractor A can NEVER access or query Contractor B&apos;s bids, contracts, assigned projects, or progress reports.
+          </div>
+          <span className="font-mono text-[#eefc55] shrink-0">
+            Organization-Isolated Workspaces
+          </span>
         </div>
       </div>
     </section>

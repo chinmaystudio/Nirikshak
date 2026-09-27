@@ -5,246 +5,245 @@ interface UnifiedGovernanceSummaryProps {
   onNavigateSection?: (sectionId: string) => void;
 }
 
-export const UnifiedGovernanceSummary: React.FC<UnifiedGovernanceSummaryProps> = ({ onNavigateSection }) => {
-  const [activePillar, setActivePillar] = useState<number>(0);
+import React, { useState } from 'react';
+import { ArrowRight, CheckCircle2, Eye, FileText, Lock, ShieldCheck, UserCheck } from 'lucide-react';
 
-  const handleJumpToSection = (sectionId: string) => {
-    if (onNavigateSection) {
-      onNavigateSection(sectionId);
-    } else {
-      const el = document.getElementById(sectionId);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+interface UnifiedGovernanceSummaryProps {
+  onNavigateSection?: (sectionId: string) => void;
+}
 
-  const governancePillars = [
+interface DataFlowPillar {
+  id: string;
+  tab: string;
+  category: string;
+  headline: string;
+  description: string;
+  createdBy: string;
+  readBy: string;
+  verifiedBy: string;
+  publicValue: string;
+  securityRule: string;
+  sampleItems: string[];
+}
+
+export const UnifiedGovernanceSummary: React.FC<UnifiedGovernanceSummaryProps> = () => {
+  const [activeTab, setActiveTab] = useState<number>(0);
+
+  const dataFlowTabs: DataFlowPillar[] = [
     {
-      id: 'PIL-01',
-      sectionId: 'contractor-section',
-      category: 'Pre-Award Vetting',
-      title: 'Contractor Intelligence & Solvency Radar',
-      tagline: 'Empirical Scoring Across 15-Year Infrastructure Track Records',
-      keyMetric: '0-100 Normalized Rating',
-      summary:
-        'Audits past project handover speed, quality test lab certificates, statutory EPFO/GSTN filings, and real-time plant machinery saturation to ensure public tenders are awarded only to solvent, capable concessionaires.',
-      subFeatures: [
-        'Contractor Performance Score (40% Milestones + 30% Quality + 20% Financials + 10% Safety)',
-        'Peer Benchmarking across CPWD, NHAI, Railways, and State PWD registries',
-        'Bid-vs-Actual Variance tracking identifying predatory low-ball pricing patterns',
-        'Dynamic Machinery & Equipment Capacity Radar preventing over-commitment (>1.75x asset base)'
-      ],
-      governanceImpact: 'Eliminates subjective appraisal; blocks over-leveraged bids before tender finalization.'
+      id: '01',
+      tab: 'PROCUREMENT',
+      category: 'Tender & Bidding',
+      headline: 'Tenders, Sealed Bids & Letter of Award',
+      description: 'Government publishes public tenders. Authenticated contractors submit encrypted bids in isolated workspaces.',
+      createdBy: 'Government (Tender specs & budget) • Contractor (Sealed technical & financial bids)',
+      readBy: 'Government (All bids unsealed post-deadline) • Contractor (Own submitted bid only)',
+      verifiedBy: 'Government Tender Evaluation Committee',
+      publicValue: 'Awarded contractor name, contract value, timeline and project specifications',
+      securityRule: 'Contractor organization isolation: Competitor bids are mathematically invisible to other bidders.',
+      sampleItems: ['Tender Notice & Scope', 'Sealed Contractor Proposals', 'Bid Evaluation Matrix', 'Signed Contract Agreement']
     },
     {
-      id: 'PIL-02',
-      sectionId: 'monitoring-section',
-      category: 'Ground Telemetry',
-      title: 'Digital Ground Monitoring & AI Progress Verification',
-      tagline: 'Evidence-Led Inspection Replacing Paper Measurement Books',
-      keyMetric: 'Volumetric Drone Audits',
-      summary:
-        'Continuous cross-verification of daily contractor claims against volumetric 3D drone models, SAR satellite imagery, and automated concrete batching plant telemetry.',
-      subFeatures: [
-        'Mandatory geo-tagged Daily Progress Reports (DPR) with equipment & manpower logs',
-        'Photogrammetric computer-vision earthwork & structural element extraction',
-        'Automated discrepancy alerts comparing physical progress against contractor billing',
-        'Direct synchronization with digital Measurement Book (e-MB) sign-off workflows'
-      ],
-      governanceImpact: 'Prevents ghost work claims and prevents unverified milestone billing.'
+      id: '02',
+      tab: 'EXECUTION',
+      category: 'Milestone Progress',
+      headline: 'Progress Submissions & Ground Evidence',
+      description: 'Contractors document physical construction, milestone completions, and site inspection logs.',
+      createdBy: 'Contractor Project Team',
+      readBy: 'Contractor Organization & Authorized Government Authority',
+      verifiedBy: 'Government Field Engineers / PIU Reviewers',
+      publicValue: 'Unverified contractor claims remain private; only verified progress is published.',
+      securityRule: 'Claimed progress does NOT update public records until formal government verification.',
+      sampleItems: ['Milestone Progress Percentage', 'Geo-tagged Site Documentation', 'Workfront Completion Logs', 'Interim Payment Invoices']
     },
     {
-      id: 'PIL-03',
-      sectionId: 'financial-section',
-      category: 'Fiscal Integrity',
-      title: 'Milestone-Linked Escrows & Fraud-Proof Disbursements',
-      tagline: 'Direct Treasury Release Strictly Upon Verified Physical Delivery',
-      keyMetric: '100% Milestone-Gated',
-      summary:
-        'Eliminates capital lockup and diversion by linking every interim payment certificate (IPC) directly to verified physical completion milestones.',
-      subFeatures: [
-        'Tripartite escrow account management with direct sub-contractor fund splits',
-        'Automated statutory deduction audit (GST-TDS, labor cess, retention money)',
-        'Price adjustment formula engine tracking official RBI/wholesale commodity indices',
-        'Audit-ready electronic payment vouchers with tamper-proof digital signatures'
-      ],
-      governanceImpact: 'Protects public funds from diversion while ensuring steady contractor cash-flow.'
+      id: '03',
+      tab: 'VERIFICATION',
+      category: 'Official Oversight',
+      headline: 'Inspection Determinations & Sanctions',
+      description: 'Designated government officers examine physical site reality, evaluate evidence, and approve or reject claims.',
+      createdBy: 'Government Project Officers & Field Engineers',
+      readBy: 'Government Authority & Assigned Contractor',
+      verifiedBy: 'Authorized Senior Project Officer / Competent Authority',
+      publicValue: 'Official verified percentage, verification timestamp, and official project status',
+      securityRule: 'Constitutional human-in-the-loop: No automated fund releases or status promotions without officer approval.',
+      sampleItems: ['Site Inspection Orders', 'Progress Approval / Rejection Orders', 'Measurement Book Approvals', 'Statutory Milestone Sanctions']
     },
     {
-      id: 'PIL-04',
-      sectionId: 'risk-section',
-      category: 'Early Intervention',
-      title: 'Predictive Risk & S-Curve Delay Forecaster',
-      tagline: '60–90 Day Early Warnings Before Critical Path Disruption',
-      keyMetric: '60-Day Lead Time',
-      summary:
-        'Multi-factor predictive model synthesizing weather forecasts, Right of Way (RoW) acquisition delays, and supply chain lead times to predict schedule slips.',
-      subFeatures: [
-        'Real-time CPM/PERT critical path schedule variance analysis (Earned Value Analysis)',
-        'Monsoon seasonality & heavy rainfall disruption forecasting',
-        'Material supply chain alert engine for bulk cement, structural steel, and bitumen',
-        'Automated catch-up schedule recommendation with resource reallocation models'
-      ],
-      governanceImpact: 'Transitions administrative governance from post-mortem reviews to proactive recovery.'
+      id: '04',
+      tab: 'CITIZEN FEEDBACK',
+      category: 'Public Accountability',
+      headline: 'Ground Grievances & Corrective Actions',
+      description: 'Citizens submit ground observations or complaints; government triages and assigns contractor corrective actions.',
+      createdBy: 'Citizens (Complaints & photos) • Government (Directives) • Contractor (Remediation)',
+      readBy: 'Reporting Citizen, Government Oversight Team, and Assigned Contractor',
+      verifiedBy: 'Government Grievance Officer',
+      publicValue: 'Issue classification, resolution timeline, and public redressal verification status',
+      securityRule: 'Whistleblower and citizen privacy protected; remediation tracked until verified closed.',
+      sampleItems: ['Citizen Ground Reports', 'Location-tagged Incident Logs', 'Contractor Action Evidence', 'Officer Closure Certification']
     },
     {
-      id: 'PIL-05',
-      sectionId: 'claims-section',
-      category: 'Dispute Resolution',
-      title: 'Evidence-Based Claims & Arbitration Triage',
-      tagline: 'Structured Clause Adjudication Preventing Multi-Year Litigation',
-      keyMetric: '90-Day Triage Speed',
-      summary:
-        'Transforms disputed Extension of Time and cost claims into structured, evidence-backed adjudications using real-time site weather logs, court stays, and contractual clause matching.',
-      subFeatures: [
-        'Standardized FIDIC / CPWD / NHAI contract clause alignment for all submitted claims',
-        'Evidence verification engine linking claims to geotagged rainfall and RoW handover notices',
-        'Fair compensation recommendation minimizing protracted arbitral tribunals',
-        'Audit-ready claims docket generated for statutory CAG and vigilance scrutiny'
-      ],
-      governanceImpact: 'Reduces stalled public investments and avoids compounding arbitral interest liabilities.'
+      id: '05',
+      tab: 'AI',
+      category: 'Cognitive Advisory',
+      headline: 'Nemotron Cognitive Risk & Variance Signals',
+      description: 'NIRIKSHAK AI evaluates baseline milestones against ground submissions to highlight risk trajectories.',
+      createdBy: 'NIRIKSHAK Intelligence (NVIDIA Nemotron via OpenRouter + Deterministic Calculators)',
+      readBy: 'Government Reviewers & Assigned Contractor (Contextual alerts)',
+      verifiedBy: 'Government Officer (Accepts, rejects, or clarifies AI insights)',
+      publicValue: 'High-level project health status and verified forecast milestones',
+      securityRule: 'AI provides decision support only. AI cannot execute contracts, disburse funds, or modify data.',
+      sampleItems: ['Schedule Delay Trajectory', 'Financial vs Physical Divergence', 'Milestone Slippage Alerts', 'Recommended Review Actions']
     },
     {
-      id: 'PIL-06',
-      sectionId: 'projects-section',
-      category: 'Portfolio Oversight',
-      title: 'Executive Portfolio Analytics & Tiered Governance',
-      tagline: 'Standardized Oversight Across ₹1,000 Cr+ Megaprojects',
-      keyMetric: 'Multi-Tier Pipeline',
-      summary:
-        'Consolidated executive reporting across high-value strategic megaprojects, active workfronts, critical-path interventions, and handed-over infrastructure assets.',
-      subFeatures: [
-        'High-Value Mega Projects (₹1,000 Cr+) synced directly with Cabinet Secretariat reviews',
-        'Active Pipeline tracking S-Curves, resource telemetry, and statutory permits',
-        'Critical Intervention triage applying liquidated damages and mandatory catch-up schedules',
-        'Defect Liability Period (DLP) 3-5 year digital warranty monitoring post-commissioning'
-      ],
-      governanceImpact: 'Enables high-level ministerial visibility and standardized compliance across all states.'
+      id: '06',
+      tab: 'AUDIT',
+      category: 'Tamper-Evident History',
+      headline: 'Permanent Traceable Decision Ledger',
+      description: 'Every submission, edit, verification, rejection, and fund event creates an immutable audit trail.',
+      createdBy: 'System Triggered (PostgreSQL Row Triggers & Authentication Handshakes)',
+      readBy: 'Government Audit Officers, Vigilance Observers, and System Administrators',
+      verifiedBy: 'Cryptographic Event Timestamps & Supabase RLS Policies',
+      publicValue: 'Public verification timestamps and milestone certification chronology',
+      securityRule: 'Append-only logs: Historical entries cannot be modified or purged by any portal user.',
+      sampleItems: ['Authentication Logs', 'Verification Decision Records', 'RLS Policy Audits', 'Milestone State Transition History']
     }
   ];
 
-  const current = governancePillars[activePillar];
+  const current = dataFlowTabs[activeTab];
 
   return (
-    <section id="governance-summary-section" className="py-20 bg-transparent text-white relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="governance-summary-section" className="min-h-screen py-24 bg-gradient-to-r from-neutral-950/90 via-neutral-950/60 to-transparent text-white relative flex flex-col justify-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+        {/* Section Header */}
         <div className="max-w-3xl mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-400 mb-2 font-display">
             <ShieldCheck className="w-4 h-4 text-amber-400" />
-            <span>Pre-Award Intelligence &amp; Active Monitoring</span>
+            <span>Cross-Portal Access Control &amp; Data Pipeline</span>
           </div>
           <h2 className="text-4xl sm:text-6xl font-extrabold text-white font-display tracking-tight leading-tight">
-            Know the Contractor Before the Project.
+            How Data Moves Through NIRIKSHAK
           </h2>
-          <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed">
-            A unified governance suite synthesizing contractor prequalification, ground drone telemetry, milestone payments, delay risk prediction, dispute resolution, and portfolio compliance into one coherent digital architecture.
+          <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed max-w-2xl">
+            Who creates it, who can read it, who verifies it, and what becomes public. A clean security architecture with strict role isolation.
           </p>
         </div>
 
-        {/* Pillar Switcher (Plain text buttons) */}
+        {/* 6 Tabs */}
         <div className="flex flex-wrap gap-2 sm:gap-3 mb-10 pb-6 border-b border-white/15">
-          {governancePillars.map((p, idx) => {
-            const isSelected = activePillar === idx;
+          {dataFlowTabs.map((p, idx) => {
+            const isSelected = activeTab === idx;
             return (
               <button
-                key={p.id}
-                onClick={() => setActivePillar(idx)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                key={p.tab}
+                onClick={() => setActiveTab(idx)}
+                className={`px-4 py-2.5 rounded-full text-xs font-bold tracking-wide transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#eefc55] text-neutral-950 font-extrabold shadow-md'
-                    : 'bg-transparent text-slate-300 hover:text-white border border-white/20'
+                    ? 'bg-[#eefc55] text-neutral-950 font-black shadow-lg scale-105'
+                    : 'bg-black/40 text-slate-300 hover:text-white border border-white/20 hover:border-amber-400'
                 }`}
               >
-                {p.id} • {p.category}
+                {p.id} • {p.tab}
               </button>
             );
           })}
         </div>
 
-        {/* Selected Pillar Plain Text Deep Dive (No card containers) */}
-        <div className="pb-12 border-b border-white/15">
+        {/* Selected Tab Deep Dive */}
+        <div className="bg-black/35 p-6 sm:p-8 rounded-2xl border border-white/10 backdrop-blur-sm">
+          {/* Header */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-6 border-b border-white/10 mb-8">
             <div>
               <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
-                {current.id} — {current.category} • Core Architecture
+                DATA DOMAIN {current.id} — {current.category}
               </div>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-white font-display">
-                {current.title}
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-white font-display">
+                {current.headline}
               </h3>
-              <p className="text-sm text-slate-300 mt-1">
-                {current.tagline}
+              <p className="text-sm text-slate-300 mt-1 max-w-xl">
+                {current.description}
               </p>
             </div>
 
-            <div className="shrink-0 max-w-sm">
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                Benchmark Standard
+            <div className="shrink-0 max-w-sm px-4 py-3 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-[11px] font-bold text-[#eefc55] uppercase tracking-wider flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-[#eefc55]" />
+                Security Rule
               </div>
-              <div className="text-xl font-extrabold text-[#eefc55] font-display mt-0.5">
-                {current.keyMetric}
-              </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Standardized algorithmic protocol across central and state departments.
+              <p className="text-xs text-slate-300 mt-1">
+                {current.securityRule}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-5 space-y-6">
-              <div>
-                <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">
-                  Functional Overview
-                </div>
-                <p className="text-sm text-slate-200 leading-relaxed">
-                  {current.summary}
-                </p>
+          {/* 4 Access Matrix Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* WHO CREATES IT */}
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 border-t-2 border-t-blue-400">
+              <div className="text-xs font-bold uppercase text-blue-400 mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                Who Creates It
               </div>
-
-              <div>
-                <div className="text-xs font-bold text-[#eefc55] uppercase tracking-wider mb-2">
-                  Public Governance Safeguard
-                </div>
-                <p className="text-sm text-slate-200 leading-relaxed">
-                  {current.governanceImpact}
-                </p>
-              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                {current.createdBy}
+              </p>
             </div>
 
-            <div className="lg:col-span-7">
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-4">
-                Key Verification Capabilities
+            {/* WHO CAN READ IT */}
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 border-t-2 border-t-amber-400">
+              <div className="text-xs font-bold uppercase text-amber-400 mb-2 flex items-center gap-1.5">
+                <Eye className="w-3.5 h-3.5" />
+                Who Can Read It
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {current.subFeatures.map((feat, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span className="leading-relaxed">{feat}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between">
-                <span className="text-xs text-slate-400">
-                  Methodology and interactive diagnostics:
-                </span>
-                <button
-                  onClick={() => handleJumpToSection(current.sectionId)}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#eefc55] hover:text-white transition-colors cursor-pointer"
-                >
-                  <span>Explore In-Depth Module</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                {current.readBy}
+              </p>
             </div>
+
+            {/* WHO CAN VERIFY IT */}
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 border-t-2 border-t-emerald-400">
+              <div className="text-xs font-bold uppercase text-emerald-400 mb-2 flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5" />
+                Who Verifies It
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                {current.verifiedBy}
+              </p>
+            </div>
+
+            {/* WHAT BECOMES PUBLIC */}
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 border-t-2 border-t-[#eefc55]">
+              <div className="text-xs font-bold uppercase text-[#eefc55] mb-2 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                What Becomes Public
+              </div>
+              <p className="text-xs text-slate-200 leading-relaxed font-medium">
+                {current.publicValue}
+              </p>
+            </div>
+          </div>
+
+          {/* Sample Data Artifacts */}
+          <div className="pt-4 border-t border-white/10 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider mr-2">
+              Domain Artifacts:
+            </span>
+            {current.sampleItems.map((item, idx) => (
+              <span key={idx} className="text-xs text-slate-300 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                ✓ {item}
+              </span>
+            ))}
           </div>
         </div>
 
-        <div className="pt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-300">
+        {/* Security Standard Footer */}
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs text-slate-300">
           <div>
-            <strong className="text-white">Statutory Audit Standard: </strong>
-            Audited monthly by Project Implementation Units (PIU) and Chief Vigilance Officers. Preserves immutable digital verification records across all works.
+            <strong className="text-white">Security Model: </strong>
+            PostgreSQL Row-Level Security (RLS) guarantees contractors only query their own records, while government officers oversee their authority jurisdiction.
           </div>
-          <span className="font-mono text-amber-400 shrink-0">
-            Verified against General Financial Rules (GFR)
+          <span className="font-mono text-[#eefc55] shrink-0">
+            Reported ≠ Verified ≠ Public
           </span>
         </div>
       </div>

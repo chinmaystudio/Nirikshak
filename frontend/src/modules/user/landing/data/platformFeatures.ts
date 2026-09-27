@@ -3,147 +3,150 @@ import { LifecycleStageInfo } from '../types';
 export const LIFECYCLE_STAGES: LifecycleStageInfo[] = [
   {
     step: '01',
-    name: 'TENDER',
-    title: 'Tender & Notice Inviting Bid',
-    objective: 'Standardized BOQ creation, objective qualification rules, clear milestone definitions.',
-    governmentAction: 'Draft criteria, publish NIT, evaluate vendor technical capabilities with historical data.',
-    contractorAction: 'Submit technical and financial bids with digital credentials & capacity declarations.',
-    aiVerification: 'Unbalanced bid anomaly detection, collusion pattern scanning, contractor capability check.',
-    outputs: ['E-Tender Notice', 'BOQ Baseline', 'Prequalification Matrix']
+    name: 'PLAN',
+    title: 'Project Creation & Budget Sanction',
+    objective: 'Official sanctioning of infrastructure projects, budget allocation, and administrative approvals.',
+    governmentAction: 'Sanction project scope, allocate capital budget, define jurisdiction and milestone milestones.',
+    contractorAction: 'None (Pre-tendering public authority planning phase).',
+    aiVerification: 'Historical cost and timeline sanity checks against regional infrastructure baselines.',
+    outputs: ['Administrative Approval', 'Sanctioned Budget', 'Official Project Record']
   },
   {
     step: '02',
-    name: 'SELECT',
-    title: 'Contractor Selection & Award',
-    objective: 'Transparent evaluation based on verified competence, realistic pricing, and past track records.',
-    governmentAction: 'Issue Letter of Acceptance (LoA) with strict timeline adherence stipulations.',
-    contractorAction: 'Furnish Performance Security Guarantee and mobilization commitments.',
-    aiVerification: 'Past delay index analysis, active site workload vs plant-machinery capacity check.',
-    outputs: ['Letter of Award', 'Performance Security', 'Risk Profile']
+    name: 'TENDER',
+    title: 'Government Publishes Tender',
+    objective: 'Public issuance of tenders with technical requirements, eligibility criteria, and deadlines.',
+    governmentAction: 'Draft and publish tender notice with detailed scope, estimated value, and submission deadline.',
+    contractorAction: 'Review published tender notices, technical requirements, and eligibility guidelines.',
+    aiVerification: 'Tender specification clarity checks, estimated rate benchmarking, and timeline validation.',
+    outputs: ['Published Tender Notice', 'Technical Requirements', 'Procurement Baseline']
   },
   {
     step: '03',
-    name: 'CONTRACT',
-    title: 'Contract Signing & Milestones',
-    objective: 'Digitized contract clauses, milestone deadlines, and clear responsibility matrix.',
-    governmentAction: 'Lock digital agreement, map GIS boundaries, approve Baseline Program (Schedule).',
-    contractorAction: 'Sign tripartite agreements, submit CPM/PERT baseline schedule and safety protocols.',
-    aiVerification: 'Clause ambiguity detection, unviable milestone schedule warnings, delay liability tags.',
-    outputs: ['Digitized Agreement', 'Approved Work Program', 'Escrow Account']
+    name: 'BID',
+    title: 'Verified Contractors Submit Bids',
+    objective: 'Secure, sealed bid submission from authenticated and verified contractor organizations.',
+    governmentAction: 'Monitor bid submission countdown; maintain cryptographic sealed-bid status.',
+    contractorAction: 'Submit financial and technical proposals from isolated company workspace.',
+    aiVerification: 'Strict contractor isolation: Contractor A can never view Contractor B proposals.',
+    outputs: ['Sealed Bid Submission', 'Technical Proposal', 'Company Verification Hash']
   },
   {
     step: '04',
-    name: 'EXECUTE',
-    title: 'Site Execution & Mobilization',
-    objective: 'Right of Way (RoW) clearance, utility shifting, machinery mobilization and site handover.',
-    governmentAction: 'Handover encumbrance-free land stretches, conduct monthly coordination reviews.',
-    contractorAction: 'Deploy equipment, batching plants, workforce, and begin physical earthwork/structures.',
-    aiVerification: 'GPS-tagged equipment tracking, utility handover bottleneck forecasts.',
-    outputs: ['Site Handover Certificate', 'Mobilization Report', 'Safety Approvals']
+    name: 'AWARD',
+    title: 'Government Evaluates & Selects',
+    objective: 'Comparative technical and financial evaluation of eligible submissions.',
+    governmentAction: 'Unseal all received bids simultaneously; review technical scores and select winning bidder.',
+    contractorAction: 'Receive evaluation notification and Letter of Award if selected.',
+    aiVerification: 'Outlier bid detection, technical-financial score computation, and audit logging.',
+    outputs: ['Comparative Bid Matrix', 'Selection Resolution', 'Award Notification']
   },
   {
     step: '05',
-    name: 'MONITOR',
-    title: 'Multi-Source Digital Monitoring',
-    objective: 'Continuous ground truth tracking through GIS, geo-tagged imagery, drone surveys & IoT.',
-    governmentAction: 'Inspect field reports, cross-examine physical measurements against planned schedule.',
-    contractorAction: 'Upload daily progress reports (DPR), material consumption logs, and drone footage.',
-    aiVerification: 'Photogrammetric progress alignment, computer vision concrete pour verification.',
-    outputs: ['Daily Progress Reports', '3D Drone Orthomosaic', 'Material Inward Logs']
+    name: 'CONTRACT',
+    title: 'Contract + Contractor Assignment',
+    objective: 'Legal contract creation, contractor assignment, and access provisioning.',
+    governmentAction: 'Execute contract, bind contractor organization to project, and grant project workspace access.',
+    contractorAction: 'Sign agreement; assigned project appears immediately in contractor private portal.',
+    aiVerification: 'Organization membership and role-based clearance verified in Supabase RLS.',
+    outputs: ['Executed Contract Agreement', 'Project Assignment', 'Workspace Access Granted']
   },
   {
     step: '06',
-    name: 'VERIFY',
-    title: 'AI Progress Verification',
-    objective: 'Independent algorithmic cross-check of reported completion against physical telemetry.',
-    governmentAction: 'Review AI discrepancy flags before granting measurement book (MB) signoffs.',
-    contractorAction: 'Provide test certificates, cube strength lab reports, and surveyor punch-lists.',
-    aiVerification: 'Discrepancy scoring between claimed completion % and satellite/drone ground truth.',
-    outputs: ['Verification Certificate', 'Discrepancy Log', 'Certified Measurement Book']
+    name: 'EXECUTE',
+    title: 'Contractor Begins Project Work',
+    objective: 'Physical site mobilization, milestone schedule execution, and resource deployment.',
+    governmentAction: 'Track milestone schedule, oversee right-of-way, and inspect ongoing workfronts.',
+    contractorAction: 'Mobilize site crew, execute work against milestone timeline, log daily activity.',
+    aiVerification: 'Baseline vs actual schedule tracking; early milestone slippage warnings.',
+    outputs: ['Mobilization Record', 'Execution Timeline', 'Site Workfront Logs']
   },
   {
     step: '07',
-    name: 'PAY',
-    title: 'Milestone-Linked Payment',
-    objective: 'Direct bank release strictly upon verified deliverables, minimizing capital lockups and leakage.',
-    governmentAction: 'Approve Running Account (RA) bills, process statutory withholdings and deductions.',
-    contractorAction: 'Generate e-invoices mapped 1:1 against certified milestone checkpoints.',
-    aiVerification: 'Overpayment prevention check, duplicate measurement detection, variation cost audit.',
-    outputs: ['E-Payment Release', 'Statutory Deductions', 'Milestone Certificate']
+    name: 'REPORT',
+    title: 'Progress + Evidence Submitted',
+    objective: 'Contractor submits physical and financial progress backed by geotagged evidence.',
+    governmentAction: 'Receive progress submission notification with attached site documentation.',
+    contractorAction: 'Submit physical progress % with geotagged site photographs, reports, and bills.',
+    aiVerification: 'Evidence integrity validation; submission marked as REPORTED (unverified).',
+    outputs: ['Progress Submission', 'Geotagged Evidence Files', 'Measurement Documentation']
   },
   {
     step: '08',
-    name: 'PREDICT',
-    title: 'Early Warning & Delay Prediction',
-    objective: 'Forecast schedule slip and cost escalation 60-90 days before critical path disruption.',
-    governmentAction: 'Convene proactive contractor intervention meetings, issue corrective notices.',
-    contractorAction: 'Submit revised catch-up plans and mobilize additional critical equipment shifts.',
-    aiVerification: 'S-curve variance projections, weather impact simulations, resource deficit alerts.',
-    outputs: ['Delay Early Warning Notice', 'Catch-Up Program', 'Bottleneck Root-Cause']
+    name: 'ANALYZE',
+    title: 'NIRIKSHAK AI Reviews Evidence',
+    objective: 'NVIDIA Nemotron via OpenRouter evaluates evidence, progress variance, and risks.',
+    governmentAction: 'Review structured AI advisory report detailing risk indicators and variance signals.',
+    contractorAction: 'View analysis flags if additional clarification or documentation is requested.',
+    aiVerification: 'Deterministic variance calculation + Nemotron contextual risk reasoning.',
+    outputs: ['Structured Risk Advisory', 'Variance Score', 'Recommended Review Actions']
   },
   {
     step: '09',
-    name: 'RESOLVE',
-    title: 'Evidence-Based Dispute Resolution',
-    objective: 'Structured, speedy claim settlements using time-stamped project logs rather than prolonged litigation.',
-    governmentAction: 'Assess Extension of Time (EoT) requests with clear cause-and-effect audit trail.',
-    contractorAction: 'Lodge claims with direct cross-references to RoW delays, weather data, or drawings.',
-    aiVerification: 'Delay responsibility attribution (% client delay vs % contractor delay based on logs).',
-    outputs: ['Claim Assessment Ruling', 'EoT Sanction', 'Dispute Resolution Record']
+    name: 'VERIFY',
+    title: 'Government Accepts / Rejects / Clarifies',
+    objective: 'Designated Government officers evaluate evidence and issue official determination.',
+    governmentAction: 'Examine ground reality, verify physical progress, and approve, reject, or request revisions.',
+    contractorAction: 'Receive official determination; update site logs or rectify flagged deficiencies.',
+    aiVerification: 'Constitutional human-in-the-loop: only approved data transitions to verified state.',
+    outputs: ['Official Verification Order', 'Certified Physical Progress', 'Audit Trail Record']
   },
   {
     step: '10',
-    name: 'LEARN',
-    title: 'Institutional Knowledge & Memory',
-    objective: 'Feed actual performance data back into contractor profiles and future tender specifications.',
-    governmentAction: 'Update contractor performance ratings, adjust standardized BOQ rates and schedule norms.',
-    contractorAction: 'Receive performance score card, bid eligibility weightages, and project completion certificate.',
-    aiVerification: 'Continuous model retraining on actual vs estimated durations, costs, and contractor behavior.',
-    outputs: ['Contractor Scorecard Update', 'Post-Completion Review', 'Tender Norm Adjustments']
+    name: 'TRANSPARENCY',
+    title: 'Verified Information + Citizen Feedback',
+    objective: 'Public transparency projection on Citizen Portal and community ground feedback.',
+    governmentAction: 'Review citizen complaints, assign corrective actions, and track public resolution.',
+    contractorAction: 'Respond to assigned corrective actions with evidence of remediation.',
+    aiVerification: 'Public projection strictly reflects verified data (Reported ≠ Verified ≠ Public).',
+    outputs: ['Public Project View', 'Citizen Issue Redressal', 'Permanent Lifecycle Record']
   }
 ];
 
-export const AI_ENGINES = [
+export const AI_CAPABILITIES = [
   {
-    id: 'E1',
-    title: 'Contractor Intelligence',
-    subtitle: 'Pre-Award & Active Risk',
-    desc: 'Analyzes longitudinal contractor bid behavior, plant-machinery capacity, cash-flow liquidity, and past litigation indices to prevent adverse selection.',
-    metric: 'Multi-Source Anomaly Detection'
+    id: 'C1',
+    title: 'Schedule Risk',
+    subtitle: 'Timeline & Milestone Trajectory',
+    desc: 'Correlates reported site progress against contract milestones and planned baseline to detect slippages early.',
+    metric: 'Milestone Velocity'
   },
   {
-    id: 'E2',
-    title: 'AI Progress Verification',
-    subtitle: 'Drone & Satellite Ground Truth',
-    desc: 'Computes volume calculations from UAV photogrammetry and scans time-stamped site photos against BIM models to confirm physical work completion before bill certification.',
-    metric: 'Survey-Grade Photogrammetry'
+    id: 'C2',
+    title: 'Progress Variance',
+    subtitle: 'Reported vs Actual Gap',
+    desc: 'Analyzes discrepancy between contractor claimed percentage and historical completion velocity.',
+    metric: 'Delta Detection'
   },
   {
-    id: 'E3',
-    title: 'Delay Prediction & Early Warning',
-    subtitle: '60-Day Critical Path Forecast',
-    desc: 'Runs multi-factor simulation models correlating weather seasonality, material delivery bottlenecks, and labour attendance to flag delays before they trigger.',
-    metric: 'Multi-Factor Bayesian Modeling'
+    id: 'C3',
+    title: 'Financial / Physical Divergence',
+    subtitle: 'Fund Utilization vs Work Done',
+    desc: 'Detects if invoice disbursement pacing exceeds verified ground reality to prevent over-certification.',
+    metric: 'Fiscal Alignment'
   },
   {
-    id: 'E4',
-    title: 'Delay Responsibility Analysis',
-    subtitle: 'Objective Fault Attribution',
-    desc: 'Correlates government approval timestamps, land handover milestones, and contractor mobilization logs to attribute delay responsibility impartially.',
-    metric: 'Statutory Audit Trail'
+    id: 'C4',
+    title: 'Evidence Conflict',
+    subtitle: 'Documentation & Photo Validation',
+    desc: 'Validates site inspection logs, geo-tagged documentation, and progress reports for internal consistency.',
+    metric: 'Signal Verification'
   },
   {
-    id: 'E5',
-    title: 'Claim & Dispute Assessment',
-    subtitle: 'Contract Evidence Matching',
-    desc: 'Evaluates contractor Extension of Time (EoT) and cost escalation claims directly against digitized contract clauses, FIDIC norms, and historical site data.',
-    metric: 'Structured Clause Alignment'
+    id: 'C5',
+    title: 'Environmental Signals',
+    subtitle: 'Weather & Site Constraints',
+    desc: 'Monitors external operational factors such as seasonal disruptions, monsoon halts, and local conditions.',
+    metric: 'Contextual Factors'
   },
   {
-    id: 'E6',
-    title: 'Predictive Financial Risk',
-    subtitle: 'Cost Overrun Forecasting',
-    desc: 'Scans variation order trends, steel-cement index volatility, and milestone payment schedules to forecast final project cost deviations early.',
-    metric: 'Commodity Index Reconciliation'
+    id: 'C6',
+    title: 'Recommended Review Actions',
+    subtitle: 'Government Decision Support',
+    desc: 'Synthesizes findings into actionable decision recommendations (Approve, Reject, Request Revised Evidence).',
+    metric: 'Action Advisory'
   }
 ];
+
+export const AI_ENGINES = AI_CAPABILITIES;
+

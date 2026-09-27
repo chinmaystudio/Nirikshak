@@ -82,11 +82,11 @@ export const OfficialLoginModal: React.FC<OfficialLoginModalProps> = ({
 
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-400/40 text-amber-900 text-[11px] font-bold uppercase tracking-wider mb-3 shadow-xs">
             <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
-            <span>National Single Sign-On</span>
+            <span>Authorized Portal Sign-In</span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-black">
-            Official PRAGATI Portal
+            Official NIRIKSHAK Portal
           </h2>
           <p className="text-xs text-neutral-800 font-medium mt-1">
             Secure multi-factor authentication for public project governance.
