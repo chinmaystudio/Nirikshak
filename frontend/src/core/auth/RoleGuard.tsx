@@ -34,9 +34,15 @@ export function RoleGuard({
     return <AccessDeniedPage currentRole={null} allowedRoles={allowedRoles} />;
   }
 
-  // If user is authenticated but role is mismatched, show Access Denied page
+  // If user is authenticated but role is mismatched, show Access Denied or Pending screen
   if (!role || !allowedRoles.includes(role)) {
-    return <AccessDeniedPage currentRole={role} allowedRoles={allowedRoles} />;
+    return (
+      <AccessDeniedPage
+        currentRole={role}
+        allowedRoles={allowedRoles}
+        pendingApproval={session?.pendingApproval}
+      />
+    );
   }
 
   return <>{children}</>;

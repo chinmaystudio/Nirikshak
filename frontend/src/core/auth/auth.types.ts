@@ -60,4 +60,9 @@ export interface AppSession {
   organization: Organization | null;
   role: AppRole;
   permissions: string[];
+  pendingApproval?: {
+    type: 'government' | 'contractor';
+    status: 'PENDING' | 'REJECTED' | 'APPROVED';
+    message?: string;
+  } | null;
 }

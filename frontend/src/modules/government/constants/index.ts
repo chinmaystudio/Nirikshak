@@ -154,8 +154,9 @@ export const TOP_NAV: TopNavItem[] = [
 
 /** Overflow group at the end of the top navigation. */
 export const TOP_NAV_MORE: { id: string; labelKey: string; to: string; icon: string; description: string }[] = [
+  { id: 'more-access-requests', labelKey: 'nav.accessRequests', to: '/government/access-requests', icon: 'how_to_reg', description: 'Review Government & Contractor access requests' },
   { id: 'more-reports', labelKey: 'nav.reports', to: '/government/reports', icon: 'analytics', description: 'Cross-project analytics and exports' },
-  { id: 'more-citizen', labelKey: 'nav.citizenPortal', to: '/citizen', icon: 'public', description: 'Public transparency portal (new view)' },
+  { id: 'more-citizen', labelKey: 'nav.citizenPortal', to: '/user', icon: 'public', description: 'Public transparency portal' },
   { id: 'more-settings', labelKey: 'nav.settings', to: '/government/settings', icon: 'manage_accounts', description: 'Roles, permissions and preferences' },
 ]
 

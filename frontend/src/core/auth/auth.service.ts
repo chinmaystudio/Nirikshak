@@ -32,15 +32,64 @@ export class AuthService {
         .eq('user_id', user.id)
         .ilike('status', 'active')
         .maybeSingle();
-      if (memberError) throw memberError;
+
+      if (memberError) {
+        console.warn('Membership lookup error:', memberError);
+      }
 
       let role: AppRole = 'citizen';
       let organization: Organization | null = null;
+      let pendingApproval: { type: 'government' | 'contractor'; status: 'PENDING' | 'REJECTED' | 'APPROVED'; message?: string } | null = null;
 
       if (memberData) {
         role = memberData.role as AppRole;
         if (memberData.organizations) {
           organization = memberData.organizations as Organization;
+        }
+      } else {
+        // Requirement 16: Check for pending Government or Contractor access requests
+        const { data: govReq } = await supabase
+          .from('government_access_requests')
+          .select('id, status, department, designation')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (govReq) {
+          if (govReq.status === 'PENDING') {
+            pendingApproval = {
+              type: 'government',
+              status: 'PENDING',
+              message: 'Government access request pending administrator approval.',
+            };
+          } else if (govReq.status === 'REJECTED') {
+            pendingApproval = {
+              type: 'government',
+              status: 'REJECTED',
+              message: 'Your government access request was not approved by the department administrator.',
+            };
+          }
+        } else {
+          const { data: contReq } = await supabase
+            .from('contractor_access_requests')
+            .select('id, status, company_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (contReq) {
+            if (contReq.status === 'PENDING') {
+              pendingApproval = {
+                type: 'contractor',
+                status: 'PENDING',
+                message: 'Contractor organization verification is pending administrator approval.',
+              };
+            } else if (contReq.status === 'REJECTED') {
+              pendingApproval = {
+                type: 'contractor',
+                status: 'REJECTED',
+                message: 'Your contractor organization onboarding was not approved.',
+              };
+            }
+          }
         }
       }
 
@@ -63,6 +112,7 @@ export class AuthService {
         organization,
         role,
         permissions,
+        pendingApproval,
       };
     } catch (err) {
       console.error('Failed to resolve user session, falling back:', err);
@@ -143,37 +193,54 @@ export class AuthService {
     state: string;
     district: string;
     password: string;
+    requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, officialEmail, employeeId, department, designation, state, district, password } = payload;
+    const { fullName, officialEmail, employeeId, department, designation, state, district, password, requestedRole = 'government_engineer' } = payload;
     
-    // 1. Sign up Supabase Auth user
-    const { data, error } = await supabase.auth.signUp({
-      email: officialEmail,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          department,
-          designation,
-          employee_id: employeeId,
-          state,
-          district,
-          requested_role: 'government_engineer',
-        },
-      },
+    // Call authoritative database RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc('register_government_account', {
+      p_email: officialEmail,
+      p_password: password,
+      p_full_name: fullName,
+      p_employee_id: employeeId,
+      p_department: department,
+      p_designation: designation,
+      p_state: state,
+      p_district: district,
+      p_requested_role: requestedRole,
     });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (rpcError) {
+      console.warn('RPC register_government_account failed, attempting auth.signUp:', rpcError.message);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: officialEmail,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            department,
+            designation,
+            employee_id: employeeId,
+            state,
+            district,
+            requested_role: requestedRole,
+          },
+        },
+      });
 
-    if (!data.user) {
-      throw new Error('Registration failed to create user.');
+      if (authError) {
+        throw new Error(authError.message || rpcError.message);
+      }
+
+      return {
+        user: authData.user,
+        message: 'Registration request submitted. Your Government access is pending administrator approval.',
+      };
     }
 
     return {
-      user: data.user,
-      message: 'Registration request submitted successfully. Account status is PENDING verification by a Government Administrator.',
+      user: { id: rpcData.user_id, email: rpcData.email } as any,
+      message: rpcData.message || 'Registration request submitted. Your Government access is pending administrator approval.',
     };
   }
 
@@ -188,39 +255,57 @@ export class AuthService {
     state: string;
     district: string;
     password: string;
+    requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password } = payload;
+    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password, requestedRole = 'contractor_admin' } = payload;
 
-    // 1. Sign up Supabase Auth user
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone,
-          company_name: companyName,
-          registration_cin: registrationCin,
-          gstin,
-          contractor_class: contractorClass,
-          state,
-          district,
-          requested_role: 'contractor_admin',
-        },
-      },
+    const { data: rpcData, error: rpcError } = await supabase.rpc('register_contractor_account', {
+      p_email: email,
+      p_password: password,
+      p_full_name: fullName,
+      p_phone: phone,
+      p_company_name: companyName,
+      p_registration_cin: registrationCin,
+      p_gstin: gstin,
+      p_contractor_class: contractorClass,
+      p_state: state,
+      p_district: district,
+      p_requested_role: requestedRole,
     });
 
-    if (error) {
-      throw new Error(error.message);
-    }
+    if (rpcError) {
+      console.warn('RPC register_contractor_account failed, attempting auth.signUp:', rpcError.message);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone,
+            company_name: companyName,
+            registration_cin: registrationCin,
+            gstin,
+            contractor_class: contractorClass,
+            state,
+            district,
+            requested_role: requestedRole,
+          },
+        },
+      });
 
-    if (!data.user) {
-      throw new Error('Registration failed to create user.');
+      if (authError) {
+        throw new Error(authError.message || rpcError.message);
+      }
+
+      return {
+        user: authData.user,
+        message: 'Your contractor organization verification is pending.',
+      };
     }
 
     return {
-      user: data.user,
-      message: 'Contractor onboarding application submitted successfully. Verification status is PENDING review.',
+      user: { id: rpcData.user_id, email: rpcData.email } as any,
+      message: rpcData.message || 'Your contractor organization verification is pending.',
     };
   }
 

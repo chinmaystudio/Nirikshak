@@ -31,6 +31,7 @@ const AuditPage = lazy(() => import('@/pages/audit/AuditPage').then((m) => ({ de
 const AiInsightsPage = lazy(() => import('@/pages/ai-insights/AiInsightsPage').then((m) => ({ default: m.AiInsightsPage })))
 const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const AccessRequestsPage = lazy(() => import('@/pages/access-requests/AccessRequestsPage').then((m) => ({ default: m.AccessRequestsPage })))
 
 /* ---------- Approval workspace (code-split; all modules request-scoped) ---------- */
 const ApprovalWorkspaceLayout = lazy(() => import('@/pages/approval/ApprovalWorkspaceLayout').then((m) => ({ default: m.ApprovalWorkspaceLayout })))
@@ -158,9 +159,11 @@ export function AppRoutes() {
           <Route path="ai-insights" element={<AiInsightsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="access-requests" element={<AccessRequestsPage />} />
         </Route>
 
         {/* Legacy (pre-workspace) paths → new prefixed / workspace routes */}
+        <Route path="/access-requests" element={<Navigate to="/government/access-requests" replace />} />
         <Route path="/dashboard" element={<Navigate to="/government/dashboard" replace />} />
         <Route path="/projects" element={<Navigate to="/government/projects" replace />} />
         <Route path="/projects/create" element={<Navigate to="/government/projects/create" replace />} />

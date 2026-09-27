@@ -145,16 +145,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         let records: any[] = (data as any[]) || [];
 
-        // If contractor has no direct contracts in view yet, load live major infrastructure projects
-        if ((!records || records.length === 0) && isMounted) {
-          const { data: publicProjects } = await supabase
-            .from('public_projects_view')
-            .select('*')
-            .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-            .limit(10);
-          records = (publicProjects as any[]) || [];
-        }
-
         if (records && records.length > 0 && isMounted) {
           const liveProjects: Project[] = records.map((p: any) => {
             const cost = Number(p.contract_value ?? p.total_cost_inr_crore) || 0;

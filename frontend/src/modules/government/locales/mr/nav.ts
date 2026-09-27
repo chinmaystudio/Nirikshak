@@ -1,4 +1,4 @@
-﻿/** Navigation labels (Marathi). */
+/** Navigation labels (Marathi). */
 export const nav: Record<string, string> = {
   'nav.groupCore': 'मुख्य',
   'nav.groupGovernance': 'प्रशासन व वित्त',
@@ -20,6 +20,7 @@ export const nav: Record<string, string> = {
   'nav.audit': 'लेखापरीक्षा व्यवस्थापन',
   'nav.aiInsights': 'एआय-सहाय्यित अंतर्दृष्टी',
   'nav.reports': 'अहवाल व विश्लेषण',
+  'nav.accessRequests': 'प्रवेश विनंत्या आणि मंजुरी',
   'nav.citizenPortal': 'नागरिक पारदर्शकता पोर्टल',
   'nav.settings': 'सेटिंग्ज व भूमिका',
   'nav.groupSystem': 'प्रणाली',
