@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/core/supabase/client';
 import { ArrowRight, CheckCircle2, ExternalLink, Layers, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { navigate } from '@/app/router';
+import { ROUTES, projectRoute } from '@/constants/routes';
 
 interface PublicProjectRow {
   id: string;
@@ -88,7 +89,6 @@ const FALLBACK_PROJECTS: PublicProjectRow[] = [
 export const ProjectsExplorer: React.FC = () => {
   const [projects, setProjects] = useState<PublicProjectRow[]>(FALLBACK_PROJECTS);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadProjects() {
@@ -149,7 +149,7 @@ export const ProjectsExplorer: React.FC = () => {
           </div>
 
           <button
-            onClick={() => navigate('/user/projects')}
+            onClick={() => navigate(ROUTES.PROJECTS)}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#eefc55] text-neutral-950 text-xs font-extrabold hover:bg-white transition-all cursor-pointer self-start md:self-auto shadow-lg"
           >
             <span>View All Public Projects</span>
@@ -176,7 +176,7 @@ export const ProjectsExplorer: React.FC = () => {
                 {projects.map((p) => (
                   <tr
                     key={p.id}
-                    onClick={() => navigate(`/user/project/${p.nirikshak_project_id || p.id}`)}
+                    onClick={() => navigate(projectRoute(p.nirikshak_project_id || p.id))}
                     className="hover:bg-white/5 transition-colors cursor-pointer group"
                   >
                     <td className="py-4 px-6 font-medium">
@@ -225,7 +225,7 @@ export const ProjectsExplorer: React.FC = () => {
           <div className="p-4 bg-white/5 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-400">
             <span>Query source: <code>public_projects_view</code> (PostgreSQL Row-Level Security Enforced)</span>
             <button
-              onClick={() => navigate('/user/projects')}
+              onClick={() => navigate(ROUTES.PROJECTS)}
               className="text-[#eefc55] hover:underline font-bold inline-flex items-center gap-1.5"
             >
               <span>Explore all 3,900+ projects in Citizen Portal</span>
