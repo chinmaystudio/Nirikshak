@@ -1,6 +1,6 @@
 import type { GovernmentAlert, GovernmentAlertView, AlertCategory, AlertSeverity } from "@/types/infrastructure";
 import { latency, offlineGuard } from "@/services/api/client";
-import { alerts } from "@/data/alerts";
+import { alerts } from "../../data/alerts";
 import { appStore } from "@/app/providers/store";
 import { ALERT_SEVERITY_ORDER } from "@/constants/alertSeverities";
 import { environment } from "@/config/environment";

@@ -1,7 +1,7 @@
 import type { Project, ProjectCategory, ProjectStatus, WardStatistics, CityStatistics } from "@/types/project";
 import { ApiError } from "@/services/api/client";
-import { projects as mockProjects, projectImages } from "@/data/projects";
-import { ward as wardStats, cityStats } from "@/data/ward";
+import { projects as mockProjects, projectImages } from "../../data/projects";
+import { ward as wardStats, cityStats } from "../../data/ward";
 import { supabase } from "@/core/supabase/client";
 
 const useMock = import.meta.env.VITE_USE_MOCK_API === 'true';
