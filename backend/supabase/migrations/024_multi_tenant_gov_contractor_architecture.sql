@@ -217,7 +217,10 @@ DECLARE
 BEGIN
     v_user_org_id := public.get_user_organization_id();
     IF NEW.government_organization_id IS NULL THEN
-        NEW.government_organization_id := COALESCE(v_user_org_id, 'c675a05d-6c45-4008-b021-6b88825e3641'::uuid);
+        IF v_user_org_id IS NULL THEN
+            RAISE EXCEPTION 'government_organization_id is required when no authenticated organization membership exists';
+        END IF;
+        NEW.government_organization_id := v_user_org_id;
     END IF;
     IF NEW.created_by IS NULL THEN
         NEW.created_by := (SELECT auth.uid());
@@ -352,14 +355,14 @@ DECLARE
     v_gov_org_id UUID;
     v_req public.government_access_requests%ROWTYPE;
 BEGIN
-    -- Check caller is authenticated government admin or executing from trusted admin context
-    IF v_caller_id IS NOT NULL THEN
-        SELECT role INTO v_caller_role FROM public.organization_members
-        WHERE user_id = v_caller_id AND status = 'active';
-
-        IF v_caller_role <> 'government_admin' AND NOT public.is_government_user() THEN
-            RAISE EXCEPTION 'Unauthorized: Only Government Administrators can approve officer access requests';
-        END IF;
+    -- Approval must always be performed by an authenticated administrator.
+    IF v_caller_id IS NULL THEN
+        RAISE EXCEPTION 'Unauthorized: authentication is required';
+    END IF;
+    SELECT role INTO v_caller_role FROM public.organization_members
+    WHERE user_id = v_caller_id AND status = 'active';
+    IF v_caller_role <> 'government_admin' THEN
+        RAISE EXCEPTION 'Unauthorized: Only Government Administrators can approve officer access requests';
     END IF;
 
     -- Lock and retrieve request
@@ -375,8 +378,11 @@ BEGIN
         RAISE EXCEPTION 'Request % has already been %', request_id, v_req.status;
     END IF;
 
-    -- Resolve Government Authority: caller org or Pune Authority
-    v_gov_org_id := COALESCE(public.get_user_organization_id(), 'c675a05d-6c45-4008-b021-6b88825e3641'::uuid);
+    -- Resolve the authority from the authenticated administrator's membership.
+    v_gov_org_id := public.get_user_organization_id();
+    IF v_gov_org_id IS NULL THEN
+        RAISE EXCEPTION 'Unauthorized: administrator organization is missing';
+    END IF;
 
     -- Create or reactivate active organization membership
     INSERT INTO public.organization_members (
@@ -464,8 +470,8 @@ DECLARE
     v_contractor_org_id UUID;
     v_req public.contractor_access_requests%ROWTYPE;
 BEGIN
-    -- Check caller is government admin or executing from trusted admin context
-    IF v_caller_id IS NOT NULL AND NOT public.is_government_user() THEN
+    -- Contractor verification must always be performed by an authenticated government user.
+    IF v_caller_id IS NULL OR NOT public.is_government_user() OR public.get_user_role() <> 'government_admin' THEN
         RAISE EXCEPTION 'Unauthorized: Only Government Administrators can verify contractor onboarding';
     END IF;
 
@@ -652,10 +658,7 @@ SELECT
     (SELECT count(*) FROM public.ai_insights ai WHERE ai.project_id = p.id AND ai.severity = 'HIGH' AND ai.status = 'ACTIVE') AS high_risk_ai_count
 FROM public.projects p
 WHERE p.deleted_at IS NULL
-  AND (
-      p.government_organization_id = public.get_user_organization_id()
-      OR (public.get_user_organization_id() IS NULL AND p.government_organization_id = 'c675a05d-6c45-4008-b021-6b88825e3641'::uuid)
-  );
+  AND p.government_organization_id = public.get_user_organization_id();
 
 DROP VIEW IF EXISTS public.contractor_assigned_projects_view;
 CREATE OR REPLACE VIEW public.contractor_assigned_projects_view AS

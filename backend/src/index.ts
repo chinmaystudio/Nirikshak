@@ -13,16 +13,17 @@ export const app = express();
 app.use(securityHeaders);
 
 // 2. Strict CORS Configuration (Rule 37)
-const allowedOrigins = [
-  'https://nirikshak-portal.vercel.app',
-  'https://nirikshak.gov.in',
+const defaultDevelopmentOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
   'http://localhost:4000',
 ];
-if (process.env.ALLOWED_ORIGINS) {
-  allowedOrigins.push(...process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()));
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : process.env.NODE_ENV === 'production' ? [] : defaultDevelopmentOrigins;
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  throw new Error('ALLOWED_ORIGINS must be configured in production');
 }
 
 app.use(

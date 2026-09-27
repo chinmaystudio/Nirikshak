@@ -253,51 +253,25 @@ export class AuthService {
   }): Promise<{ user: User | null; message: string }> {
     const { fullName, officialEmail, employeeId, department, designation, state, district, password, requestedRole = 'government_engineer' } = payload;
     
-    // Call authoritative database RPC
-    const { data: rpcData, error: rpcError } = await supabase.rpc('register_government_account', {
-      p_email: officialEmail,
-      p_password: password,
-      p_full_name: fullName,
-      p_employee_id: employeeId,
-      p_department: department,
-      p_designation: designation,
-      p_state: state,
-      p_district: district,
-      p_requested_role: requestedRole,
-    });
-
-    if (rpcError) {
-      console.warn('RPC register_government_account failed, attempting auth.signUp:', rpcError.message);
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: officialEmail,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            department,
-            designation,
-            employee_id: employeeId,
-            state,
-            district,
-            requested_role: requestedRole,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email: officialEmail,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          department,
+          designation,
+          employee_id: employeeId,
+          state,
+          district,
+          requested_role: requestedRole,
         },
-      });
-
-      if (authError) {
-        throw new Error(authError.message || rpcError.message);
-      }
-
-      return {
-        user: authData.user,
-        message: 'Registration request submitted. Your Government access is pending administrator approval.',
-      };
-    }
-
-    const result = rpcData as any;
+      },
+    });
+    if (error) throw new Error(error.message);
     return {
-      user: { id: result?.user_id, email: result?.email } as any,
-      message: result?.message || 'Registration request submitted. Your Government access is pending administrator approval.',
+      user: data.user,
+      message: 'Registration request submitted. Your Government access is pending administrator approval.',
     };
   }
 
@@ -316,54 +290,27 @@ export class AuthService {
   }): Promise<{ user: User | null; message: string }> {
     const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password, requestedRole = 'contractor_admin' } = payload;
 
-    const { data: rpcData, error: rpcError } = await supabase.rpc('register_contractor_account', {
-      p_email: email,
-      p_password: password,
-      p_full_name: fullName,
-      p_phone: phone,
-      p_company_name: companyName,
-      p_registration_cin: registrationCin,
-      p_gstin: gstin,
-      p_contractor_class: contractorClass,
-      p_state: state,
-      p_district: district,
-      p_requested_role: requestedRole,
-    });
-
-    if (rpcError) {
-      console.warn('RPC register_contractor_account failed, attempting auth.signUp:', rpcError.message);
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            phone,
-            company_name: companyName,
-            registration_cin: registrationCin,
-            gstin,
-            contractor_class: contractorClass,
-            state,
-            district,
-            requested_role: requestedRole,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          phone,
+          company_name: companyName,
+          registration_cin: registrationCin,
+          gstin,
+          contractor_class: contractorClass,
+          state,
+          district,
+          requested_role: requestedRole,
         },
-      });
-
-      if (authError) {
-        throw new Error(authError.message || rpcError.message);
-      }
-
-      return {
-        user: authData.user,
-        message: 'Your contractor organization verification is pending.',
-      };
-    }
-
-    const result = rpcData as any;
+      },
+    });
+    if (error) throw new Error(error.message);
     return {
-      user: { id: result?.user_id, email: result?.email } as any,
-      message: result?.message || 'Your contractor organization verification is pending.',
+      user: data.user,
+      message: 'Your contractor organization verification is pending.',
     };
   }
 
