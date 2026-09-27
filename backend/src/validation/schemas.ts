@@ -21,7 +21,7 @@ export const CreateProjectSchema = z.object({
 export const SubmitProgressSchema = z.object({
   project_id: z.string().uuid(),
   milestone_id: z.string().uuid().optional(),
-  contractor_organization_id: z.string().uuid(),
+  contractor_organization_id: z.string().uuid().optional(), // Derived server-side from active membership (Rule 26)
   reported_progress: z.number().min(0).max(100),
   description: z.string().min(5),
   evidence: z.array(z.object({
@@ -35,7 +35,7 @@ export const SubmitProgressSchema = z.object({
 
 export const ReviewProgressSchema = z.object({
   progress_update_id: z.string().uuid(),
-  decision: z.enum(['APPROVED', 'REJECTED']),
+  decision: z.enum(['APPROVED', 'REJECTED', 'CLARIFICATION_REQUIRED']),
   verified_progress: z.number().min(0).max(100).nullable().optional(),
   review_notes: z.string().min(2),
 });
