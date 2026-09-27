@@ -45,6 +45,10 @@ export async function loginWithEmail(email: string, password: string, next: stri
   return { user: citizen, next: target };
 }
 
+export async function loginWithGoogle(redirectTo: string = "/user/home"): Promise<void> {
+  await AuthService.signInWithGoogle(redirectTo);
+}
+
 export async function register(payload: RegisterPayload): Promise<Citizen> {
   const password = payload.password || 'NirikshakCitizen#2026';
   const { user } = await AuthService.signUp({

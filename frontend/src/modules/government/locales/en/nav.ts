@@ -46,6 +46,7 @@ export const nav: Record<string, string> = {
   'nav.alertsNotifications': 'Alerts & Notifications',
   'nav.top.dashboard': 'Dashboard',
   'nav.top.projects': 'Projects',
+  'nav.top.accessRequests': 'Clearances',
   'nav.top.complaints': 'Complaints',
   'nav.top.approvals': 'Approvals',
   'nav.top.alerts': 'Alerts',

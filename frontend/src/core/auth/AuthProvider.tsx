@@ -12,6 +12,8 @@ interface AuthContextValue {
   error: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<AppSession>;
+  loginWithGoogle: (redirectTo?: string) => Promise<void>;
+  signInWithGoogle: (redirectTo?: string) => Promise<void>;
   register: (payload: {
     email: string;
     password: string;
@@ -84,6 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (redirectTo?: string) => {
+    setError(null);
+    try {
+      await AuthService.signInWithGoogle(redirectTo);
+    } catch (err: any) {
+      setError(err.message || 'Google sign in failed');
+      throw err;
+    }
+  }, []);
+
   const register = useCallback(async (payload: {
     email: string;
     password: string;
@@ -130,12 +142,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       isAuthenticated: Boolean(session?.user),
       login,
+      loginWithGoogle,
+      signInWithGoogle: loginWithGoogle,
       register,
       logout,
       signOut: logout,
       refreshSession,
     }),
-    [session, loading, error, login, register, logout, refreshSession]
+    [session, loading, error, login, loginWithGoogle, register, logout, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

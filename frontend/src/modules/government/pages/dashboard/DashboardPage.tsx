@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '@/core/supabase/client'
 import { useI18n } from '@/context/I18nContext'
 import { KpiCard } from '@/components/charts/KpiCard'
 import { Panel, Card } from '@/components/ui/Card'
@@ -32,7 +33,24 @@ export function DashboardPage() {
   const [keyword, setKeyword] = useState('')
   const [expandedDepts, setExpandedDepts] = useState(false)
   const [loadedAt] = useState(() => new Date())
+  const [pendingClearanceCount, setPendingClearanceCount] = useState<number>(0)
   const demoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true'
+
+  useEffect(() => {
+    async function fetchPendingRequests() {
+      try {
+        const [govRes, conRes] = await Promise.all([
+          supabase.from('government_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+          supabase.from('contractor_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+        ])
+        const total = (govRes.count || 0) + (conRes.count || 0)
+        setPendingClearanceCount(total)
+      } catch (err) {
+        console.error('Failed to count pending clearance requests:', err)
+      }
+    }
+    fetchPendingRequests()
+  }, [])
 
   const list = useMemo(() => {
     let rows = projects ?? []
@@ -113,6 +131,36 @@ export function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Registration Clearance Queue Alert */}
+      {pendingClearanceCount > 0 && (
+        <div className="rounded-control border border-warning-border bg-warning-tint p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[24px] text-warning-strong shrink-0 mt-0.5">
+              how_to_reg
+            </span>
+            <div>
+              <div className="text-body font-bold text-warning-strong flex items-center gap-2">
+                <span>Registration Clearance Queue ({pendingClearanceCount} pending)</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-warning-strong text-white animate-pulse">
+                  Action Required
+                </span>
+              </div>
+              <p className="text-body-small text-fg-muted mt-0.5">
+                New government officer clearance requests have been received. Review and approve credentials in the Master Clearance Portal.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            icon="verified_user"
+            onClick={() => navigate('/government/access-requests')}
+            className="shrink-0 font-bold"
+          >
+            Review &amp; Approve Requests →
+          </Button>
+        </div>
+      )}
 
       {/* 8 KPI cards (Stitch grid: 1/2/4/7 cols) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">

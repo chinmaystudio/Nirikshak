@@ -148,6 +148,7 @@ export const TOP_NAV: TopNavItem[] = [
   { id: 'approvals', labelKey: 'nav.approvalWorkflow', shortKey: 'nav.top.approvals', icon: 'rule', to: '/government/approvals', match: ['/government/approvals'], badge: 7 },
   { id: 'alerts', labelKey: 'nav.alertsNotifications', shortKey: 'nav.top.alerts', icon: 'crisis_alert', to: '/government/alerts', match: ['/government/alerts'], badge: 5 },
   { id: 'documents', labelKey: 'nav.documents', shortKey: 'nav.top.documents', icon: 'folder_shared', to: '/government/documents', match: ['/government/documents'] },
+  { id: 'access-requests', labelKey: 'nav.accessRequests', shortKey: 'nav.top.accessRequests', icon: 'how_to_reg', to: '/government/access-requests', match: ['/government/access-requests'] },
   { id: 'audit', labelKey: 'nav.audit', shortKey: 'nav.top.audit', icon: 'content_paste_search', to: '/government/audit', match: ['/government/audit'] },
   { id: 'ai-insights', labelKey: 'nav.aiInsights', shortKey: 'nav.top.ai', icon: 'auto_awesome', to: '/government/ai-insights', match: ['/government/ai-insights'] },
 ]

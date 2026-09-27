@@ -143,6 +143,28 @@ export class AuthService {
     return await this.resolveUserSession(data.user);
   }
 
+  static async signInWithGoogle(redirectTo?: string): Promise<void> {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectUrl = redirectTo
+      ? (redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo}`)
+      : `${origin}${window.location.pathname}`;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
   static async signUp(payload: {
     email: string;
     password: string;

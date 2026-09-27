@@ -46,6 +46,7 @@ export const nav: Record<string, string> = {
   'nav.alertsNotifications': 'अलर्ट एवं सूचनाएँ',
   'nav.top.dashboard': 'डैशबोर्ड',
   'nav.top.projects': 'परियोजनाएँ',
+  'nav.top.accessRequests': 'मंज़ूरी',
   'nav.top.complaints': 'शिकायतें',
   'nav.top.approvals': 'अनुमोदन',
   'nav.top.alerts': 'अलर्ट',

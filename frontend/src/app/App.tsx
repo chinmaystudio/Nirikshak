@@ -62,6 +62,16 @@ class RootErrorBoundary extends React.Component<
 }
 
 function normalizeLegacyLocation(): void {
+  // CRITICAL: Do NOT alter hash if it contains Supabase Auth OAuth tokens or error callbacks!
+  if (
+    window.location.hash.includes('access_token=') ||
+    window.location.hash.includes('refresh_token=') ||
+    window.location.hash.includes('error=') ||
+    window.location.hash.includes('error_description=')
+  ) {
+    return;
+  }
+
   const pathname = window.location.pathname.replace(/\\/g, '/');
   const hash = window.location.hash.replace(/^#\/?/, '');
   if (!hash) return;
