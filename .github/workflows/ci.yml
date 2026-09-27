@@ -28,7 +28,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - run: npm test
       - run: npm run build
+      - name: Verify no leaked secrets in frontend bundle
+        run: |
+          ! grep -rn "SUPABASE_SERVICE_ROLE_KEY" frontend/dist/ || exit 1
+          ! grep -rn "OPENROUTER_API_KEY" frontend/dist/ || exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -37,7 +42,7 @@ jobs:
           retention-days: 7
 
   backend:
-    name: Backend typecheck and build
+    name: Backend typecheck, security tests, and build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -51,6 +56,8 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - name: Run Backend & Security Attack Test Suite
+        run: npm test
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
