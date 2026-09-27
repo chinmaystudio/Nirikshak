@@ -63,115 +63,60 @@ export function AccessRequestsPage() {
       setLoading(true);
       setError(null);
 
-      // Fetch government requests with profile full_name
-      let formattedGov: GovAccessRequest[] = [];
-      const { data: govData, error: govErr } = await (supabase.from as any)('government_access_requests')
-        .select(`
-          id,
-          user_id,
-          employee_id,
-          department,
-          designation,
-          official_email,
-          state,
-          district,
-          status,
-          requested_role,
-          created_at,
-          reviewed_at,
-          profiles:user_id ( full_name, phone )
-        `)
+      // Fetch government requests
+      const { data: rawGov, error: rawGovErr } = await supabase
+        .from('government_access_requests')
+        .select('id, user_id, employee_id, department, designation, official_email, state, district, status, requested_role, created_at, reviewed_at')
         .order('created_at', { ascending: false });
 
-      if (govErr) {
-        console.warn('Direct join on government_access_requests failed, falling back to separate profile query:', govErr.message);
-        const { data: rawGov, error: rawGovErr } = await supabase
-          .from('government_access_requests')
-          .select('id, user_id, employee_id, department, designation, official_email, state, district, status, requested_role, created_at, reviewed_at')
-          .order('created_at', { ascending: false });
+      if (rawGovErr) throw rawGovErr;
 
-        if (rawGovErr) throw rawGovErr;
+      const govUserIds = Array.from(new Set((rawGov || []).map((r: any) => r.user_id).filter(Boolean)));
+      const govProfileMap: Record<string, { full_name?: string; phone?: string }> = {};
 
-        const userIds = Array.from(new Set((rawGov || []).map((r: any) => r.user_id).filter(Boolean)));
-        const profileMap: Record<string, { full_name?: string; phone?: string }> = {};
+      if (govUserIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', govUserIds);
 
-        if (userIds.length > 0) {
-          const { data: profs } = await supabase
-            .from('profiles')
-            .select('id, full_name, phone')
-            .in('id', userIds);
-
-          (profs || []).forEach((p: any) => {
-            profileMap[p.id] = { full_name: p.full_name, phone: p.phone };
-          });
-        }
-
-        formattedGov = (rawGov || []).map((r: any) => ({
-          ...r,
-          user_profile: profileMap[r.user_id] || { full_name: r.official_email?.split('@')[0] },
-        }));
-      } else {
-        formattedGov = (govData || []).map((r: any) => ({
-          ...r,
-          user_profile: Array.isArray(r.profiles) ? r.profiles[0] : r.profiles,
-        }));
+        (profs || []).forEach((p: any) => {
+          govProfileMap[p.id] = { full_name: p.full_name, phone: p.phone };
+        });
       }
+
+      const formattedGov: GovAccessRequest[] = (rawGov || []).map((r: any) => ({
+        ...r,
+        user_profile: govProfileMap[r.user_id] || { full_name: r.official_email?.split('@')[0] },
+      }));
       setGovRequests(formattedGov);
 
-      // Fetch contractor requests with profile full_name
-      let formattedCon: ContractorAccessRequest[] = [];
-      const { data: conData, error: conErr } = await (supabase.from as any)('contractor_access_requests')
-        .select(`
-          id,
-          user_id,
-          company_name,
-          registration_cin,
-          gstin,
-          contractor_class,
-          state,
-          district,
-          phone,
-          status,
-          requested_role,
-          created_at,
-          reviewed_at,
-          profiles:user_id ( full_name )
-        `)
+      // Fetch contractor requests
+      const { data: rawCon, error: rawConErr } = await supabase
+        .from('contractor_access_requests')
+        .select('id, user_id, company_name, registration_cin, gstin, contractor_class, state, district, phone, status, requested_role, created_at, reviewed_at')
         .order('created_at', { ascending: false });
 
-      if (conErr) {
-        console.warn('Direct join on contractor_access_requests failed, falling back to separate profile query:', conErr.message);
-        const { data: rawCon, error: rawConErr } = await supabase
-          .from('contractor_access_requests')
-          .select('id, user_id, company_name, registration_cin, gstin, contractor_class, state, district, phone, status, requested_role, created_at, reviewed_at')
-          .order('created_at', { ascending: false });
+      if (rawConErr) throw rawConErr;
 
-        if (rawConErr) throw rawConErr;
+      const conUserIds = Array.from(new Set((rawCon || []).map((r: any) => r.user_id).filter(Boolean)));
+      const conProfileMap: Record<string, { full_name?: string }> = {};
 
-        const userIds = Array.from(new Set((rawCon || []).map((r: any) => r.user_id).filter(Boolean)));
-        const profileMap: Record<string, { full_name?: string }> = {};
+      if (conUserIds.length > 0) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', conUserIds);
 
-        if (userIds.length > 0) {
-          const { data: profs } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', userIds);
-
-          (profs || []).forEach((p: any) => {
-            profileMap[p.id] = { full_name: p.full_name };
-          });
-        }
-
-        formattedCon = (rawCon || []).map((r: any) => ({
-          ...r,
-          user_profile: profileMap[r.user_id] || { full_name: r.company_name },
-        }));
-      } else {
-        formattedCon = (conData || []).map((r: any) => ({
-          ...r,
-          user_profile: Array.isArray(r.profiles) ? r.profiles[0] : r.profiles,
-        }));
+        (profs || []).forEach((p: any) => {
+          conProfileMap[p.id] = { full_name: p.full_name };
+        });
       }
+
+      const formattedCon: ContractorAccessRequest[] = (rawCon || []).map((r: any) => ({
+        ...r,
+        user_profile: conProfileMap[r.user_id] || { full_name: r.company_name },
+      }));
       setContractorRequests(formattedCon);
     } catch (err: any) {
       console.error('Failed to load access requests:', err);

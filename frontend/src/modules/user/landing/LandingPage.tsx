@@ -52,7 +52,14 @@ export function LandingPage(): JSX.Element {
         className="fixed top-0 left-0 right-0 z-50 bg-neutral-950/90 backdrop-blur-xl border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-2xl transition-all"
       >
         <div className="flex items-center gap-6">
-          <a href="#/" className="flex items-center gap-3 group">
+          <a
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              scrollToSection('hero');
+            }}
+            className="flex items-center gap-3 group"
+          >
             <div className="bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-lg shadow-sm border border-white/20 transition-transform group-hover:scale-[1.02]">
               <img
                 src="/logo/nirikshak-logo.png"

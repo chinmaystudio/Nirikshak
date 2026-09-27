@@ -72,8 +72,14 @@ function normalizeLegacyLocation(): void {
     return;
   }
 
+  const rawHash = window.location.hash;
+  // If not a routing hash, preserve standard anchor scrolling (e.g. #hero, #how-it-works)
+  if (!rawHash || (!rawHash.startsWith('#/') && !rawHash.startsWith('#contractor/') && !rawHash.startsWith('#government/') && !rawHash.startsWith('#user/'))) {
+    return;
+  }
+
   const pathname = window.location.pathname.replace(/\\/g, '/');
-  const hash = window.location.hash.replace(/^#\/?/, '');
+  const hash = rawHash.replace(/^#\/?/, '');
   if (!hash) return;
 
   let target: string | null = null;
@@ -81,6 +87,7 @@ function normalizeLegacyLocation(): void {
   else if (pathname.startsWith('/government')) target = `/government/${hash}`;
   else if (hash.startsWith('contractor/')) target = `/${hash}`;
   else if (hash.startsWith('government/')) target = `/${hash}`;
+  else if (hash.startsWith('user/')) target = `/${hash}`;
   else target = `/user/${hash}`;
 
   const normalized = target.replace(/\/{2,}/g, '/').replace(/\/$/, '') || '/user';
