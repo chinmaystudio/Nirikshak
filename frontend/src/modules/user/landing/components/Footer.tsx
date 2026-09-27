@@ -79,25 +79,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateSection, onOpenLogin }
 
           <div>
             <div className="text-xs uppercase font-bold text-amber-400 tracking-wider mb-4">
-              Official Portals
+              Security &amp; Compliance
             </div>
             <div className="space-y-3">
-              <button
-                onClick={() => onOpenLogin('officer')}
-                className="text-xs font-bold text-[#eefc55] hover:text-white transition-colors block text-left cursor-pointer"
-              >
-                Government Officer SSO ↗
-              </button>
-              <button
-                onClick={() => onOpenLogin('contractor')}
-                className="text-xs font-bold text-slate-300 hover:text-white transition-colors block text-left cursor-pointer"
-              >
-                Contractor Portal ↗
-              </button>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 pt-2">
-                <Lock className="w-3 h-3 text-slate-400" />
-                <span>256-bit TLS Encrypted Gov Gateway</span>
+              <div className="flex items-center gap-1.5 text-xs text-slate-300">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>256-bit TLS Encrypted Gateway</span>
               </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Public infrastructure records are immutably logged and protected under statutory digital governance.
+              </p>
             </div>
           </div>
         </div>
