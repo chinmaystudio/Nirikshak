@@ -1,11 +1,4 @@
 import React, { useState } from 'react';
-import { ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
-
-interface UnifiedGovernanceSummaryProps {
-  onNavigateSection?: (sectionId: string) => void;
-}
-
-import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2, Eye, FileText, Lock, ShieldCheck, UserCheck } from 'lucide-react';
 
 interface UnifiedGovernanceSummaryProps {
