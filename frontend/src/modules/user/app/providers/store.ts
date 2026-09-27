@@ -59,6 +59,7 @@ function load(): AppStoreState {
     return {
       ...DEFAULT_STATE,
       ...parsed,
+      user: null, // Rule 31: Supabase Auth is source of truth; never trust persisted user in localStorage
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings ?? {}) },
       readAlerts: parsed.readAlerts ?? [],
       confirmed: parsed.confirmed ?? [],
@@ -78,7 +79,9 @@ const listeners = new Set<() => void>();
 
 function persist(): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    // Strip user object before writing to localStorage (Rule 31)
+    const { user: _omittedUser, ...persistedState } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistedState));
   } catch {
     /* storage unavailable — session-only mode */
   }

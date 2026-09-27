@@ -121,6 +121,16 @@ export const approvalsApi = {
     await delay()
     return APPROVALS.find((a) => a.id === id)
   },
+  async approve(id: string, _notes?: string): Promise<void> {
+    await delay(120)
+    const item = APPROVALS.find((a) => a.id === id)
+    if (item) item.status = 'approved'
+  },
+  async reject(id: string, _notes?: string): Promise<void> {
+    await delay(120)
+    const item = APPROVALS.find((a) => a.id === id)
+    if (item) item.status = 'rejected'
+  },
 }
 
 /* ---------- Tenders ---------- */

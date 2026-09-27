@@ -25,17 +25,20 @@ export class AuthService {
         state: user.user_metadata?.state || null,
       };
 
-      // 2. Fetch Active Organization Membership
-      const { data: memberData, error: memberError } = await supabase
+      // 2. Fetch Active Organization Membership (prefer deterministic primary active membership)
+      const { data: memberRows, error: memberError } = await supabase
         .from('organization_members')
         .select('*, organizations(*)')
         .eq('user_id', user.id)
         .ilike('status', 'active')
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (memberError) {
         console.warn('Membership lookup error:', memberError);
       }
+
+      const memberData = memberRows && memberRows.length > 0 ? memberRows[0] : null;
 
       let role: AppRole = 'citizen';
       let organization: Organization | null = null;
@@ -143,13 +146,35 @@ export class AuthService {
     return await this.resolveUserSession(data.user);
   }
 
+  /**
+   * Sanitizes redirect path to ensure it is internal only (Rule 49).
+   * Rejects external URLs, protocol-relative URLs (//), backslash bypasses (/\ or \), and script schemes.
+   */
+  static sanitizeRedirectPath(path?: string): string {
+    if (!path || typeof path !== 'string') return '/';
+    const trimmed = path.trim().replace(/\0/g, '');
+    if (
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('/\\') ||
+      trimmed.includes('\\') ||
+      trimmed.startsWith('javascript:') ||
+      trimmed.startsWith('data:')
+    ) {
+      return '/';
+    }
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  }
+
   static async signInWithGoogle(redirectTo?: string): Promise<void> {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const redirectUrl = redirectTo
-      ? (redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo}`)
-      : `${origin}${window.location.pathname}`;
+    const safePath = this.sanitizeRedirectPath(
+      redirectTo || (typeof window !== 'undefined' ? window.location.pathname : '/')
+    );
+    const redirectUrl = `${origin}${safePath}`;
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: redirectUrl,
@@ -165,15 +190,24 @@ export class AuthService {
     }
   }
 
+  /**
+   * Generic public signup. Never accepts or sets privileged roles (Rule 5).
+   * Government & Contractor onboarding MUST use dedicated approval workflows.
+   */
   static async signUp(payload: {
     email: string;
     password: string;
     fullName: string;
     phone?: string;
-    role?: AppRole;
     metadata?: Record<string, any>;
   }): Promise<{ user: User | null; session: Session | null }> {
-    const { email, password, fullName, phone, role = 'citizen', metadata = {} } = payload;
+    const { email, password, fullName, phone, metadata = {} } = payload;
+
+    // Sanitize metadata: remove any attempt to inject privileged roles or organization IDs
+    const safeMetadata = { ...metadata };
+    delete (safeMetadata as any).role;
+    delete (safeMetadata as any).organization_id;
+    delete (safeMetadata as any).is_admin;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -182,8 +216,8 @@ export class AuthService {
         data: {
           full_name: fullName,
           phone,
-          role,
-          ...metadata,
+          role: 'citizen', // Enforced citizen only for public signups
+          ...safeMetadata,
         },
       },
     });
@@ -260,9 +294,10 @@ export class AuthService {
       };
     }
 
+    const result = rpcData as any;
     return {
-      user: { id: rpcData.user_id, email: rpcData.email } as any,
-      message: rpcData.message || 'Registration request submitted. Your Government access is pending administrator approval.',
+      user: { id: result?.user_id, email: result?.email } as any,
+      message: result?.message || 'Registration request submitted. Your Government access is pending administrator approval.',
     };
   }
 
@@ -325,9 +360,10 @@ export class AuthService {
       };
     }
 
+    const result = rpcData as any;
     return {
-      user: { id: rpcData.user_id, email: rpcData.email } as any,
-      message: rpcData.message || 'Your contractor organization verification is pending.',
+      user: { id: result?.user_id, email: result?.email } as any,
+      message: result?.message || 'Your contractor organization verification is pending.',
     };
   }
 

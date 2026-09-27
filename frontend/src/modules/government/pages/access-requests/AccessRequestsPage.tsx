@@ -65,8 +65,7 @@ export function AccessRequestsPage() {
 
       // Fetch government requests with profile full_name
       let formattedGov: GovAccessRequest[] = [];
-      const { data: govData, error: govErr } = await supabase
-        .from('government_access_requests')
+      const { data: govData, error: govErr } = await (supabase.from as any)('government_access_requests')
         .select(`
           id,
           user_id,
@@ -121,8 +120,7 @@ export function AccessRequestsPage() {
 
       // Fetch contractor requests with profile full_name
       let formattedCon: ContractorAccessRequest[] = [];
-      const { data: conData, error: conErr } = await supabase
-        .from('contractor_access_requests')
+      const { data: conData, error: conErr } = await (supabase.from as any)('contractor_access_requests')
         .select(`
           id,
           user_id,
@@ -194,7 +192,7 @@ export function AccessRequestsPage() {
       setError(null);
       setSuccessMsg(null);
 
-      const { error: rpcErr } = await supabase.rpc('approve_government_access_request', {
+      const { error: rpcErr } = await (supabase.rpc as any)('approve_government_access_request', {
         request_id: requestId,
         approved_role: roleToGrant,
       });
@@ -218,7 +216,7 @@ export function AccessRequestsPage() {
       setError(null);
       setSuccessMsg(null);
 
-      const { error: rpcErr } = await supabase.rpc('approve_contractor_access_request', {
+      const { error: rpcErr } = await (supabase.rpc as any)('approve_contractor_access_request', {
         request_id: requestId,
         approved_role: roleToGrant,
       });
@@ -241,7 +239,7 @@ export function AccessRequestsPage() {
       setError(null);
       setSuccessMsg(null);
 
-      const { error: rpcErr } = await supabase.rpc('reject_access_request', {
+      const { error: rpcErr } = await (supabase.rpc as any)('reject_access_request', {
         p_request_id: requestId,
         p_type: type,
         p_reason: 'Application rejected by Government Authority Administrator',
@@ -401,7 +399,7 @@ export function AccessRequestsPage() {
         </div>
       ) : activeTab === 'government' ? (
         filteredGov.length === 0 ? (
-          <Panel bodyClassName="p-12 text-center text-fg-muted">
+          <Panel title="Government Clearance Requests" bodyClassName="p-12 text-center text-fg-muted">
             <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <h3 className="text-base font-semibold text-fg">No Government requests found</h3>
             <p className="text-xs text-fg-muted mt-1">There are no matching Government access requests in this view.</p>
@@ -512,7 +510,7 @@ export function AccessRequestsPage() {
         )
       ) : (
         filteredContractors.length === 0 ? (
-          <Panel bodyClassName="p-12 text-center text-fg-muted">
+          <Panel title="Contractor Clearance Requests" bodyClassName="p-12 text-center text-fg-muted">
             <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <h3 className="text-base font-semibold text-fg">No Contractor requests found</h3>
             <p className="text-xs text-fg-muted mt-1">There are no matching Contractor access requests in this view.</p>

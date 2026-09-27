@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { appStore, useAppState } from "@/app/providers/store";
 import type { Citizen, Language } from "@/types/user";
 import type { AppSettings } from "@/app/providers/store";
-import { logout as svcLogout } from "@/services/auth/authService";
+import { logout as svcLogout, syncCitizenSession } from "@/services/auth/authService";
 
 export interface UseAuthResult {
   user: Citizen | null;
@@ -16,6 +17,10 @@ export interface UseAuthResult {
 }
 
 export function useAuth(): UseAuthResult {
+  useEffect(() => {
+    syncCitizenSession().catch(() => {});
+  }, []);
+
   const user = useAppState((s) => s.user);
   const lang = useAppState((s) => s.lang);
   const fontScale = useAppState((s) => s.fontScale);

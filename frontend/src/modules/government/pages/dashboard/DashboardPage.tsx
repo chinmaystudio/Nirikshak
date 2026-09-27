@@ -40,8 +40,8 @@ export function DashboardPage() {
     async function fetchPendingRequests() {
       try {
         const [govRes, conRes] = await Promise.all([
-          supabase.from('government_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
-          supabase.from('contractor_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+          (supabase.from as any)('government_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+          (supabase.from as any)('contractor_access_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
         ])
         const total = (govRes.count || 0) + (conRes.count || 0)
         setPendingClearanceCount(total)

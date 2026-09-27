@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useAuthContext } from './AuthProvider';
+import { AuthService } from './auth.service';
 
 export function ProtectedRoute({
   children,
@@ -23,7 +24,7 @@ export function ProtectedRoute({
 
   if (!session) {
     if (typeof window !== 'undefined') {
-      window.location.href = redirectTo;
+      window.location.href = AuthService.sanitizeRedirectPath(redirectTo);
     }
     return null;
   }

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { AppRole, AppSession } from './auth.types';
 import { AuthService } from './auth.service';
+import { realtimeService } from '@/core/realtime/realtime.service';
 
 interface AuthContextValue {
   session: AppSession | null;
@@ -19,7 +20,6 @@ interface AuthContextValue {
     password: string;
     fullName: string;
     phone?: string;
-    role?: AppRole;
     metadata?: Record<string, any>;
   }) => Promise<any>;
   logout: () => Promise<void>;
@@ -101,7 +101,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string;
     fullName: string;
     phone?: string;
-    role?: AppRole;
     metadata?: Record<string, any>;
   }) => {
     setLoading(true);
@@ -124,8 +123,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
+      // Disconnect all Supabase Realtime subscriptions to prevent leaking data
+      realtimeService.cleanupAll();
+
+      // Sign out from Supabase Auth
       await AuthService.signOut();
       setSession(null);
+
+      // Clear any session-specific storage and cached private state (Rules 32, 96)
+      if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+      }
     } catch (err: any) {
       console.error('Logout error:', err);
     } finally {
