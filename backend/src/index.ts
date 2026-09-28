@@ -9,6 +9,7 @@ import { aiRouter } from './routes/ai.js';
 import { authRouter } from './routes/auth.js';
 
 export const app = express();
+export default app;
 
 // 1. HTTP Security Headers & Correlation ID (Rules 38, 73, 98, 100)
 app.use(securityHeaders);
