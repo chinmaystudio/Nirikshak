@@ -98,6 +98,11 @@ authRouter.post(
     });
 
     if (error || !data.user) {
+      console.error('Supabase account creation failed', {
+        code: error?.code,
+        status: error?.status,
+        message: error?.message,
+      });
       const duplicate = error?.message?.toLowerCase().includes('already') || error?.status === 422;
       return res.status(duplicate ? 409 : 400).json({
         success: false,
