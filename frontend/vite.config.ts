@@ -64,6 +64,16 @@ function moduleAliasPlugin() {
 
 export default defineConfig({
   plugins: [moduleAliasPlugin(), react()],
+  build: {
+    // Browser applications must ship JavaScript, but production source files,
+    // source maps, and readable module names should never be published.
+    sourcemap: false,
+    minify: 'esbuild',
+    manifest: false,
+  },
+  esbuild: {
+    legalComments: 'none',
+  },
   server: {
     port: 5173,
     host: true,
