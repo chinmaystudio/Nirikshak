@@ -14,6 +14,11 @@ export const supabaseAdmin = createClient(requiredSupabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+/** Least-privileged client for endpoints that expose only RLS-approved public data. */
+export const supabasePublic = createClient(requiredSupabaseUrl, requiredAnonKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
 /** Creates a client bound to the authenticated user's JWT so RLS applies. */
 export async function createAuthenticatedClient(accessToken: string) {
   const { data, error } = await supabaseAdmin.auth.getUser(accessToken);

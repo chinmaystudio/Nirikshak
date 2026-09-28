@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { supabaseAdmin, createAuthenticatedClient } from '../services/supabase.js';
+import { supabaseAdmin, supabasePublic, createAuthenticatedClient } from '../services/supabase.js';
 import { CreateProjectSchema } from '../validation/schemas.js';
 import { requireAuth, requireGovernment, AuthenticatedRequest } from '../middleware/auth.js';
 
@@ -10,7 +10,7 @@ projectsRouter.get('/', async (req: Request, res: Response) => {
   try {
     const { city, sector, status, limit = 50, offset = 0 } = req.query;
 
-    let query = supabaseAdmin
+    let query = supabasePublic
       .from('projects')
       .select(
         'id, nirikshak_project_id, project_name, description, sector, subsector, project_authority, state, city, location_text, total_cost_inr_crore, planned_start_date, original_completion_date, normalized_status, physical_progress_percent, current_status_verified, is_public',
@@ -38,6 +38,11 @@ projectsRouter.get('/', async (req: Request, res: Response) => {
       },
     });
   } catch (err: any) {
+    console.error('Public project list query failed', {
+      code: err?.code,
+      message: err?.message,
+      details: err?.details,
+    });
     res.status(500).json({ success: false, error: { code: 'FETCH_ERROR', message: 'Failed to retrieve project list' } });
   }
 });
@@ -92,7 +97,7 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
     }
 
     // Public / Citizen projection (Rules 18, 30: Never expose private contracts, internal complaints, or unverified progress)
-    let query = supabaseAdmin
+    let query = supabasePublic
       .from('projects')
       .select('id, nirikshak_project_id, project_name, description, sector, subsector, project_authority, state, city, location_text, latitude, longitude, total_cost_inr_crore, planned_start_date, original_completion_date, normalized_status, physical_progress_percent, current_status_verified, is_public, project_milestones(id, milestone_name, sequence_order, target_completion_date, verified_progress, status)')
       .eq('is_public', true)
@@ -111,6 +116,11 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
 
     res.json({ success: true, data });
   } catch (err: any) {
+    console.error('Public project detail query failed', {
+      code: err?.code,
+      message: err?.message,
+      details: err?.details,
+    });
     res.status(500).json({ success: false, error: { code: 'FETCH_ERROR', message: 'Failed to retrieve project details' } });
   }
 });
