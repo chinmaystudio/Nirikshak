@@ -33,7 +33,11 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(new Error(`Origin '${origin}' not permitted by CORS policy`));
+        const error = Object.assign(new Error('Origin not permitted by CORS policy'), {
+          status: 403,
+          code: 'CORS_ORIGIN_DENIED',
+        });
+        callback(error);
       }
     },
     credentials: true,
