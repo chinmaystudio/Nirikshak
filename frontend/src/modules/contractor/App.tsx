@@ -64,7 +64,7 @@ function Router() {
   }
 
   if (!role || !CONTRACTOR_ROLES.includes(role)) {
-    return <AccessDeniedPage currentRole={role} allowedRoles={CONTRACTOR_ROLES} />;
+    return <AccessDeniedPage currentRole={role} allowedRoles={CONTRACTOR_ROLES} pendingApproval={session.pendingApproval} />;
   }
 
   // Tender routes

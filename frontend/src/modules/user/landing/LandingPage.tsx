@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ScrollCanvasBackground } from './components/ScrollCanvasBackground';
 import { HeroSection } from './components/HeroSection';
 import { ConnectedViewSection } from './components/ConnectedViewSection';
@@ -14,31 +13,15 @@ import { ClaimsDisputesSection } from './components/ClaimsDisputesSection';
 import { ReportsSection } from './components/ReportsSection';
 import { ProjectsExplorer } from './components/ProjectsExplorer';
 import { AboutSection } from './components/AboutSection';
-import { OfficialLoginModal } from './components/OfficialLoginModal';
 import { Footer } from './components/Footer';
-import { ArrowRight, User } from 'lucide-react';
-import { navigate } from '@/app/router';
-import { ROUTES } from '@/constants/routes';
 import './index.css';
 
 export function LandingPage(): JSX.Element {
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [loginRole, setLoginRole] = useState<'officer' | 'contractor'>('officer');
-
   const scrollToSection = (sectionId: string) => {
     const el = document.getElementById(sectionId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
-
-  const handleOpenLogin = (role: 'officer' | 'contractor' = 'officer') => {
-    setLoginRole(role);
-    setIsLoginOpen(true);
-  };
-
-  const goToPortal = () => {
-    navigate(ROUTES.HOME);
   };
 
   return (
@@ -103,17 +86,6 @@ export function LandingPage(): JSX.Element {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            id="nav-enter-citizen-portal"
-            onClick={goToPortal}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-[#eefc55] hover:bg-white text-neutral-950 shadow-lg hover:shadow-xl transition-all cursor-pointer active:scale-95"
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Citizen Portal</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
       </header>
 
       <main className="flex-grow relative z-10 pt-16">
@@ -141,13 +113,6 @@ export function LandingPage(): JSX.Element {
 
       <Footer
         onNavigateSection={scrollToSection}
-        onOpenLogin={handleOpenLogin}
-      />
-
-      <OfficialLoginModal
-        isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
-        initialRole={loginRole}
       />
     </div>
   );

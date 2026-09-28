@@ -3,6 +3,27 @@ import type { User, Session } from '@supabase/supabase-js';
 import type { AppRole, AppSession, Profile, Organization, OrganizationMember } from './auth.types';
 
 export class AuthService {
+  private static readonly apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+  private static friendlyError(message?: string): string {
+    const value = (message || '').toLowerCase();
+    if (value.includes('invalid login credentials')) return 'Incorrect email or password.';
+    if (value.includes('email not confirmed')) return 'Your account is awaiting email confirmation. Contact support if this persists.';
+    if (value.includes('rate limit') || value.includes('too many')) return 'Too many attempts. Please wait a few minutes and try again.';
+    if (value.includes('user already registered')) return 'An account with this email already exists. Please sign in instead.';
+    return message || 'Authentication failed. Please try again.';
+  }
+
+  private static async registerWithBackend(payload: Record<string, unknown>): Promise<void> {
+    if (!this.apiBaseUrl) throw new Error('Registration service is temporarily unavailable.');
+    const response = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error?.message || 'Registration failed. Please try again.');
+  }
   /**
    * Resolves authoritative user profile, organization, and role from Supabase DB.
    */
@@ -140,7 +161,7 @@ export class AuthService {
     });
 
     if (error || !data.user) {
-      throw new Error(error?.message || 'Authentication failed');
+      throw new Error(this.friendlyError(error?.message));
     }
 
     return await this.resolveUserSession(data.user);
@@ -209,34 +230,18 @@ export class AuthService {
     delete (safeMetadata as any).organization_id;
     delete (safeMetadata as any).is_admin;
 
-    const { data, error } = await supabase.auth.signUp({
+    await this.registerWithBackend({
+      accountType: 'citizen',
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone,
-          role: 'citizen', // Enforced citizen only for public signups
-          ...safeMetadata,
-        },
-      },
+      fullName,
+      phone,
+      city: safeMetadata.city,
+      ward: safeMetadata.ward,
+      preferredLanguage: safeMetadata.preferredLanguage,
     });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    if (data.user) {
-      // Upsert profile in DB
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        full_name: fullName,
-        phone: phone || null,
-        updated_at: new Date().toISOString(),
-      });
-      if (profileError) throw new Error(`Account created, but profile setup failed: ${profileError.message}`);
-    }
-
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user || !data.session) throw new Error(this.friendlyError(error?.message));
     return data;
   }
 
@@ -251,26 +256,21 @@ export class AuthService {
     password: string;
     requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, officialEmail, employeeId, department, designation, state, district, password, requestedRole = 'government_engineer' } = payload;
+    const { fullName, officialEmail, employeeId, department, designation, state, district, password } = payload;
     
-    const { data, error } = await supabase.auth.signUp({
+    await this.registerWithBackend({
+      accountType: 'government',
       email: officialEmail,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          department,
-          designation,
-          employee_id: employeeId,
-          state,
-          district,
-          requested_role: requestedRole,
-        },
-      },
+      fullName,
+      employeeId,
+      department,
+      designation,
+      state,
+      district,
     });
-    if (error) throw new Error(error.message);
     return {
-      user: data.user,
+      user: null,
       message: 'Registration request submitted. Your Government access is pending administrator approval.',
     };
   }
@@ -288,28 +288,23 @@ export class AuthService {
     password: string;
     requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password, requestedRole = 'contractor_admin' } = payload;
+    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password } = payload;
 
-    const { data, error } = await supabase.auth.signUp({
+    await this.registerWithBackend({
+      accountType: 'contractor',
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          phone,
-          company_name: companyName,
-          registration_cin: registrationCin,
-          gstin,
-          contractor_class: contractorClass,
-          state,
-          district,
-          requested_role: requestedRole,
-        },
-      },
+      fullName,
+      phone,
+      companyName,
+      registrationCin,
+      gstin,
+      contractorClass,
+      state,
+      district,
     });
-    if (error) throw new Error(error.message);
     return {
-      user: data.user,
+      user: null,
       message: 'Your contractor organization verification is pending.',
     };
   }

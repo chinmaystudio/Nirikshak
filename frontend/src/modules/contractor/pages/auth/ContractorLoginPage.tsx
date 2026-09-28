@@ -4,14 +4,13 @@ import { navigate } from '../../lib/router';
 import { useAuth } from '@/core/auth/useAuth';
 
 export default function ContractorLoginPage() {
-  const { session } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isDev = true;
+  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
