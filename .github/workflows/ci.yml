@@ -44,6 +44,12 @@ jobs:
   backend:
     name: Backend typecheck, security tests, and build
     runs-on: ubuntu-latest
+    env:
+      # Non-secret placeholders required at module initialization. Tests mock all
+      # external calls and never connect to this URL.
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_ANON_KEY: ci-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
     defaults:
       run:
         working-directory: backend
