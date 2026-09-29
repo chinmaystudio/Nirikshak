@@ -18,6 +18,14 @@ export const CreateProjectSchema = z.object({
   is_public: z.boolean().default(true),
 });
 
+export const CreateTenderSchema = z.object({
+  project_id: z.string().min(3).max(120),
+  title: z.string().trim().min(3).max(240),
+  estimated_value_inr_crore: z.number().positive(),
+  mode: z.enum(['e-Tender', 'Manually', 'Global']).default('e-Tender'),
+  description: z.string().trim().max(2000).optional(),
+});
+
 export const SubmitProgressSchema = z.object({
   project_id: z.string().uuid(),
   milestone_id: z.string().uuid().optional(),

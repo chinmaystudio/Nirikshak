@@ -513,7 +513,7 @@ export const tendersApi = {
     try {
       const { data, error } = await supabase
         .from('tenders')
-        .select('*')
+        .select('*, projects(nirikshak_project_id)')
         .order('publication_date', { ascending: false });
       if (error) throw error;
       if (data) {
@@ -530,7 +530,7 @@ export const tendersApi = {
           bidsReceived: 0,
           category: 'Unknown',
           mode: 'e-Tender' as const,
-          projectId: t.project_id,
+          projectId: t.projects?.nirikshak_project_id || t.project_id,
         }));
       }
     } catch (err) {
@@ -547,27 +547,37 @@ export const tendersApi = {
     title: string;
     estimatedCostCr: number;
     mode?: string;
+    scopeSummary?: string;
   }): Promise<Tender> {
-    const tenderNumber = `TND-MH-${Date.now().toString().slice(-6)}`;
-    const { data, error } = await supabase
-      .from('tenders')
-      .insert({
-        project_id: tender.projectId,
-        tender_number: tenderNumber,
-        title: tender.title,
-        status: 'PUBLISHED',
-        estimated_value_inr_crore: tender.estimatedCostCr,
-        is_public: true,
-        publication_date: new Date().toISOString().slice(0, 10),
-        bid_due_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Failed to create tender in Supabase:', error);
-      throw error;
+    if (!API_BASE_URL) {
+      throw new Error('Tender publication service is temporarily unavailable.');
     }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
+
+    const response = await fetch(`${API_BASE_URL}/api/tenders`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: tender.projectId,
+        title: tender.title,
+        estimated_value_inr_crore: tender.estimatedCostCr,
+        mode: tender.mode || 'e-Tender',
+        description: tender.scopeSummary || undefined,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.data) {
+      throw new Error(result?.error?.message || 'The tender could not be published.');
+    }
+
+    const data = result.data;
 
     return {
       id: data.tender_number || data.id,
@@ -582,7 +592,7 @@ export const tendersApi = {
       bidsReceived: 0,
       category: 'Infrastructure',
       mode: (tender.mode as any) || 'e-Tender',
-      projectId: data.project_id,
+      projectId: data.nirikshak_project_id || tender.projectId,
     };
   },
 };

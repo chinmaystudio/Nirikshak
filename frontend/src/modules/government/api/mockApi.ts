@@ -181,6 +181,7 @@ export const tendersApi = {
     title: string;
     estimatedCostCr: number;
     mode?: string;
+    scopeSummary?: string;
   }): Promise<Tender> {
     await delay()
     const newTender: Tender = {

@@ -44,7 +44,7 @@ export function WorkspaceTendersPage() {
   const [detail, setDetail] = useState<Tender | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [newTender, setNewTender] = useState({ title: '', estimate: '', mode: 'e-Tender' })
+  const [newTender, setNewTender] = useState({ title: '', estimate: '', mode: 'e-Tender', scopeSummary: '' })
 
   useEffect(() => {
     setTenderList(tenders)
@@ -59,10 +59,11 @@ export function WorkspaceTendersPage() {
         title: newTender.title.trim(),
         estimatedCostCr: Number(newTender.estimate),
         mode: newTender.mode,
+        scopeSummary: newTender.scopeSummary.trim() || undefined,
       })
       setTenderList((prev) => [created, ...prev])
       showToast(`Tender "${created.title}" published successfully (${created.id})`, 'success')
-      setNewTender({ title: '', estimate: '', mode: 'e-Tender' })
+      setNewTender({ title: '', estimate: '', mode: 'e-Tender', scopeSummary: '' })
       setCreateOpen(false)
     } catch (err: any) {
       showToast(err.message || 'Failed to publish tender', 'danger')
@@ -222,7 +223,7 @@ export function WorkspaceTendersPage() {
             onChange={(e) => setNewTender((f) => ({ ...f, mode: e.target.value }))}
             options={['e-Tender', 'Manually', 'Global'].map((m) => ({ value: m, label: m }))}
           />
-          <TextArea label="Scope summary" rows={2} placeholder="Brief scope for the e-NIT document…" />
+          <TextArea label="Scope summary" rows={2} value={newTender.scopeSummary} onChange={(e) => setNewTender((f) => ({ ...f, scopeSummary: e.target.value }))} placeholder="Brief scope for the e-NIT document…" />
         </div>
       </Modal>
     </div>

@@ -7,6 +7,7 @@ import { progressRouter } from './routes/progress.js';
 import { complaintsRouter } from './routes/complaints.js';
 import { aiRouter } from './routes/ai.js';
 import { authRouter } from './routes/auth.js';
+import { tendersRouter } from './routes/tenders.js';
 
 export const app = express();
 export default app;
@@ -85,6 +86,7 @@ app.get('/health', (_req, res) => {
 // 7. API Route Handlers
 app.use('/api/auth', authRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/tenders', tendersRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/complaints', complaintsRouter);
 app.use('/api/ai', aiRouter);
