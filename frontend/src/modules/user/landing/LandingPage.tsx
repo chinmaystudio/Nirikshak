@@ -86,6 +86,13 @@ export function LandingPage(): JSX.Element {
           </nav>
         </div>
 
+        <a
+          href="/user/app"
+          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#eefc55]/70 bg-[#eefc55] px-3.5 sm:px-5 text-xs sm:text-sm font-bold text-neutral-950 shadow-lg shadow-black/20 transition-all hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#eefc55] focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
+        >
+          Enter User Portal
+        </a>
+
       </header>
 
       <main className="flex-grow relative z-10 pt-16">
