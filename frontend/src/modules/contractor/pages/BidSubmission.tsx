@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Check, ArrowLeft, ArrowRight, Save, Sparkles, CircleAlert, Building2, ShieldCheck,
   Wrench, IndianRupee, FileUp, ClipboardList, Send, CheckCircle2,
@@ -55,6 +55,25 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(existing && existing.ref ? existing.ref : null);
+  const [serverSubmittedAt, setServerSubmittedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadServerBid = async () => {
+      try {
+        const serverBids = await ContractorTenderService.getMyBids();
+        const serverBid = serverBids.find((bid) => bid.tender_id === tenderId && bid.status === 'SUBMITTED');
+        if (active && serverBid?.bid_reference) {
+          setSubmittedRef(serverBid.bid_reference);
+          setServerSubmittedAt(serverBid.submitted_at || null);
+        }
+      } catch (error) {
+        console.warn('Unable to restore submitted bid state:', error);
+      }
+    };
+    void loadServerBid();
+    return () => { active = false; };
+  }, [tenderId]);
 
   if (!tender) {
     return (
@@ -82,7 +101,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
           <div className="rounded-lg border border-slate-200 p-4 mt-6 text-left dark:border-slate-700">
             <dl className="space-y-2 text-sm">
               <Row k="Bid Reference" v={ref} mono />
-              <Row k="Submitted On" v={fmtDate(existing?.submittedAt ?? new Date().toISOString())} />
+              <Row k="Submitted On" v={fmtDate(serverSubmittedAt ?? existing?.submittedAt ?? new Date().toISOString())} />
               <Row k="Department" v={tender.department} />
               <Row k="Current Stage" v="Technical Bid Opening" />
             </dl>
@@ -152,6 +171,21 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
       setConfirmOpen(false);
       toast('success', 'Bid submitted successfully', `Reference: ${bid.bid_reference}`);
     } catch (error: any) {
+      if ((error?.message || '').toLowerCase().includes('only draft bids can be changed')) {
+        try {
+          const serverBids = await ContractorTenderService.getMyBids();
+          const serverBid = serverBids.find((bid) => bid.tender_id === tender.id && bid.status === 'SUBMITTED');
+          if (serverBid?.bid_reference) {
+            setSubmittedRef(serverBid.bid_reference);
+            setServerSubmittedAt(serverBid.submitted_at || null);
+            setConfirmOpen(false);
+            toast('success', 'Bid already submitted', `Reference: ${serverBid.bid_reference}`);
+            return;
+          }
+        } catch (recoveryError) {
+          console.warn('Unable to recover submitted bid state:', recoveryError);
+        }
+      }
       toast('warn', 'Bid submission failed', error.message || 'Please retry.');
     }
   };

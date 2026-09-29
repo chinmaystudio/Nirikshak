@@ -13,6 +13,7 @@ import { BarChart } from '@/components/charts/Charts'
 import { DonutChart } from '@/components/charts/Charts'
 import { formatCr, formatDate } from '@/utils/format'
 import { AI_CLASSIFICATION, AI_CONFIDENCE } from '@/utils/status'
+import { insightsApi } from '@/api'
 
 /**
  * Project workspace — AI Insights: the AI command center for the selected
@@ -27,6 +28,23 @@ export function WorkspaceAiInsightsPage() {
   const milestones = project?.milestones ?? []
   const [expanded, setExpanded] = useState<string | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<any>(null)
+
+  const generateReport = async () => {
+    if (!project || aiLoading) return
+    setAiLoading(true)
+    try {
+      const result = await insightsApi.analyzeProject(project.id)
+      setAiResult(result)
+      setReportOpen(true)
+      showToast('Live AI analysis completed and saved to the project audit trail.', 'success')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'AI analysis could not be completed.', 'danger')
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   if (!project) return null
 
@@ -47,8 +65,8 @@ export function WorkspaceAiInsightsPage() {
         title="AI Insights"
         description={`AI command center for ${project.id} — risk prediction, anomaly detection and recommendations computed from this project's records. Decision support only; officers decide.`}
         actions={
-          <Button variant="primary" size="sm" icon="smart_toy" onClick={() => setReportOpen(true)}>
-            Generate Detailed AI Report
+          <Button variant="primary" size="sm" icon="smart_toy" disabled={aiLoading} onClick={() => void generateReport()}>
+            {aiLoading ? 'Analyzing live project data…' : 'Generate Detailed AI Report'}
           </Button>
         }
       />
@@ -202,9 +220,7 @@ export function WorkspaceAiInsightsPage() {
           <div>
             <p className="nk-label">1. Executive Summary</p>
             <p className="mt-1 text-fg">
-              Health {health}/100. {project.delayDays > 0 ? `${project.delayDays}-day schedule slippage with ` : ''}financial utilization at
-              {' '}{project.financialProgressPct}% against {project.physicalProgressPct}% physical progress
-              {flaggedBills.length ? ` and ${flaggedBills.length} bill(s) flagged by the risk engine` : ''}.
+              {aiResult?.summary || `Health ${health}/100. ${project.delayDays > 0 ? `${project.delayDays}-day schedule slippage with ` : ''}financial utilization at ${project.financialProgressPct}% against ${project.physicalProgressPct}% physical progress${flaggedBills.length ? ` and ${flaggedBills.length} bill(s) flagged by the risk engine` : ''}.`}
             </p>
           </div>
           <div>
@@ -217,9 +233,9 @@ export function WorkspaceAiInsightsPage() {
           <div>
             <p className="nk-label">3. Key Risks</p>
             <ul className="mt-1 list-disc pl-5 text-fg-muted">
-              <li>Schedule — {scheduleRisk}/100 ({project.delayDays} days behind plan)</li>
-              <li>Financial — {financialRisk}/100 (utilization vs physical progress gap)</li>
-              <li>Quality — {qualityRisk}/100 (test-result spread within limits)</li>
+              {(aiResult?.schedule?.reasons ?? [`Risk score ${scheduleRisk}/100 (${project.delayDays} days behind plan)`]).map((reason: string) => <li key={`schedule-${reason}`}>Schedule — {reason}</li>)}
+              {(aiResult?.finance?.reasons ?? [`Risk score ${financialRisk}/100 (utilization vs physical progress gap)`]).map((reason: string) => <li key={`finance-${reason}`}>Financial — {reason}</li>)}
+              {(aiResult?.environment?.reasons ?? [`Quality risk ${qualityRisk}/100 (test-result spread within limits)`]).map((reason: string) => <li key={`environment-${reason}`}>Environment/quality — {reason}</li>)}
             </ul>
           </div>
           <div>
@@ -242,8 +258,8 @@ export function WorkspaceAiInsightsPage() {
           <div>
             <p className="nk-label">6. Recommended Actions (for officer review)</p>
             <ul className="mt-1 list-disc pl-5 text-fg-muted">
-              {insights.map((i) => (
-                <li key={i.id}>{i.recommendedAction}</li>
+              {(aiResult?.recommended_actions ?? insights.map((i) => i.recommendedAction)).map((action: string) => (
+                <li key={action}>{action}</li>
               ))}
               <li>Clear pending bill verifications before the next RA cycle.</li>
             </ul>

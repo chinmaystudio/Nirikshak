@@ -305,6 +305,9 @@ export const workApi = {
 
 /* ---------- AI insights ---------- */
 export const insightsApi = {
+  async analyzeProject(): Promise<never> {
+    throw new Error('Live AI analysis is unavailable while mock mode is enabled.')
+  },
   async all(): Promise<AiInsight[]> {
     await delay()
     return AI_INSIGHTS

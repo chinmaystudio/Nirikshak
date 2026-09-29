@@ -180,7 +180,6 @@ export function GovernmentHeader({
           <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
             notifications
           </span>
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" aria-hidden="true" />
         </button>
 
         {/* Profile */}

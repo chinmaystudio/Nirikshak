@@ -25,6 +25,19 @@ aiRouter.post(
         'government_engineer',
         'auditor',
       ].includes(req.role || '');
+      const isContractor = [
+        'contractor_admin',
+        'contractor_manager',
+        'contractor_engineer',
+        'contractor_site_engineer',
+      ].includes(req.role || '');
+
+      if (!isGovernment && !isContractor) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'AI project analysis is available only to authorized project organizations.' },
+        });
+      }
 
       let projectQuery = req.supabase!
         .from('projects')
@@ -51,6 +64,19 @@ aiRouter.post(
           success: false,
           error: { code: 'FORBIDDEN', message: 'Project belongs to a different government authority' },
         });
+      }
+
+      if (isContractor) {
+        if (!req.organizationId) {
+          return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'An active contractor organization is required.' } });
+        }
+        const [{ data: contracts }, { data: assignments }] = await Promise.all([
+          supabaseAdmin.from('contracts').select('id').eq('project_id', project.id).eq('contractor_organization_id', req.organizationId).limit(1),
+          supabaseAdmin.from('project_organizations').select('id').eq('project_id', project.id).eq('organization_id', req.organizationId).limit(1),
+        ]);
+        if ((!contracts || contracts.length === 0) && (!assignments || assignments.length === 0)) {
+          return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Your contractor organization is not assigned to this project.' } });
+        }
       }
 
       const provider = getLLMProvider();

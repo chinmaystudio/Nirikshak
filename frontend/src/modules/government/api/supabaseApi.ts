@@ -187,8 +187,10 @@ export const projectsApi = {
     const { data, error } = await supabase
       .from('government_project_summary_view')
       .select('*')
+      .is('source_record_id', null)
+      .or('record_scope.is.null,record_scope.neq.DEMO')
       .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-      .limit(4000);
+      .limit(1000);
 
     if (error) {
       console.error('Failed to fetch projects from Supabase:', error);
@@ -205,6 +207,7 @@ export const projectsApi = {
     const to = from + pageSize - 1;
 
     let query = supabase.from('government_project_summary_view').select('*', { count: 'exact' });
+    query = query.is('source_record_id', null).or('record_scope.is.null,record_scope.neq.DEMO');
 
     if (q?.search) {
       query = query.or(`project_name.ilike.%${q.search}%,location_text.ilike.%${q.search}%,nirikshak_project_id.ilike.%${q.search}%`);
@@ -811,6 +814,23 @@ export const workApi = {
 
 /* ---------- AI insights ---------- */
 export const insightsApi = {
+  async analyzeProject(projectId: string): Promise<any> {
+    if (!API_BASE_URL) throw new Error('AI analysis service is temporarily unavailable.');
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
+
+    const response = await fetch(`${API_BASE_URL}/api/ai/analyze/${encodeURIComponent(projectId)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.data?.analysis) {
+      throw new Error(result?.error?.message || 'AI analysis could not be completed.');
+    }
+    return result.data.analysis;
+  },
   async all(): Promise<AiInsight[]> {
     try {
       const { data, error } = await supabase
