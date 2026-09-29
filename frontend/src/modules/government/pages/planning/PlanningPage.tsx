@@ -10,6 +10,7 @@ import { DEPARTMENTS, DISTRICTS, PROJECT_CATEGORIES, FUNDING_SOURCES } from '@/c
 import { formatCr } from '@/utils/format'
 import { useToast } from '@/context/ToastContext'
 import { cn } from '@/utils/cn'
+import { projectsApi } from '@/api'
 
 const STEPS = [
   'Basic Details',
@@ -30,6 +31,7 @@ export function PlanningPage() {
   const { t } = useI18n()
   const { showToast } = useToast()
   const navigate = useNavigate()
+  const [submitting, setSubmitting] = useState(false)
 
   // Active wizard step mirrors the ?step= query param so the sidebar's
   // "Project Creation" outline can deep-link into a specific step.
@@ -65,12 +67,37 @@ export function PlanningPage() {
     step === 4 || step === 5 || step === 6 ||
     (step === 7 && form.confirmChecked)
 
+  const submitProject = async () => {
+    if (!canNext || submitting) return
+    setSubmitting(true)
+    try {
+      const project = await projectsApi.create({
+        name: form.name.trim(),
+        department: form.department,
+        district: form.district,
+        category: form.category,
+        amountCr: amount,
+        adminApprovalDate: form.adminApprovalDate,
+        technicalApprovalDate: form.technicalApprovalDate || undefined,
+        expectedCompletion: form.expectedCompletion,
+        summary: form.summary.trim() || undefined,
+      })
+      showToast(`Project ${project.id} created successfully.`, 'success')
+      navigate('/government/projects')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Project could not be created.'
+      showToast(message, 'danger')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-heading-1 text-fg">{t('dash.sanctionNewProject')}</h1>
         <p className="mt-1 text-body-small text-fg-muted">
-          Project Planning & Creation — 8-step wizard (demo; no record is persisted to any backend).
+          Project Planning & Creation — complete the sanction details to add the project to the shared register.
         </p>
       </div>
 
@@ -191,13 +218,10 @@ export function PlanningPage() {
             ) : (
               <Button
                 icon="task_alt"
-                disabled={!canNext}
-                onClick={() => {
-                  showToast('Demo only — project record not persisted.', 'info')
-                  navigate('/government/projects')
-                }}
+                disabled={!canNext || submitting}
+                onClick={submitProject}
               >
-                Submit for sanction
+                {submitting ? 'Creating project…' : 'Submit for sanction'}
               </Button>
             )}
           </div>

@@ -22,6 +22,19 @@ import type {
 import { normalizeProjectStatus } from '@/core/status/projectStatus';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+export interface CreateGovernmentProjectInput {
+  name: string;
+  department: string;
+  district: string;
+  category: string;
+  amountCr: number;
+  adminApprovalDate: string;
+  technicalApprovalDate?: string;
+  expectedCompletion: string;
+  summary?: string;
+}
 
 // Helper to map DB project to Government Portal Project type
 function mapDbProject(db: any): Project {
@@ -128,6 +141,48 @@ function mapNormalizedStatus(status: string): Project['status'] {
 }
 
 export const projectsApi = {
+  async create(input: CreateGovernmentProjectInput): Promise<Project> {
+    if (!API_BASE_URL) {
+      throw new Error('Project creation service is temporarily unavailable.');
+    }
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (sessionError || !accessToken) {
+      throw new Error('Your session has expired. Please sign in again.');
+    }
+
+    const projectId = `NIR-GOV-${Date.now().toString(16).toUpperCase()}`;
+    const response = await fetch(`${API_BASE_URL}/api/projects`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nirikshak_project_id: projectId,
+        project_name: input.name,
+        description: input.summary || undefined,
+        sector: input.category,
+        project_authority: input.department,
+        state: 'Maharashtra',
+        city: input.district,
+        location_text: `${input.district}, Maharashtra`,
+        total_cost_inr_crore: input.amountCr,
+        planned_start_date: input.adminApprovalDate,
+        original_completion_date: input.expectedCompletion,
+        is_public: true,
+      }),
+    });
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.data) {
+      throw new Error(result?.error?.message || 'Project could not be created. Please try again.');
+    }
+
+    return mapDbProject(result.data);
+  },
+
   async all(): Promise<Project[]> {
     const { data, error } = await supabase
       .from('government_project_summary_view')

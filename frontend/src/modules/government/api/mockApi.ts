@@ -81,6 +81,39 @@ export const authApi = {
 
 /* ---------- Projects ---------- */
 export const projectsApi = {
+  async create(input: {
+    name: string;
+    department: string;
+    district: string;
+    category: string;
+    amountCr: number;
+    adminApprovalDate: string;
+    technicalApprovalDate?: string;
+    expectedCompletion: string;
+    summary?: string;
+  }): Promise<Project> {
+    await delay()
+    const project: Project = {
+      ...PROJECTS[0],
+      id: `NIR-DEMO-${Date.now().toString(16).toUpperCase()}`,
+      name: input.name,
+      department: input.department,
+      district: input.district,
+      division: input.district,
+      category: input.category,
+      sanctionedAmountCr: input.amountCr,
+      utilizedAmountCr: 0,
+      physicalProgressPct: 0,
+      financialProgressPct: 0,
+      adminApprovalDate: input.adminApprovalDate,
+      technicalApprovalDate: input.technicalApprovalDate || input.adminApprovalDate,
+      expectedCompletion: input.expectedCompletion,
+      summary: input.summary || '',
+      status: 'sanctioned',
+    }
+    PROJECTS.unshift(project)
+    return project
+  },
   async list(query?: ListQuery): Promise<Paginated<Project>> {
     await delay()
     return paginate(matchesQuery(PROJECTS, query), query)
