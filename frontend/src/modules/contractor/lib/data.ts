@@ -1933,14 +1933,52 @@ export const AI_ANSWERS: AIAnswer[] = [
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export const getProject = (id: string) => PROJECTS.find((p) => p.id === id);
+
+function normalizeTender(value: Partial<Tender> | null | undefined): Tender | undefined {
+  if (!value?.id) return undefined;
+
+  const text = (input: unknown, fallback = '') =>
+    typeof input === 'string' && input.trim() ? input : fallback;
+  const list = (input: unknown) =>
+    Array.isArray(input) ? input.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())) : [];
+
+  return {
+    ...value,
+    id: value.id,
+    code: text(value.code, 'Tender reference pending'),
+    title: text(value.title, 'Untitled tender'),
+    department: text(value.department, 'Not specified'),
+    location: text(value.location, 'Not specified'),
+    value: Number(value.value) || 0,
+    deadline: text(value.deadline),
+    emd: Number(value.emd) || 0,
+    category: text(value.category, 'General works'),
+    durationMonths: Number(value.durationMonths) || 0,
+    opened: text(value.opened),
+    preBid: text(value.preBid),
+    status: value.status || 'Open',
+    summary: text(value.summary, 'No tender summary was provided.'),
+    scopePoints: list(value.scopePoints),
+    eligibility: {
+      label: text(value.eligibility?.label, 'Eligibility criteria'),
+      required: text(value.eligibility?.required, 'Eligibility requirements were not specified.'),
+    },
+    techReq: list(value.techReq),
+    finReq: list(value.finReq),
+    docs: list(value.docs),
+    timeline: Array.isArray(value.timeline) ? value.timeline : [],
+    contact: value.contact || { name: 'Not specified', role: 'Not specified', phone: '', email: '' },
+  } as Tender;
+}
+
 export const getTender = (id: string) => {
   if (typeof sessionStorage !== 'undefined') {
     const cached = sessionStorage.getItem(`nirikshak:tender:${id}`);
     if (cached) {
-      try { return JSON.parse(cached) as Tender; } catch { sessionStorage.removeItem(`nirikshak:tender:${id}`); }
+      try { return normalizeTender(JSON.parse(cached) as Partial<Tender>); } catch { sessionStorage.removeItem(`nirikshak:tender:${id}`); }
     }
   }
-  return TENDERS.find((t) => t.id === id);
+  return normalizeTender(TENDERS.find((t) => t.id === id));
 };
 
 export function pendingForProject(projectId: string, invoices: Invoice[]): number {

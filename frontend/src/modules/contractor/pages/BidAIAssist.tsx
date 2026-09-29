@@ -33,7 +33,9 @@ export default function BidAIAssist({ tenderId }: { tenderId: string }) {
 
   const rows = eligibilityRows(tender);
   const status = eligibilityStatus(tender);
-  const primaryTechnicalRequirement = tender.techReq?.find((item) => item?.trim())?.split(';')[0]
+  const technicalRequirement = tender.techReq?.find((item) => typeof item === 'string' && item.trim())?.trim() || '';
+  const separatorIndex = technicalRequirement.indexOf(';');
+  const primaryTechnicalRequirement = (separatorIndex >= 0 ? technicalRequirement.slice(0, separatorIndex) : technicalRequirement)
     || 'No specific technical requirement was included in the published tender';
   const technicalClauseCount = Math.max(0, (tender.techReq?.length || 1) - 1);
   const primaryFinancialRequirement = tender.finReq?.find((item) => item?.trim())

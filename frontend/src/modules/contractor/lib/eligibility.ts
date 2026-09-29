@@ -14,7 +14,7 @@ export function eligibilityRows(t: Tender): EligRow[] {
   };
   const minTurnover = thresholds[t.id] ?? 10;
   const eligibilityRequirement = t.eligibility?.required?.trim() || 'Eligibility requirements are not specified in the published tender.';
-  const eligibilityParts = eligibilityRequirement.split(';').map((part) => part.trim()).filter(Boolean);
+  const eligibilityParts = eligibilityRequirement.match(/[^;]+/g)?.map((part) => part.trim()).filter(Boolean) ?? [];
   const rows: EligRow[] = [
     {
       label: 'Contractor class / registration',
@@ -31,7 +31,7 @@ export function eligibilityRows(t: Tender): EligRow[] {
     {
       label: 'Similar completed works',
       required: eligibilityParts.slice(1).join('; ') || 'Per tender clause',
-      ours: `${CONTRACTOR.completedWorks} works including comparable ${t.category.toLowerCase()} contracts`,
+      ours: `${CONTRACTOR.completedWorks} works including comparable ${(t.category || 'general works').toLowerCase()} contracts`,
       pass: t.id === 't5' ? false : t.id === 't3' ? null : true,
     },
     {
