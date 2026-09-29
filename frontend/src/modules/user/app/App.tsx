@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { GovernmentBar } from "@/components/layout/GovernmentBar";
 import { Header, NewsTicker } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MobileNavigation } from "@/components/layout/MobileNavigation";
@@ -163,7 +162,6 @@ export function App(): JSX.Element {
         </div>
       ) : null}
 
-      <GovernmentBar />
       <Header />
       {!isAuthChrome ? <NewsTicker /> : null}
 

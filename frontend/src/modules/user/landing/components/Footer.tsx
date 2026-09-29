@@ -1,9 +1,8 @@
 import React from 'react';
-import { ArrowUp, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowUp, ShieldCheck } from 'lucide-react';
 
 interface FooterProps {
   onNavigateSection: (sectionId: string) => void;
-  onOpenLogin: (role?: 'officer' | 'contractor') => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigateSection }) => {

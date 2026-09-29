@@ -79,7 +79,7 @@ export async function loginWithEmail(email: string, password: string, next: stri
     city: session.profile?.city || 'Pune',
     ward: 'Ward 12 — Kothrud West',
     preferredLanguage: 'en',
-    verified: true,
+    verified: Boolean(session.user.email_confirmed_at),
     joinedAt: session.user.created_at ? session.user.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
   };
 
@@ -114,7 +114,7 @@ export async function register(payload: RegisterPayload): Promise<Citizen> {
     city: payload.city || 'Pune',
     ward: payload.ward,
     preferredLanguage: payload.preferredLanguage,
-    verified: true,
+    verified: Boolean(user?.email_confirmed_at),
     joinedAt: new Date().toISOString().slice(0, 10),
   };
 

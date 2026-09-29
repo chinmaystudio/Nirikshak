@@ -1,4 +1,4 @@
-name: Deploy to Vercel
+name: Deploy production
 
 on:
   workflow_dispatch:
@@ -11,32 +11,55 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Manual production deployment
+  frontend:
+    name: Deploy frontend to Cloudflare Pages
     runs-on: ubuntu-latest
     environment: production
-    strategy:
-      matrix:
-        include:
-          - app: frontend
-            project_secret: VERCEL_FRONTEND_PROJECT_ID
-          - app: backend
-            project_secret: VERCEL_BACKEND_PROJECT_ID
     defaults:
       run:
-        working-directory: ${{ matrix.app }}
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run build
-      - name: Deploy
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_USE_MOCK_API: "false"
+          VITE_DEMO_MODE: "false"
+      - name: Deploy Cloudflare Pages
+        run: npx wrangler pages deploy dist --project-name=nirikshak --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  backend:
+    name: Deploy backend to Vercel
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Deploy Vercel backend
+        run: npx vercel@39.4.2 deploy --prod --yes --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets[matrix.project_secret] }}
-        run: npx vercel@39.4.2 deploy --prod --yes --token="$VERCEL_TOKEN"
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_BACKEND_PROJECT_ID }}
