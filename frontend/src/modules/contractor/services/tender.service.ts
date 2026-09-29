@@ -37,7 +37,7 @@ export interface DbBid {
   status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'QUALIFIED' | 'DISQUALIFIED' | 'SELECTED' | 'REJECTED' | 'WITHDRAWN';
   submitted_by?: string | null;
   submitted_at?: string | null;
-  created_at?: string;
+  updated_at?: string;
   tenders?: Partial<DbTender>;
 }
 
@@ -121,7 +121,7 @@ export class ContractorTenderService {
     const { data, error } = await supabase
       .from('tender_bids')
       .select('*, tenders(id, tender_number, title, estimated_value_inr_crore, status, bid_due_date, projects(project_name))')
-      .order('created_at', { ascending: false });
+      .order('updated_at', { ascending: false });
 
     if (error) {
       console.error('Failed to query contractor bids:', error);
@@ -148,14 +148,20 @@ export class ContractorTenderService {
       throw insertErr;
     }
 
-    // Broadcast realtime event
-    await realtimeService.broadcast('government:tenders', 'BID_SUBMITTED', {
-      tender_id: tenderId,
-      bid_id: bid.id,
-      bid_reference: bid.bid_reference,
-    });
+    const savedBid = (Array.isArray(bid) ? bid[0] : bid) as unknown as DbBid | null;
+    if (!savedBid?.id || !savedBid.bid_reference) {
+      throw new Error('The bid was saved, but its confirmation could not be loaded. Refresh My Bids before retrying.');
+    }
 
-    return bid as unknown as DbBid;
+    // Bid persistence is authoritative. A transient Realtime notification must not
+    // turn a successful database transaction into a visible submission failure.
+    void realtimeService.broadcast('government:tenders', 'BID_SUBMITTED', {
+      tender_id: tenderId,
+      bid_id: savedBid.id,
+      bid_reference: savedBid.bid_reference,
+    }).catch((error) => console.warn('Bid submitted; Realtime notification was not delivered:', error));
+
+    return savedBid;
   }
 
   /**
@@ -171,7 +177,9 @@ export class ContractorTenderService {
       .rpc('save_tender_bid', { p_tender_id: tenderId, p_bid_amount: bidAmount, p_technical_proposal: technicalProposal, p_status: 'DRAFT' });
 
     if (error) throw error;
-    return bid as unknown as DbBid;
+    const savedBid = (Array.isArray(bid) ? bid[0] : bid) as unknown as DbBid | null;
+    if (!savedBid?.id) throw new Error('The bid draft confirmation could not be loaded.');
+    return savedBid;
   }
 
   /**

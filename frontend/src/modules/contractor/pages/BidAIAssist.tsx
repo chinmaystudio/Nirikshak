@@ -33,6 +33,12 @@ export default function BidAIAssist({ tenderId }: { tenderId: string }) {
 
   const rows = eligibilityRows(tender);
   const status = eligibilityStatus(tender);
+  const primaryTechnicalRequirement = tender.techReq?.find((item) => item?.trim())?.split(';')[0]
+    || 'No specific technical requirement was included in the published tender';
+  const technicalClauseCount = Math.max(0, (tender.techReq?.length || 1) - 1);
+  const primaryFinancialRequirement = tender.finReq?.find((item) => item?.trim())
+    || 'No separate financial requirement was included in the published tender';
+  const expectedAwardDate = tender.timeline?.[Math.max(0, tender.timeline.length - 1)]?.date || tender.deadline;
   const missing = tender.id === 't1' ? ['Experience Certificate', 'Equipment Ownership Proof'] : tender.id === 't3' ? ['MJP Class-1 Revalidation'] : [];
   const readiness = Math.max(20, 100 - missing.length * 11 - (status === 'Review' ? 8 : 0));
 
@@ -118,13 +124,13 @@ export default function BidAIAssist({ tenderId }: { tenderId: string }) {
               <SectionTitle title="Requirement Analysis" />
               <div className="space-y-3.5 text-sm">
                 <p className="text-slate-700 leading-relaxed dark:text-slate-300">
-                  <strong>Technical:</strong> {tender.techReq[0].split(';')[0]} is the core execution requirement; the remaining {tender.techReq.length - 1} clauses cover QC testing, plant and documentation — all standard for our fleet and lab contracts.
+                  <strong>Technical:</strong> {primaryTechnicalRequirement}. {technicalClauseCount > 0 ? `The remaining ${technicalClauseCount} clauses require separate review.` : 'Review the published tender documents before final submission.'}
                 </p>
                 <p className="text-slate-700 leading-relaxed dark:text-slate-300">
-                  <strong>Financial:</strong> {tender.finReq[0]}. Cash flow analysis suggests arranging the EMD ({'₹' + tender.emd.toFixed(2) + ' L'}) as a bank guarantee rather than cash to preserve working capital.
+                  <strong>Financial:</strong> {primaryFinancialRequirement}. Cash flow analysis suggests arranging the EMD ({'₹' + Number(tender.emd || 0).toFixed(2) + ' L'}) as a bank guarantee rather than cash to preserve working capital.
                 </p>
                 <p className="text-slate-700 leading-relaxed dark:text-slate-300">
-                  <strong>Timeline:</strong> {tender.durationMonths} months with award expected around {fmtDate(tender.timeline[tender.timeline.length - 1].date)}. Our current pipeline can absorb this start.
+                  <strong>Timeline:</strong> {tender.durationMonths || 'Not specified'} months with the current tender milestone dated {fmtDate(expectedAwardDate)}. Confirm the final work schedule with the issuing authority.
                 </p>
               </div>
             </Card>

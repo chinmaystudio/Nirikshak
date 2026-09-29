@@ -13,10 +13,12 @@ export function eligibilityRows(t: Tender): EligRow[] {
     t1: 25, t2: 18, t3: 22, t4: 10, t5: 120, t6: 7, t7: 14,
   };
   const minTurnover = thresholds[t.id] ?? 10;
+  const eligibilityRequirement = t.eligibility?.required?.trim() || 'Eligibility requirements are not specified in the published tender.';
+  const eligibilityParts = eligibilityRequirement.split(';').map((part) => part.trim()).filter(Boolean);
   const rows: EligRow[] = [
     {
       label: 'Contractor class / registration',
-      required: t.eligibility.required.split(';')[0],
+      required: eligibilityParts[0] || eligibilityRequirement,
       ours: `${CONTRACTOR.class} — PWD/MJP/ZP empanelled`,
       pass: t.id === 't3' ? null : true,
     },
@@ -28,7 +30,7 @@ export function eligibilityRows(t: Tender): EligRow[] {
     },
     {
       label: 'Similar completed works',
-      required: t.eligibility.required.split(';').slice(1).join('; ').trim() || 'Per tender clause',
+      required: eligibilityParts.slice(1).join('; ') || 'Per tender clause',
       ours: `${CONTRACTOR.completedWorks} works including comparable ${t.category.toLowerCase()} contracts`,
       pass: t.id === 't5' ? false : t.id === 't3' ? null : true,
     },
