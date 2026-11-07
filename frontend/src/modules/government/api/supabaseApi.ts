@@ -153,6 +153,9 @@ export const projectsApi = {
     }
 
     const projectId = `NIR-GOV-${Date.now().toString(16).toUpperCase()}`;
+    // 60s timeout: backend cold starts (Render/Vercel) can be slow.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(`${API_BASE_URL}/api/projects`, {
       method: 'POST',
       headers: {
@@ -173,7 +176,8 @@ export const projectsApi = {
         original_completion_date: input.expectedCompletion,
         is_public: true,
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data) {
@@ -587,6 +591,9 @@ export const tendersApi = {
     const accessToken = sessionData.session?.access_token;
     if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
 
+    // 60s timeout: backend cold starts (Render/Vercel) can be slow.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(`${API_BASE_URL}/api/tenders`, {
       method: 'POST',
       headers: {
@@ -600,7 +607,8 @@ export const tendersApi = {
         mode: tender.mode || 'e-Tender',
         description: tender.scopeSummary || undefined,
       }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data) {
@@ -847,11 +855,15 @@ export const insightsApi = {
     const accessToken = sessionData.session?.access_token;
     if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
 
+    // 60s timeout: backend cold starts (Render/Vercel) can be slow.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(`${API_BASE_URL}/api/ai/analyze/${encodeURIComponent(projectId)}`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data?.analysis) {
       throw new Error(result?.error?.message || 'AI analysis could not be completed.');

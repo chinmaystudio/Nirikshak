@@ -22,11 +22,27 @@ const defaultDevelopmentOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:4000',
 ];
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+const defaultProductionOrigins = [
+  'https://nirikshak.pages.dev',
+  'https://nirikshak-craaftverse.pages.dev',
+  'https://nirikshak.vercel.app',
+];
+const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
-  : process.env.NODE_ENV === 'production' ? [] : defaultDevelopmentOrigins;
-if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
-  throw new Error('ALLOWED_ORIGINS must be configured in production');
+  : [];
+let allowedOrigins: string[];
+if (process.env.NODE_ENV === 'production') {
+  // Never crash production boot over a missing ALLOWED_ORIGINS: fall back to
+  // the known production frontend origins (union with any env-provided list).
+  allowedOrigins = [...new Set([...envOrigins, ...defaultProductionOrigins])];
+  if (envOrigins.length === 0) {
+    console.warn(
+      '[CORS] ALLOWED_ORIGINS is not configured in production; falling back to default production origins: ' +
+        defaultProductionOrigins.join(', ')
+    );
+  }
+} else {
+  allowedOrigins = envOrigins.length > 0 ? envOrigins : defaultDevelopmentOrigins;
 }
 
 app.use(

@@ -11,7 +11,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 VITE_USE_MOCK_API=false
 
 # Connected Backend API
-VITE_BACKEND_URL=https://nirikshak-backend-api.vercel.app
+# The code reads VITE_API_BASE_URL (there is no VITE_BACKEND_URL variable in the code).
+VITE_API_BASE_URL=https://backend-one-omega-16.vercel.app
 ```
 
 ---

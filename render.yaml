@@ -24,3 +24,5 @@ services:
         value: nvidia/nemotron-3-super-120b-a12b:free
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://nirikshak.pages.dev,https://nirikshak-craaftverse.pages.dev,https://nirikshak.vercel.app

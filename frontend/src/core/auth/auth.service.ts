@@ -16,11 +16,15 @@ export class AuthService {
 
   private static async registerWithBackend(payload: Record<string, unknown>): Promise<void> {
     if (!this.apiBaseUrl) throw new Error('Registration service is temporarily unavailable.');
+    // 60s timeout: backend cold starts (Render/Vercel) can be slow.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
     const result = await response.json().catch(() => null);
     if (!response.ok) throw new Error(result?.error?.message || 'Registration failed. Please try again.');
   }

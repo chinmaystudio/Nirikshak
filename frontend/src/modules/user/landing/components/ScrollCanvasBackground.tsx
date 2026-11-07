@@ -16,7 +16,20 @@ export const ScrollCanvasBackground: React.FC = () => {
 
     const images: (HTMLImageElement | null)[] = new Array(TOTAL_FRAMES).fill(null);
     const loadedFlags: boolean[] = new Array(TOTAL_FRAMES).fill(false);
+    const loadingFlags: boolean[] = new Array(TOTAL_FRAMES).fill(false);
     let loadedCount = 0;
+
+    // Bounded window loading: only frames near the current scroll position are
+    // kept in memory (previously all 266 frames — ~218 MB — were preloaded on
+    // mount). Frames far behind/ahead are evicted again.
+    const WINDOW_RADIUS = 12;
+    const EVICT_DISTANCE = WINDOW_RADIUS * 2;
+    const LOAD_BATCH_SIZE = 4;
+    // The top progress bar only tracks readiness of the first window of frames.
+    const INITIAL_FRAME_COUNT = Math.min(TOTAL_FRAMES, WINDOW_RADIUS + 1);
+    let loadQueue: number[] = [];
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastWindowCenter = -1;
 
     let currentFrame = 0;
     let targetFrame = 0;
@@ -105,6 +118,11 @@ export const ScrollCanvasBackground: React.FC = () => {
       let frameIndex = Math.round(currentFrame);
       frameIndex = Math.max(0, Math.min(TOTAL_FRAMES - 1, frameIndex));
 
+      if (frameIndex !== lastWindowCenter) {
+        lastWindowCenter = frameIndex;
+        ensureWindow(frameIndex);
+      }
+
       const imgToDraw = findNearestLoadedFrame(frameIndex);
       if (imgToDraw) {
         renderFrame(imgToDraw);
@@ -121,59 +139,74 @@ export const ScrollCanvasBackground: React.FC = () => {
     resizeCanvas();
     updateScrollTarget();
 
-    // Load frame 1 immediately
-    const img1 = new Image();
-    img1.src = getFramePath(1);
-    img1.onload = () => {
-      images[0] = img1;
-      loadedFlags[0] = true;
-      loadedCount++;
-      renderFrame(img1);
-      preloadAllFrames();
-    };
-    img1.onerror = () => {
-      preloadAllFrames();
-    };
+    // Load the first window of frames immediately; further frames load (and
+    // far frames are evicted) as the scroll position moves — see ensureWindow.
+    ensureWindow(0);
 
     animFrameId = requestAnimationFrame(animate);
 
-    function preloadAllFrames() {
-      const batchSize = 20;
-      let currentIndex = 1;
+    function updateInitialProgress() {
+      let ready = 0;
+      for (let i = 0; i < INITIAL_FRAME_COUNT; i++) {
+        if (loadedFlags[i]) ready++;
+      }
+      setLoadingProgress(Math.round((ready / INITIAL_FRAME_COUNT) * 100));
+      if (ready >= INITIAL_FRAME_COUNT) {
+        setIsLoaded(true);
+      }
+    }
 
-      function loadNextBatch() {
-        if (currentIndex > TOTAL_FRAMES) return;
+    function loadFrame(arrayIdx: number) {
+      if (loadedFlags[arrayIdx] || loadingFlags[arrayIdx]) return;
+      loadingFlags[arrayIdx] = true;
 
-        const end = Math.min(TOTAL_FRAMES, currentIndex + batchSize - 1);
-        for (let i = currentIndex; i <= end; i++) {
-          const arrayIdx = i - 1;
-          if (images[arrayIdx]) continue;
+      const img = new Image();
+      img.src = getFramePath(arrayIdx + 1);
 
-          const img = new Image();
-          img.src = getFramePath(i);
+      const onComplete = () => {
+        loadingFlags[arrayIdx] = false;
+        images[arrayIdx] = img;
+        loadedFlags[arrayIdx] = true;
+        loadedCount++;
+        if (arrayIdx < INITIAL_FRAME_COUNT) updateInitialProgress();
+      };
 
-          const onComplete = () => {
-            images[arrayIdx] = img;
-            loadedFlags[arrayIdx] = true;
-            loadedCount++;
+      img.onload = onComplete;
+      img.onerror = onComplete;
+    }
 
-            const percent = Math.round((loadedCount / TOTAL_FRAMES) * 100);
-            setLoadingProgress(percent);
+    function processLoadQueue() {
+      const batch = loadQueue.splice(0, LOAD_BATCH_SIZE);
+      batch.forEach(loadFrame);
+      if (loadQueue.length > 0) {
+        loadTimer = setTimeout(processLoadQueue, 5);
+      } else {
+        loadTimer = null;
+      }
+    }
 
-            if (loadedCount >= TOTAL_FRAMES) {
-              setIsLoaded(true);
-            }
-          };
-
-          img.onload = onComplete;
-          img.onerror = onComplete;
+    function ensureWindow(center: number) {
+      // Evict frames far from the current scroll position to bound memory.
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        if (loadedFlags[i] && Math.abs(i - center) > EVICT_DISTANCE) {
+          images[i] = null;
+          loadedFlags[i] = false;
+          loadedCount--;
         }
-
-        currentIndex = end + 1;
-        setTimeout(loadNextBatch, 5);
       }
 
-      loadNextBatch();
+      // Queue the missing frames inside the window, nearest first, in small batches.
+      const missing: number[] = [];
+      for (let offset = 0; offset <= WINDOW_RADIUS; offset++) {
+        const prev = center - offset;
+        const next = center + offset;
+        if (prev >= 0 && !loadedFlags[prev] && !loadingFlags[prev] && !loadQueue.includes(prev)) missing.push(prev);
+        if (next !== prev && next < TOTAL_FRAMES && !loadedFlags[next] && !loadingFlags[next] && !loadQueue.includes(next)) missing.push(next);
+      }
+      if (missing.length === 0) return;
+
+      loadQueue = missing.concat(loadQueue);
+      if (!loadTimer) processLoadQueue();
     }
 
     return () => {
@@ -182,6 +215,7 @@ export const ScrollCanvasBackground: React.FC = () => {
       window.removeEventListener('wheel', updateScrollTarget);
       window.removeEventListener('touchmove', updateScrollTarget);
       cancelAnimationFrame(animFrameId);
+      if (loadTimer) clearTimeout(loadTimer);
     };
   }, []);
 

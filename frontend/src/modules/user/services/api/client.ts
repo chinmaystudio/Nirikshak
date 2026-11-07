@@ -34,6 +34,26 @@ export function latency(minMs = 300, maxMs = 600): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * fetch with a 60s AbortController timeout. Backend cold starts on
+ * Render/Vercel can take tens of seconds, so the timeout is generous —
+ * it exists so a sleeping/unreachable backend fails with an error
+ * instead of leaving the UI on an indefinite spinner.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 60000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export function notFound(message: string): ApiError {
   return new ApiError({ message, notFound: true });
 }
