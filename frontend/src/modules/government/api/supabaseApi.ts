@@ -24,6 +24,44 @@ import { normalizeProjectStatus } from '@/core/status/projectStatus';
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True only when the value can safely be used against a UUID column (DF-14). */
+function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value);
+}
+
+/** Finite number from a DB value, or 0 when the column is absent/not numeric. */
+function numberOrZero(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Build an Error from a backend JSON envelope (DF-18): the message carries
+ * the backend message and the machine-readable code is preserved on
+ * `err.code` (and in the message) so callers can distinguish e.g.
+ * 409 ACCOUNT_EXISTS from 503 AI_UNAVAILABLE.
+ */
+function backendError(result: any, response: Response, fallback: string): Error & { code?: string; status?: number } {
+  const code: string | undefined = result?.error?.code || undefined;
+  const message: string = result?.error?.message || fallback;
+  const err = new Error(code ? `${message} [${code}]` : message) as Error & { code?: string; status?: number };
+  if (code) err.code = code;
+  err.status = response.status;
+  return err;
+}
+
+/** Supabase session Bearer token, using the same pattern as the fetch callers. */
+async function getAccessToken(): Promise<string> {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (sessionError || !accessToken) {
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+  return accessToken;
+}
+
 export interface CreateGovernmentProjectInput {
   name: string;
   department: string;
@@ -36,18 +74,24 @@ export interface CreateGovernmentProjectInput {
   summary?: string;
 }
 
-// Helper to map DB project to Government Portal Project type
+// Helper to map DB project to Government Portal Project type.
+// DF-34/DF-02: every field is a real DB value or an honest empty/zero —
+// no invented contractors, funding splits, milestones, dates or counts.
 function mapDbProject(db: any): Project {
-  const cost = Number(db.total_cost_inr_crore) || Number(db.budget_approved) || 0;
-  const physPct = Number(db.physical_progress_percent) || 0;
-  const spent = Number(db.amount_spent_inr_crore) || (cost * (physPct / 100));
-  const finPct = Number(db.financial_progress_percent) || (cost > 0 ? (spent / cost) * 100 : 0);
+  const cost = numberOrZero(db.total_cost_inr_crore);
+  const physPct = numberOrZero(db.physical_progress_percent);
+  const spent = numberOrZero(db.amount_spent_inr_crore);
+  const finPct = db.financial_progress_percent != null
+    ? numberOrZero(db.financial_progress_percent)
+    : cost > 0
+      ? (spent / cost) * 100
+      : 0;
   const status = mapNormalizedStatus(db.normalized_status);
 
-  const dept = db.department || db.project_authority || db.implementing_agency || 'Public Works Department';
-  const dist = db.district || db.city || 'Pune';
+  const dept = db.department || db.project_authority || db.implementing_agency || '';
+  const dist = db.district || db.city || '';
   const distLower = dist.toLowerCase();
-  let division = 'Pune';
+  let division = '';
   if (distLower.includes('nashik') || distLower.includes('ahmednagar') || distLower.includes('dhule') || distLower.includes('jalgaon')) division = 'Nashik';
   else if (distLower.includes('nagpur') || distLower.includes('wardha') || distLower.includes('chandrapur') || distLower.includes('bhandara')) division = 'Nagpur';
   else if (distLower.includes('amravati') || distLower.includes('akola') || distLower.includes('yavatmal') || distLower.includes('buldhana')) division = 'Amravati';
@@ -56,84 +100,74 @@ function mapDbProject(db: any): Project {
   else if (distLower.includes('pune') || distLower.includes('satara') || distLower.includes('solapur') || distLower.includes('kolhapur') || distLower.includes('sangli')) division = 'Pune';
   else if (db.state) division = db.state;
 
-  const plannedEnd = db.original_completion_date || db.revised_completion_date || '2026-12-31';
-  const delayDays = status === 'delayed' ? 45 : 0;
+  const plannedEnd = db.original_completion_date || db.revised_completion_date || '';
+  // Real delay only: revised completion later than the original date.
+  let delayDays = 0;
+  if (db.original_completion_date && db.revised_completion_date) {
+    const diffMs = new Date(db.revised_completion_date).getTime() - new Date(db.original_completion_date).getTime();
+    if (Number.isFinite(diffMs) && diffMs > 0) delayDays = Math.round(diffMs / 86_400_000);
+  }
   const projId = db.nirikshak_project_id || db.id;
+  const revisedCost = db.revised_cost_inr_crore != null ? numberOrZero(db.revised_cost_inr_crore) : undefined;
 
   return {
     id: projId,
-    name: db.project_name || 'Public Infrastructure Project',
+    dbId: db.id || undefined,
+    name: db.project_name || '',
     department: dept,
     district: dist,
     division,
-    category: db.sector || db.subsector || 'Infrastructure',
+    category: db.sector || db.subsector || '',
     status,
     sanctionedAmountCr: cost,
     utilizedAmountCr: spent,
     physicalProgressPct: physPct,
     financialProgressPct: finPct,
-    adminApprovalDate: db.award_date || db.planned_start_date || '2022-01-15',
-    technicalApprovalDate: db.planned_start_date || '2022-03-01',
+    adminApprovalDate: db.award_date || db.planned_start_date || '',
+    // No technical-approval date column exists on projects — never derive
+    // one from planned_start_date (DF-34/DF-20).
+    technicalApprovalDate: db.technical_approval_date || '',
     expectedCompletion: plannedEnd,
     actualCompletion: db.actual_completion_date || undefined,
-    contractor: db.contractor_concessionaire || 'Balaji Infraprojects / L&T Consortium',
+    contractor: db.contractor_concessionaire || undefined,
     riskLevel: status === 'delayed' ? 'high' : status === 'at_risk' ? 'medium' : 'low',
     delayDays,
-    workOrderNo: `WO-MH-${projId.slice(-6)}`,
-    summary: db.description || db.public_summary || 'Monitored under NIRIKSHAK national public works oversight suite.',
+    workOrderNo: undefined,
+    summary: db.description || db.public_summary || db.public_description || '',
     financials: {
       sanctionedAmountCr: cost,
-      revisedAmountCr: Number(db.revised_cost_inr_crore) || cost,
+      revisedAmountCr: revisedCost,
       amountUtilizedCr: spent,
-      amountCommittedCr: cost * 0.85,
-      fundingSources: [
-        { source: 'State Infrastructure Budget', sharePct: 60, amountCr: cost * 0.6 },
-        { source: 'Central Assistance (MoHUA)', sharePct: 40, amountCr: cost * 0.4 },
-      ],
-      lastTrancheDate: '2025-11-15',
-      nextTrancheDueCr: cost * 0.15,
+      amountCommittedCr: 0,
+      fundingSources: [],
+      lastTrancheDate: undefined,
+      nextTrancheDueCr: undefined,
     },
-    milestones: [
-      {
-        id: 'm-1',
-        projectId: projId,
-        title: 'Site Handover & Preliminary Works',
-        status: 'completed',
-        plannedStart: '2023-01-01',
-        plannedEnd: '2023-06-30',
-        actualStart: '2023-01-10',
-        actualEnd: '2023-06-25',
-        physicalProgressPct: 100,
-        delayDays: 0,
-      },
-      {
-        id: 'm-2',
-        projectId: projId,
-        title: 'Core Civil & Structural Execution',
-        status: physPct >= 60 ? 'completed' : 'in_progress',
-        plannedStart: '2023-07-01',
-        plannedEnd: '2025-06-30',
-        actualStart: '2023-07-15',
-        physicalProgressPct: physPct >= 60 ? 100 : Math.min(100, Math.round(physPct * 1.4)),
-        delayDays: status === 'delayed' ? 30 : 0,
-      },
-      {
-        id: 'm-3',
-        projectId: projId,
-        title: 'Finishing, Testing & Final Commissioning',
-        status: physPct >= 100 ? 'completed' : 'upcoming',
-        plannedStart: '2025-07-01',
-        plannedEnd: plannedEnd,
-        physicalProgressPct: physPct >= 100 ? 100 : 0,
-        delayDays: 0,
-      },
-    ],
-    inspectionsCount: Number(db.pending_inspections_count) || 3,
-    openComplaints: Number(db.open_complaints_count) || 2,
-    pendingApprovals: Number(db.pending_progress_updates_count) || 1,
-    documentsCount: 6,
+    milestones: [],
+    inspectionsCount: numberOrZero(db.pending_inspections_count),
+    openComplaints: numberOrZero(db.open_complaints_count),
+    pendingApprovals: numberOrZero(db.pending_progress_updates_count),
+    documentsCount: 0,
   };
 }
+
+/**
+ * Translate a UI project status to the normalized_status enum value(s) it
+ * can be stored as (DF-27) — exact .in matching, never ilike substrings
+ * (e.g. 'in_execution' never substring-matches 'UNDER_CONSTRUCTION').
+ */
+// Values are restricted to members of the 001 project_status enum so the
+// filter stays valid on either DB lineage (enum or text — see migration 029).
+const UI_STATUS_TO_NORMALIZED: Record<string, string[]> = {
+  sanctioned: ['PROPOSED', 'DPR_STAGE', 'APPROVED'],
+  in_execution: ['UNDER_CONSTRUCTION'],
+  delayed: ['DELAYED'],
+  at_risk: ['STALLED', 'SUSPENDED'],
+  completed: ['COMPLETED'],
+  on_hold: ['UNKNOWN', 'OTHER', 'CANCELLED'],
+  tendered: ['TENDERED'],
+  awarded: ['AWARDED'],
+};
 
 function mapNormalizedStatus(status: string): Project['status'] {
   const shared = normalizeProjectStatus(status);
@@ -146,11 +180,7 @@ export const projectsApi = {
       throw new Error('Project creation service is temporarily unavailable.');
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (sessionError || !accessToken) {
-      throw new Error('Your session has expired. Please sign in again.');
-    }
+    const accessToken = await getAccessToken();
 
     const projectId = `NIR-GOV-${Date.now().toString(16).toUpperCase()}`;
     // 60s timeout: backend cold starts (Render/Vercel) can be slow.
@@ -173,6 +203,10 @@ export const projectsApi = {
         location_text: `${input.district}, Maharashtra`,
         total_cost_inr_crore: input.amountCr,
         planned_start_date: input.adminApprovalDate,
+        // DF-20: the form collects a technical approval date — send it
+        // (both key spellings; the backend schema/insert is the other half).
+        technicalApprovalDate: input.technicalApprovalDate || undefined,
+        technical_approval_date: input.technicalApprovalDate || undefined,
         original_completion_date: input.expectedCompletion,
         is_public: true,
       }),
@@ -181,7 +215,7 @@ export const projectsApi = {
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data) {
-      throw new Error(result?.error?.message || 'Project could not be created. Please try again.');
+      throw backendError(result, response, 'Project could not be created. Please try again.');
     }
 
     return mapDbProject(result.data);
@@ -197,8 +231,7 @@ export const projectsApi = {
       .limit(1000);
 
     if (error) {
-      console.error('Failed to fetch projects from Supabase:', error);
-      return [];
+      throw new Error(`Failed to load projects: ${error.message}`);
     }
 
     return (data || []).map(mapDbProject);
@@ -219,7 +252,13 @@ export const projectsApi = {
 
     const statusFilter = q?.filters?.status?.[0];
     if (statusFilter) {
-      query = query.ilike('normalized_status', `%${statusFilter}%`);
+      // DF-27: translate the UI status to stored enum value(s); exact match.
+      const normalized = UI_STATUS_TO_NORMALIZED[statusFilter.toLowerCase()];
+      if (normalized) {
+        query = query.in('normalized_status', normalized as any);
+      } else {
+        query = query.eq('normalized_status', statusFilter.toUpperCase() as any);
+      }
     }
 
     const { data, count, error } = await query
@@ -227,8 +266,7 @@ export const projectsApi = {
       .range(from, to);
 
     if (error) {
-      console.error('Failed to list projects from Supabase:', error);
-      return { items: [], total: 0, page, pageSize };
+      throw new Error(`Failed to list projects: ${error.message}`);
     }
 
     const items = (data || []).map(mapDbProject);
@@ -242,18 +280,15 @@ export const projectsApi = {
   },
 
   async get(id: string): Promise<Project | undefined> {
-    const { data, error } = await supabase
-      .from('government_project_summary_view')
-      .select('*')
-      .or(`id.eq.${id},nirikshak_project_id.eq.${id}`)
-      .single();
+    // DF-14: a non-UUID value must never be cast against the UUID id column.
+    let query = supabase.from('government_project_summary_view').select('*');
+    query = isUuid(id) ? query.eq('id', id) : query.eq('nirikshak_project_id', id);
+    const { data, error } = await query.maybeSingle();
 
-    if (error || !data) {
-      // Fallback to cache
-      const all = await this.all();
-      return all.find((p) => p.id === id);
+    if (error) {
+      throw new Error(`Failed to load project: ${error.message}`);
     }
-    return mapDbProject(data);
+    return data ? mapDbProject(data) : undefined;
   },
 
   async update(id: string, patch: Partial<Project>): Promise<Project> {
@@ -262,10 +297,10 @@ export const projectsApi = {
     if (patch.sanctionedAmountCr !== undefined) updatePayload.total_cost_inr_crore = patch.sanctionedAmountCr;
     if (patch.physicalProgressPct !== undefined) updatePayload.physical_progress_percent = patch.physicalProgressPct;
 
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updatePayload as any)
-      .or(`id.eq.${id},nirikshak_project_id.eq.${id}`)
+    // DF-14: query the UUID id column only for UUID values, else the code column alone.
+    let query = supabase.from('projects').update(updatePayload as any);
+    query = isUuid(id) ? query.eq('id', id) : query.eq('nirikshak_project_id', id);
+    const { data, error } = await query
       .select()
       .single();
 
@@ -297,10 +332,14 @@ export const projectsApi = {
 
 export const approvalsApi = {
   async all(): Promise<ApprovalItem[]> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('progress_updates')
       .select('*, projects(project_name, nirikshak_project_id), project_milestones(milestone_name)')
       .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to load approvals: ${error.message}`);
+    }
 
     return (data || []).map((u: any) => ({
       id: u.id,
@@ -364,10 +403,14 @@ export const approvalsApi = {
 
 export const grievancesApi = {
   async all(): Promise<Grievance[]> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('complaints')
       .select('*, projects(project_name, nirikshak_project_id)')
       .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to load grievances: ${error.message}`);
+    }
 
     return (data || []).map((c: any) => {
       const sev = String(c.severity || '').toLowerCase();
@@ -377,7 +420,11 @@ export const grievancesApi = {
 
       return {
         id: c.reference_number || c.id,
-        projectId: c.projects?.nirikshak_project_id || c.project_id || 'NIR-PUN-000',
+        // DF-06: keep the row's UUID alongside the reference number so
+        // writes can match the UUID id column exactly.
+        dbId: c.id || undefined,
+        referenceNumber: c.reference_number || undefined,
+        projectId: c.projects?.nirikshak_project_id || c.project_id || undefined,
         category: c.category || 'Quality of Work',
         status,
         subject: c.title || 'Public Works Grievance',
@@ -403,37 +450,56 @@ export const grievancesApi = {
 
   async get(id: string): Promise<Grievance | undefined> {
     const all = await this.all();
-    return all.find((g) => g.id === id);
+    return all.find((g) => g.id === id || g.dbId === id || g.referenceNumber === id);
   },
 
   async update(id: string, patch: Partial<Grievance>): Promise<Grievance> {
+    // DF-06: resolve the row's UUID first (from the patch, a UUID argument,
+    // or a lookup by display id/reference) — the UPDATE itself matches the
+    // UUID id column only, and its error is never swallowed.
+    let uuid: string | undefined = patch.dbId && isUuid(patch.dbId) ? patch.dbId : isUuid(id) ? id : undefined;
+    if (!uuid) {
+      const existing = await this.get(id);
+      uuid = existing?.dbId;
+    }
+    if (!uuid) {
+      throw new Error(`Grievance ${id} could not be found.`);
+    }
     if (patch.status) {
       const dbStatus = patch.status === 'resolved' ? 'RESOLVED' : patch.status === 'action_taken' ? 'IN_PROGRESS' : 'SUBMITTED';
-      await supabase.from('complaints').update({ status: dbStatus }).or(`id.eq.${id},reference_number.eq.${id}`);
+      const { error } = await supabase.from('complaints').update({ status: dbStatus }).eq('id', uuid);
+      if (error) throw error;
     }
-    const found = await this.get(id);
-    return found!;
+    const found = await this.get(uuid);
+    if (!found) {
+      throw new Error(`Grievance ${id} could not be reloaded after the update.`);
+    }
+    return found;
   },
 };
 
 export const citizenApi = {
   async all(): Promise<CitizenProjectSummary[]> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('public_projects_view')
       .select('*')
       .order('total_cost_inr_crore', { ascending: false, nullsFirst: false });
 
+    if (error) {
+      throw new Error(`Failed to load public projects: ${error.message}`);
+    }
+
     return (data || []).map((p: any) => ({
       id: p.nirikshak_project_id || p.id,
       name: p.project_name,
-      department: p.project_authority || 'Pune Municipal Corporation',
-      district: p.district || p.city || 'Pune',
+      department: p.project_authority || p.department || 'Not available',
+      district: p.district || p.city || 'Not available',
       status: mapNormalizedStatus(p.normalized_status),
       physicalProgressPct: Number(p.physical_progress_percent) || 0,
       sanctionedAmountCr: Number(p.total_cost_inr_crore) || 0,
       expectedCompletion: p.original_completion_date || p.revised_completion_date || '',
       contractor: p.contractor_concessionaire || 'Not available',
-      scope: p.public_summary || p.description || 'Not available',
+      scope: p.public_summary || p.public_description || p.description || 'Not available',
       publicMilestones: [],
     }));
   },
@@ -518,7 +584,7 @@ export const contractorsApi = {
 export const tendersApi = {
   async all(): Promise<Tender[]> {
     try {
-      const [{ data, error }, { data: bidData, error: bidError }] = await Promise.all([
+      const [{ data, error }, { data: bidData, error: bidError }, { data: contractData, error: contractError }] = await Promise.all([
         supabase
           .from('tenders')
           .select('*, projects(nirikshak_project_id, district, sector, project_authority)')
@@ -527,9 +593,19 @@ export const tendersApi = {
           .from('tender_bids')
           .select('id, tender_id, bid_amount, status, technical_score, financial_score, contractor_organization_id, organizations(name)')
           .is('deleted_at', null),
+        supabase
+          .from('contracts')
+          // selected_bid_id arrives with migration 030 — not selected yet so
+          // this query stays valid on the current live schema.
+          .select('id, tender_id, contract_value, contractor_organization_id, organizations(name)')
+          .is('deleted_at', null),
       ]);
       if (error) throw error;
       if (bidError) throw bidError;
+      // The contracts read is auxiliary (award enrichment): if it is not
+      // readable for this role, awarded fields still populate from the
+      // SELECTED bid rather than failing the whole tender register.
+      if (contractError) console.error('Contracts read for tender awards failed:', contractError);
       if (data) {
         const bidsByTender = new Map<string, any[]>();
         (bidData || []).forEach((bid: any) => {
@@ -537,13 +613,32 @@ export const tendersApi = {
           rows.push(bid);
           bidsByTender.set(bid.tender_id, rows);
         });
+        const contractsByTender = new Map<string, any>();
+        (contractData || []).forEach((contract: any) => {
+          if (contract.tender_id) contractsByTender.set(contract.tender_id, contract);
+        });
 
         return data.map((t: any) => {
           const bids = bidsByTender.get(t.id) || [];
           const bidOpeningAllowed = ['CLOSED', 'UNDER_EVALUATION', 'AWARDED'].includes(t.status)
             || Boolean(t.bid_due_date && new Date(`${t.bid_due_date}T23:59:59`).getTime() < Date.now());
+          // Awarded state (tender port §4.4): the SELECTED bid plus its
+          // contract. Amounts are ₹ Cr end to end (bid_amount and
+          // contracts.contract_value are both stored in ₹ Cr).
+          const selectedBid = bids.find((bid) => bid.status === 'SELECTED');
+          const contract = contractsByTender.get(t.id);
+          const awardedTo = selectedBid?.organizations?.name || contract?.organizations?.name || undefined;
+          const awardedAmountCr = contract?.contract_value != null
+            ? Number(contract.contract_value)
+            : selectedBid
+              ? Number(selectedBid.bid_amount) || 0
+              : undefined;
+          // bid_opening_date is added by a parallel DB migration; the row is
+          // typed `any` here so the optional column needs no generated-type edit.
+          const bidOpeningDate: string | undefined = t.bid_opening_date || undefined;
           return {
             id: t.tender_number || t.id,
+            databaseId: t.id,
             title: t.title || 'Unknown',
             department: t.projects?.project_authority || 'Government Authority',
             district: t.projects?.district || 'Not specified',
@@ -551,9 +646,10 @@ export const tendersApi = {
             estimatedCostCr: t.estimated_value_inr_crore == null ? 0 : Number(t.estimated_value_inr_crore),
             publishedOn: t.publication_date || '',
             submissionDeadline: t.bid_due_date || '',
-            openingDate: bidOpeningAllowed ? (t.bid_opening_date || t.bid_due_date || '') : '',
+            openingDate: bidOpeningAllowed ? (bidOpeningDate || t.bid_due_date || '') : '',
             bidsReceived: bids.filter((bid) => bid.status !== 'DRAFT' && bid.status !== 'WITHDRAWN').length,
             lots: bidOpeningAllowed ? bids.filter((bid) => bid.status !== 'DRAFT' && bid.status !== 'WITHDRAWN').map((bid) => ({
+              bidId: bid.id,
               bidder: bid.organizations?.name || 'Registered contractor',
               quotedAmountCr: Number(bid.bid_amount) || 0,
               technicalScore: Number(bid.technical_score) || 0,
@@ -561,12 +657,15 @@ export const tendersApi = {
               bidValidityDays: 120,
               bidStatus: bid.status === 'SELECTED' ? 'accepted' : bid.status === 'REJECTED' || bid.status === 'DISQUALIFIED' ? 'rejected' : 'under_review',
             })) : undefined,
+            awardedTo,
+            awardedAmountCr,
             category: t.projects?.sector || 'Infrastructure',
             mode: 'e-Tender' as const,
             projectId: t.projects?.nirikshak_project_id || t.project_id,
           };
         });
       }
+      return [];
     } catch (err) {
       console.error('Error fetching tenders from Supabase:', err);
       throw err;
@@ -587,9 +686,7 @@ export const tendersApi = {
       throw new Error('Tender publication service is temporarily unavailable.');
     }
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
+    const accessToken = await getAccessToken();
 
     // 60s timeout: backend cold starts (Render/Vercel) can be slow.
     const controller = new AbortController();
@@ -612,57 +709,129 @@ export const tendersApi = {
 
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data) {
-      throw new Error(result?.error?.message || 'The tender could not be published.');
+      throw backendError(result, response, 'The tender could not be published.');
     }
 
     const data = result.data;
 
+    // DF-40: department/district/status come from the returned row and/or
+    // its joined project — never hard-coded.
     return {
       id: data.tender_number || data.id,
+      databaseId: data.id,
       title: data.title,
-      department: 'Public Works Department',
-      district: 'Pune',
-      status: 'published',
+      department: data.projects?.project_authority || data.project_authority || data.department || 'Not available',
+      district: data.projects?.district || data.projects?.city || data.district || data.city || 'Not available',
+      status: (String(data.status || 'PUBLISHED').toLowerCase() as Tender['status']),
       estimatedCostCr: Number(data.estimated_value_inr_crore) || tender.estimatedCostCr,
-      publishedOn: data.publication_date || new Date().toISOString().slice(0, 10),
+      publishedOn: data.publication_date || '',
       submissionDeadline: data.bid_due_date || '',
-      openingDate: '',
+      openingDate: data.bid_opening_date || '',
       bidsReceived: 0,
-      category: 'Infrastructure',
-      mode: (tender.mode as any) || 'e-Tender',
-      projectId: data.nirikshak_project_id || tender.projectId,
+      category: data.projects?.sector || data.sector || 'Not available',
+      mode: (data.mode as any) || (tender.mode as any) || 'e-Tender',
+      projectId: data.nirikshak_project_id || data.projects?.nirikshak_project_id || tender.projectId,
     };
+  },
+
+  /** Close bid submission for a published tender (tender port §4.4). */
+  async close(id: string): Promise<void> {
+    if (!API_BASE_URL) {
+      throw new Error('Tender service is temporarily unavailable.');
+    }
+    const accessToken = await getAccessToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const response = await fetch(`${API_BASE_URL}/api/tenders/${encodeURIComponent(id)}/close`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw backendError(result, response, 'The tender could not be closed.');
+    }
+  },
+
+  /**
+   * Award a tender to the selected bid via the award_contract RPC
+   * (tender port §4.4). RPC errors are user-meaningful and surfaced verbatim.
+   */
+  async award(tenderDbId: string, bidId: string): Promise<any> {
+    const { data, error } = await supabase.rpc('award_contract', {
+      p_tender_id: tenderDbId,
+      p_selected_bid_id: bidId,
+    });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  /** Record technical/financial evaluation scores for a bid (tender port §4.4). */
+  async evaluateBid(
+    tenderDbId: string,
+    bidId: string,
+    scores: { technical_score: number; financial_score: number },
+  ): Promise<void> {
+    if (!API_BASE_URL) {
+      throw new Error('Tender evaluation service is temporarily unavailable.');
+    }
+    const accessToken = await getAccessToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const response = await fetch(
+      `${API_BASE_URL}/api/tenders/${encodeURIComponent(tenderDbId)}/bids/${encodeURIComponent(bidId)}/evaluate`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          technical_score: scores.technical_score,
+          financial_score: scores.financial_score,
+        }),
+        signal: controller.signal,
+      },
+    ).finally(() => clearTimeout(timeoutId));
+
+    const result = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw backendError(result, response, 'The bid evaluation could not be saved.');
+    }
   },
 };
 
 /* ---------- Finance ---------- */
 export const financeApi = {
   async fundFlows(): Promise<FundFlow[]> {
-    try {
-      const { data, error } = await supabase
-        .from('financial_updates')
-        .select('*, projects(project_name, nirikshak_project_id)')
-        .order('observation_date', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((f: any, idx: number) => {
-          const budget = Number(f.budget_allocation_inr_crore) || Number(f.reported_cost_inr_crore) || 100;
-          const spent = Number(f.amount_spent_inr_crore) || (budget * 0.4);
-          return {
-            id: `FF-MH-2026-${(idx + 1).toString().padStart(4, '0')}`,
-            fy: '2025-26',
-            demandNo: 42,
-            head: f.projects?.project_name ? `${f.projects.project_name} Execution Head` : '5054-Capital Outlay on Roads & Bridges',
-            budgetEstimateCr: budget,
-            revisedEstimateCr: Number(f.revised_cost_inr_crore) || budget,
-            allocationCr: budget,
-            releasedCr: budget * 0.8,
-            utilizedCr: spent,
-            status: budget > 0 ? 'released' : 'allocated',
-          };
-        });
-      }
-    } catch (err) {
-      console.warn('Error fetching financial updates from Supabase:', err);
+    const { data, error } = await supabase
+      .from('financial_updates')
+      .select('*, projects(project_name, nirikshak_project_id)')
+      .order('observation_date', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load fund flows: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((f: any, idx: number) => {
+        const budget = Number(f.budget_allocation_inr_crore) || Number(f.reported_cost_inr_crore) || 100;
+        const spent = Number(f.amount_spent_inr_crore) || (budget * 0.4);
+        return {
+          id: `FF-MH-2026-${(idx + 1).toString().padStart(4, '0')}`,
+          fy: '2025-26',
+          demandNo: 42,
+          head: f.projects?.project_name ? `${f.projects.project_name} Execution Head` : '5054-Capital Outlay on Roads & Bridges',
+          budgetEstimateCr: budget,
+          revisedEstimateCr: Number(f.revised_cost_inr_crore) || budget,
+          allocationCr: budget,
+          releasedCr: budget * 0.8,
+          utilizedCr: spent,
+          status: budget > 0 ? 'released' : 'allocated',
+        };
+      });
     }
     return DEMO_MODE ? FUND_FLOWS : [];
   },
@@ -670,50 +839,48 @@ export const financeApi = {
     return DEMO_MODE ? BILLS : [];
   },
   async createAllocation(projectId: string, amountCr: number, head: string, notes?: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('financial_updates')
-        .insert({
-          project_id: projectId,
-          observation_date: new Date().toISOString().slice(0, 10),
-          budget_allocation_inr_crore: amountCr,
-          notes: `${head}${notes ? ` — ${notes}` : ''}`,
-        });
-      if (error) {
-        console.warn('Failed to insert financial allocation in Supabase:', error.message);
-      }
-    } catch (err) {
-      console.warn('Financial allocation error:', err);
+    // DF-07: financial_updates.project_id is a UUID column — callers must
+    // pass the project's dbId, never its NIR- display id.
+    if (!isUuid(projectId)) {
+      throw new Error('Budget allocation requires the project database id (UUID).');
     }
+    const { error } = await supabase
+      .from('financial_updates')
+      .insert({
+        project_id: projectId,
+        observation_date: new Date().toISOString().slice(0, 10),
+        budget_allocation_inr_crore: amountCr,
+        notes: `${head}${notes ? ` — ${notes}` : ''}`,
+      });
+    if (error) throw error;
   },
 };
 
 /* ---------- Audit ---------- */
 export const auditApi = {
   async findings(): Promise<AuditFinding[]> {
-    try {
-      const { data, error } = await supabase
-        .from('inspections')
-        .select('*, projects(project_name, nirikshak_project_id)')
-        .eq('status', 'COMPLETED')
-        .order('inspection_date', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((ins: any, idx: number) => ({
-          id: `AUD-2026-${(idx + 1).toString().padStart(4, '0')}`,
-          auditTitle: ins.summary?.slice(0, 60) || 'Field Quality & Safety Audit',
-          projectId: ins.projects?.nirikshak_project_id || ins.project_id,
-          severity: (ins.inspection_type === 'SAFETY_AUDIT' ? 'medium' : 'low') as any,
-          category: ins.inspection_type || 'Civil Quality Check',
-          observation: ins.summary || 'Periodic compliance audit conducted at project site.',
-          raisedOn: ins.inspection_date || '2026-03-01',
-          status: 'open',
-          accountableOfficer: 'Chief Quality Inspector (Pune Div)',
-          dueDate: '2026-04-15',
-          irregularityAmountCr: 0,
-        }));
-      }
-    } catch (err) {
-      console.warn('Error fetching audit findings:', err);
+    const { data, error } = await supabase
+      .from('inspections')
+      .select('*, projects(project_name, nirikshak_project_id)')
+      .eq('status', 'COMPLETED')
+      .order('inspection_date', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load audit findings: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((ins: any, idx: number) => ({
+        id: `AUD-2026-${(idx + 1).toString().padStart(4, '0')}`,
+        auditTitle: ins.summary?.slice(0, 60) || 'Field Quality & Safety Audit',
+        projectId: ins.projects?.nirikshak_project_id || ins.project_id,
+        severity: (ins.inspection_type === 'SAFETY_AUDIT' ? 'medium' : 'low') as any,
+        category: ins.inspection_type || 'Civil Quality Check',
+        observation: ins.summary || 'Periodic compliance audit conducted at project site.',
+        raisedOn: ins.inspection_date || '2026-03-01',
+        status: 'open',
+        accountableOfficer: 'Chief Quality Inspector (Pune Div)',
+        dueDate: '2026-04-15',
+        irregularityAmountCr: 0,
+      }));
     }
     return DEMO_MODE ? AUDIT_FINDINGS : [];
   },
@@ -722,26 +889,25 @@ export const auditApi = {
 /* ---------- Alerts ---------- */
 export const alertsApi = {
   async list(): Promise<AlertItem[]> {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((n: any) => ({
-          id: n.id,
-          category: n.type || 'System',
-          severity: (n.metadata?.priority === 'critical' ? 'critical' : n.metadata?.priority === 'high' ? 'high' : 'medium') as any,
-          title: n.title || 'Infrastructure Alert',
-          body: n.message || '',
-          timestamp: n.created_at || new Date().toISOString(),
-          projectId: n.entity_id,
-          read: Boolean(n.read_at),
-          sourceModule: 'Government Oversight & Monitoring',
-        }));
-      }
-    } catch (err) {
-      console.warn('Error fetching notifications from Supabase:', err);
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load alerts: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((n: any) => ({
+        id: n.id,
+        category: n.type || 'System',
+        severity: (n.metadata?.priority === 'critical' ? 'critical' : n.metadata?.priority === 'high' ? 'high' : 'medium') as any,
+        title: n.title || 'Infrastructure Alert',
+        body: n.message || '',
+        timestamp: n.created_at || new Date().toISOString(),
+        projectId: n.entity_id,
+        read: Boolean(n.read_at),
+        sourceModule: 'Government Oversight & Monitoring',
+      }));
     }
     return DEMO_MODE ? ALERTS : [];
   },
@@ -750,34 +916,33 @@ export const alertsApi = {
 /* ---------- Documents ---------- */
 export const documentsApi = {
   async all(): Promise<DocumentItem[]> {
-    try {
-      const { data, error } = await supabase
-        .from('project_documents')
-        .select('*')
-        .order('document_date', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((d: any) => {
-          let category: DocumentItem['category'] = 'Work Order';
-          if (d.document_type === 'DPR') category = 'Administrative Approval';
-          else if (d.document_type === 'EIA') category = 'Technical Approval';
-          else if (d.document_type === 'CONTRACT') category = 'Contract Agreement';
-          else if (d.document_type === 'INSPECTION') category = 'Inspection Report';
+    const { data, error } = await supabase
+      .from('project_documents')
+      .select('*')
+      .order('document_date', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load documents: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((d: any) => {
+        let category: DocumentItem['category'] = 'Work Order';
+        if (d.document_type === 'DPR') category = 'Administrative Approval';
+        else if (d.document_type === 'EIA') category = 'Technical Approval';
+        else if (d.document_type === 'CONTRACT') category = 'Contract Agreement';
+        else if (d.document_type === 'INSPECTION') category = 'Inspection Report';
 
-          return {
-            id: d.id,
-            name: d.title || 'Project Document',
-            category,
-            projectId: d.project_id,
-            uploadedOn: d.document_date || '2025-01-01',
-            uploadedBy: d.publisher || 'Department Engineer',
-            fileSizeKb: 2450,
-            version: 1,
-            accessLevel: d.is_public ? 'Public' : 'Internal',
-          };
-        });
-      }
-    } catch (err) {
-      console.warn('Error fetching project documents:', err);
+        return {
+          id: d.id,
+          name: d.title || 'Project Document',
+          category,
+          projectId: d.project_id,
+          uploadedOn: d.document_date || '2025-01-01',
+          uploadedBy: d.publisher || 'Department Engineer',
+          fileSizeKb: 2450,
+          version: 1,
+          accessLevel: d.is_public ? 'Public' : 'Internal',
+        };
+      });
     }
     return DEMO_MODE ? DOCUMENTS : [];
   },
@@ -797,51 +962,49 @@ export const litigationApi = {
 /* ---------- Work orders & inspections ---------- */
 export const workApi = {
   async workOrders(): Promise<WorkOrder[]> {
-    try {
-      const { data, error } = await supabase
-        .from('contracts')
-        .select('*, projects(nirikshak_project_id)')
-        .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((c: any) => ({
-          id: c.contract_number || c.official_contract_id || c.id,
-          projectId: c.projects?.nirikshak_project_id || c.project_id,
-          contractor: 'L&T - Tata Projects Consortium',
-          issuedOn: c.scheduled_start_date || '2023-01-15',
-          valueCr: Number(c.contract_value) || 2450,
-          completionPeriodDays: 1095,
-          status: (c.status || 'ACTIVE').toLowerCase() === 'active' ? 'in_execution' : 'issued',
-          measurementBookNo: `eMB-2026-${(c.contract_number || '01').slice(-3)}`,
-          defectLiabilityMonths: 36,
-        }));
-      }
-    } catch (err) {
-      console.warn('Error fetching contracts from Supabase:', err);
+    const { data, error } = await supabase
+      .from('contracts')
+      .select('*, projects(nirikshak_project_id)')
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load work orders: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((c: any) => ({
+        id: c.contract_number || c.official_contract_id || c.id,
+        projectId: c.projects?.nirikshak_project_id || c.project_id,
+        contractor: 'L&T - Tata Projects Consortium',
+        issuedOn: c.scheduled_start_date || '2023-01-15',
+        valueCr: Number(c.contract_value) || 2450,
+        completionPeriodDays: 1095,
+        status: (c.status || 'ACTIVE').toLowerCase() === 'active' ? 'in_execution' : 'issued',
+        measurementBookNo: `eMB-2026-${(c.contract_number || '01').slice(-3)}`,
+        defectLiabilityMonths: 36,
+      }));
     }
     return DEMO_MODE ? WORK_ORDERS : [];
   },
   async inspections(): Promise<InspectionRecord[]> {
-    try {
-      const { data, error } = await supabase
-        .from('inspections')
-        .select('*, projects(nirikshak_project_id)')
-        .order('scheduled_date', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((i: any) => ({
-          id: i.id,
-          projectId: i.projects?.nirikshak_project_id || i.project_id,
-          inspectedOn: i.inspection_date || i.scheduled_date || '2026-03-01',
-          inspector: 'Er. R. K. Shinde (SE Pune)',
-          type: (i.inspection_type === 'SAFETY_AUDIT' ? 'Safety' : i.inspection_type === 'QUALITY_CHECK' ? 'Quality' : 'Routine') as any,
-          findings: i.summary || 'Site inspection completed as per protocol.',
-          geoTag: { lat: 18.5204, lng: 73.8567 },
-          photosCount: 4,
-          outcome: i.status === 'COMPLETED' ? 'satisfactory' : 'observations',
-          correctiveAction: i.status !== 'COMPLETED' ? 'Action item assigned to contractor' : undefined,
-        }));
-      }
-    } catch (err) {
-      console.warn('Error fetching inspections from Supabase:', err);
+    const { data, error } = await supabase
+      .from('inspections')
+      .select('*, projects(nirikshak_project_id)')
+      .order('scheduled_date', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load inspections: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((i: any) => ({
+        id: i.id,
+        projectId: i.projects?.nirikshak_project_id || i.project_id,
+        inspectedOn: i.inspection_date || i.scheduled_date || '2026-03-01',
+        inspector: 'Er. R. K. Shinde (SE Pune)',
+        type: (i.inspection_type === 'SAFETY_AUDIT' ? 'Safety' : i.inspection_type === 'QUALITY_CHECK' ? 'Quality' : 'Routine') as any,
+        findings: i.summary || 'Site inspection completed as per protocol.',
+        geoTag: { lat: 18.5204, lng: 73.8567 },
+        photosCount: 4,
+        outcome: i.status === 'COMPLETED' ? 'satisfactory' : 'observations',
+        correctiveAction: i.status !== 'COMPLETED' ? 'Action item assigned to contractor' : undefined,
+      }));
     }
     return DEMO_MODE ? INSPECTIONS : [];
   },
@@ -851,9 +1014,7 @@ export const workApi = {
 export const insightsApi = {
   async analyzeProject(projectId: string): Promise<any> {
     if (!API_BASE_URL) throw new Error('AI analysis service is temporarily unavailable.');
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
+    const accessToken = await getAccessToken();
 
     // 60s timeout: backend cold starts (Render/Vercel) can be slow.
     const controller = new AbortController();
@@ -866,33 +1027,32 @@ export const insightsApi = {
     }).finally(() => clearTimeout(timeoutId));
     const result = await response.json().catch(() => null);
     if (!response.ok || !result?.data?.analysis) {
-      throw new Error(result?.error?.message || 'AI analysis could not be completed.');
+      throw backendError(result, response, 'AI analysis could not be completed.');
     }
     return result.data.analysis;
   },
   async all(): Promise<AiInsight[]> {
-    try {
-      const { data, error } = await supabase
-        .from('ai_insights')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data.map((item: any) => ({
-          id: item.id,
-          area: item.insight_type === 'schedule_risk' ? 'Schedule & Delay Prediction' : item.insight_type === 'complaint_cluster' ? 'Public Grievance Correlation' : 'Cost & Material Anomaly',
-          title: item.title,
-          insight: item.summary,
-          supportingData: Array.isArray(item.evidence) ? item.evidence.join('; ') : (item.evidence || ''),
-          confidencePct: Math.round((Number(item.confidence) || 0.85) * 100),
-          confidenceBand: (Number(item.confidence) >= 0.85 ? 'high' : Number(item.confidence) >= 0.65 ? 'medium' : 'low') as any,
-          recommendedAction: Array.isArray(item.recommended_actions) ? item.recommended_actions.join('; ') : (item.recommended_actions || ''),
-          relatedProjectIds: item.project_id ? [item.project_id] : [],
-          generatedOn: (item.created_at || '').slice(0, 10) || '2026-02-20',
-          classification: 'ai_insight' as const,
-        }));
-      }
-    } catch (err) {
-      console.warn('Error fetching AI insights from Supabase:', err);
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load AI insights: ${error.message}`);
+    }
+    if (data && data.length > 0) {
+      return data.map((item: any) => ({
+        id: item.id,
+        area: item.insight_type === 'schedule_risk' ? 'Schedule & Delay Prediction' : item.insight_type === 'complaint_cluster' ? 'Public Grievance Correlation' : 'Cost & Material Anomaly',
+        title: item.title,
+        insight: item.summary,
+        supportingData: Array.isArray(item.evidence) ? item.evidence.join('; ') : (item.evidence || ''),
+        confidencePct: Math.round((Number(item.confidence) || 0.85) * 100),
+        confidenceBand: (Number(item.confidence) >= 0.85 ? 'high' : Number(item.confidence) >= 0.65 ? 'medium' : 'low') as any,
+        recommendedAction: Array.isArray(item.recommended_actions) ? item.recommended_actions.join('; ') : (item.recommended_actions || ''),
+        relatedProjectIds: item.project_id ? [item.project_id] : [],
+        generatedOn: (item.created_at || '').slice(0, 10) || '2026-02-20',
+        classification: 'ai_insight' as const,
+      }));
     }
     return DEMO_MODE ? AI_INSIGHTS : [];
   },

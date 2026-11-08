@@ -1,10 +1,9 @@
 import type { AssistantReply, ChatMessage } from "@/types/api";
 import type { Project } from "@/types/project";
 import { latency } from "@/services/api/client";
-import { nearbyProjects, projectsData, findProject } from "@/services/projects/projectsService";
+import { nearbyProjects, findProject } from "@/services/projects/projectsService";
 import { getMyComplaints } from "@/services/complaints/complaintsService";
 import { criticalUnreadAlerts } from "@/services/alerts/alertsService";
-import { ward as wardStats } from "@/data/ward";
 import { isLoggedIn, currentUser } from "@/services/auth/authService";
 
 export interface AssistantContext {
@@ -75,9 +74,9 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
   }
 
   if (/(delay|late|behind|stuck|slow|why.*time)/.test(q)) {
-    const project = (ctx?.projectId ? findProject(ctx.projectId) : undefined) ?? projectsData.find((p) => p.id === "katraj-kondhwa-road");
+    const project = ctx?.projectId ? findProject(ctx.projectId) : undefined;
     if (!project) {
-      return make({ text: "I could not find that project. Try asking about projects near you." });
+      return make({ text: "Tell me which project you mean — open a project page and ask again, or ask about projects near you." });
     }
     if (project.delay) {
       const penaltyAmount = /([\d.]+)/.exec(project.delay.penalty)?.[1] ?? "?";
@@ -97,8 +96,23 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
 
   if (/(who|responsible|accountab|contractor|engineer)/.test(q)) {
     const project = (ctx?.projectId ? findProject(ctx.projectId) : undefined) ?? nearbyProjects(1)[0];
+    if (!project) {
+      return make({ text: "Open a project page and ask again — I will pull the accountable agency and contractor from its record." });
+    }
+    // Only state what the public record actually carries (DF-02 fields).
+    const bits = [`For ${project.name}, the executing agency is ${project.agency}.`];
+    if (project.contractor.name && project.contractor.name !== '—') {
+      bits.push(`The works contractor is ${project.contractor.name}.`);
+    }
+    if (project.contractor.performance.onTime) {
+      bits.push(`On-time performance: ${project.contractor.performance.onTime}.`);
+    }
+    if (project.engineer) {
+      bits.push(`The supervising engineer is ${project.engineer}.`);
+    }
+    bits.push('All of this is public on the project page.');
     return make({
-      text: `For ${project.name}, the executing agency is ${project.agency} and the works contractor is ${project.contractor.name} (contract ₹${project.contractor.contractValue} Cr). On-time performance: ${project.contractor.performance.onTime}, quality rating ${project.contractor.performance.quality}. The supervising engineer is ${project.engineer}. All of this is public on the project page.`,
+      text: bits.join(' '),
       actions: [{ label: "Open Contractor Profile", icon: "engineering", route: `#/projects/${project.id}?tab=contractor` }],
       chips: ["How are contractors penalised?", "Which projects has this contractor done before?"]
     });
@@ -106,9 +120,8 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
 
   if (/(money|spent|budget|cost|fund|expenditure|kharcha|paisa)/.test(q)) {
     return make({
-      text: `In ${wardStats.name}, ₹${wardStats.spentFYCr} Cr has been spent this financial year against ₹${wardStats.totalValueCr} Cr of sanctioned project value (${wardStats.expenditurePct}% utilisation). The largest active outlay is Pune Metro Line 3, followed by the Katraj–Kondhwa road works. Every rupee is traceable on each project's Financial Transparency tab.`,
+      text: "Each project's sanctioned cost and published financial figures are on its Financial Transparency tab. Open a project to see its budget — I don't publish ward-level totals that aren't drawn from those records.",
       actions: [
-        { label: "See Ward Accountability", icon: "account_balance", route: "#/home" },
         { label: "Open Project Budgets", icon: "payments", route: "#/projects" }
       ]
     });
@@ -131,7 +144,7 @@ export async function respond(text: string, ctx: AssistantContext | null): Promi
     return make({
       text: crit.length
         ? `There ${crit.length === 1 ? "is 1 critical alert" : `are ${crit.length} critical alerts`} right now:\n• ${crit[0].title}\n\nPlease follow the advisories for your area.`
-        : "No critical alerts right now. The latest advisory is about desilting works along the riverfront park (14–18 Sep, 7–11 AM).",
+        : "No critical alerts right now.",
       actions: [{ label: "Open Alerts Centre", icon: "notifications_active", route: "#/alerts" }]
     });
   }

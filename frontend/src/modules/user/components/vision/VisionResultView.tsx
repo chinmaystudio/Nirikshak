@@ -42,10 +42,12 @@ export function VisionResultView({ result, continueToReport, onReport, onInfoSub
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="flex justify-between text-label-sm mb-1">
-                  <span className="text-on-surface-variant">Confidence</span>
-                  <span className="font-bold text-primary tabular-nums">{result.confidence}%</span>
+                  <span className="text-on-surface-variant">Match strength</span>
+                  <span className="font-bold text-primary tabular-nums">
+                    {result.confidence != null ? `${result.confidence}%` : 'Indicative — demo estimate, not measured'}
+                  </span>
                 </div>
-                <ProgressBar pct={result.confidence} toneClass="bg-info" />
+                {result.confidence != null ? <ProgressBar pct={result.confidence} toneClass="bg-info" /> : null}
               </div>
             </div>
             <p className="text-body-sm text-on-surface-variant leading-relaxed">{result.description}</p>
@@ -181,7 +183,7 @@ export function VisionHistoryList({
               >
                 {r.condition.label}
               </span>
-              <div className="text-label-sm text-outline mt-1">{r.confidence}%</div>
+              <div className="text-label-sm text-outline mt-1">{r.confidence != null ? `${r.confidence}%` : 'Indicative (demo)'}</div>
             </div>
           </button>
         );

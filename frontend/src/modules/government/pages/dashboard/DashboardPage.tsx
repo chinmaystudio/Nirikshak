@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/core/supabase/client'
 import { useI18n } from '@/context/I18nContext'
+import { useAuth } from '@/context/AuthContext'
 import { KpiCard } from '@/components/charts/KpiCard'
 import { Panel, Card } from '@/components/ui/Card'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -25,7 +26,14 @@ import { cn } from '@/utils/cn'
  */
 export function DashboardPage() {
   const { t } = useI18n()
+  const { officer } = useAuth()
   const navigate = useNavigate()
+  // DF-41: access requests can only be actioned by admin / chief-engineer
+  // level roles — other roles must not see the pending badge/count at all
+  // (their RLS-scoped count would read as a misleading zero).
+  const canActOnAccessRequests = (officer?.roles ?? []).some(
+    (r) => r === 'government_admin' || r === 'chief_engineer',
+  )
   const { data: projects, loading } = useApiData(() => projectsApi.all(), [])
   const [division, setDivision] = useState('')
   const [health, setHealth] = useState('')
@@ -37,6 +45,7 @@ export function DashboardPage() {
   const demoMode = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true'
 
   useEffect(() => {
+    if (!canActOnAccessRequests) return
     async function fetchPendingRequests() {
       try {
         const [govRes, conRes] = await Promise.all([
@@ -50,7 +59,7 @@ export function DashboardPage() {
       }
     }
     fetchPendingRequests()
-  }, [])
+  }, [canActOnAccessRequests])
 
   const list = useMemo(() => {
     let rows = projects ?? []
@@ -132,8 +141,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Registration Clearance Queue Alert */}
-      {pendingClearanceCount > 0 && (
+      {/* Registration Clearance Queue Alert — admin / chief-engineer only (DF-41) */}
+      {canActOnAccessRequests && pendingClearanceCount > 0 && (
         <div className="rounded-control border border-warning-border bg-warning-tint p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
           <div className="flex items-start gap-3">
             <span className="material-symbols-outlined text-[24px] text-warning-strong shrink-0 mt-0.5">

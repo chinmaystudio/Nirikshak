@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MapLegend, ProjectMap } from "@/components/projects/ProjectMap";
 import { Icon } from "@/components/common/Icon";
 import { useLocation } from "@/hooks/useLocation";
@@ -21,11 +22,17 @@ function toPin(point: { x: number; y: number }): ReportPin {
 
 export function LocationPicker({ draft, onChange }: LocationPickerProps): JSX.Element {
   const { locating, locate } = useLocation();
+  const [gpsDenied, setGpsDenied] = useState(false);
 
   const useCurrent = (): void => {
     void locate().then((pos) => {
-      if (!pos) return;
-      onChange({ gps: formatGps(pos.lat, pos.lng), address: draft.address || "Kothrud, Paud Road (approximate location)" });
+      if (!pos) {
+        // DF-44: no fabricated fallback point — ask for a manual location.
+        setGpsDenied(true);
+        return;
+      }
+      setGpsDenied(false);
+      onChange({ gps: formatGps(pos.lat, pos.lng) });
     });
   };
 
@@ -79,6 +86,11 @@ export function LocationPicker({ draft, onChange }: LocationPickerProps): JSX.El
               {locating ? "Locating…" : "Use Current"}
             </button>
           </div>
+          {gpsDenied ? (
+            <p className="text-body-sm text-error mt-1.5">
+              Location unavailable or permission denied — please type the address above or drop a pin on the map instead.
+            </p>
+          ) : null}
         </div>
       </div>
       <div>

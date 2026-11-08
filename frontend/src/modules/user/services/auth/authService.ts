@@ -53,14 +53,19 @@ export async function syncCitizenSession(): Promise<Citizen | null> {
   if (current && current.id === user.id) {
     return current;
   }
+  // DF-43: a different account on this browser starts from a clean store.
+  if (current && current.id !== user.id) {
+    appStore.resetSession();
+  }
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
   const citizen: Citizen = {
     id: user.id,
     name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Citizen',
     email: user.email,
     mobile: profile?.phone || user.user_metadata?.phone || '',
-    city: profile?.city || user.user_metadata?.city || 'Pune',
-    ward: user.user_metadata?.ward || 'Ward 12 — Kothrud West',
+    city: profile?.city || user.user_metadata?.city || '',
+    // DF-32: no fabricated fallbacks — unknown ward/city stay empty.
+    ward: user.user_metadata?.ward || '',
     preferredLanguage: user.user_metadata?.preferredLanguage || 'en',
     verified: Boolean(user.email_confirmed_at),
     joinedAt: user.created_at ? user.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -75,10 +80,11 @@ export async function loginWithEmail(email: string, password: string, next: stri
     id: session.user.id,
     name: session.profile?.full_name || session.user.email?.split('@')[0] || 'Citizen',
     email: session.user.email,
-    mobile: session.profile?.phone || '9876543210',
-    city: session.profile?.city || 'Pune',
-    ward: 'Ward 12 — Kothrud West',
-    preferredLanguage: 'en',
+    // DF-32: no fabricated mobile/ward — use only stored profile/metadata.
+    mobile: session.profile?.phone || session.user.user_metadata?.phone || '',
+    city: session.profile?.city || '',
+    ward: session.user.user_metadata?.ward || '',
+    preferredLanguage: session.user.user_metadata?.preferredLanguage || 'en',
     verified: Boolean(session.user.email_confirmed_at),
     joinedAt: session.user.created_at ? session.user.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
   };
@@ -93,10 +99,11 @@ export async function loginWithGoogle(redirectTo: string = "/user/home"): Promis
 }
 
 export async function register(payload: RegisterPayload): Promise<Citizen> {
-  const password = payload.password || 'NirikshakCitizen#2026';
+  // DF-32: never fall back to a hard-coded shared password.
+  if (!payload.password) throw new Error('Please set a password for your account.');
   const { user } = await AuthService.signUp({
     email: payload.email,
-    password,
+    password: payload.password,
     fullName: payload.name,
     phone: payload.mobile,
     metadata: {
@@ -106,12 +113,14 @@ export async function register(payload: RegisterPayload): Promise<Citizen> {
     },
   });
 
+  if (!user?.id) throw new Error('Registration did not return an account. Please try signing in.');
+
   const citizen: Citizen = {
-    id: user?.id || `citizen-${Date.now()}`,
+    id: user.id,
     name: payload.name,
     email: payload.email,
     mobile: payload.mobile || '',
-    city: payload.city || 'Pune',
+    city: payload.city || '',
     ward: payload.ward,
     preferredLanguage: payload.preferredLanguage,
     verified: Boolean(user?.email_confirmed_at),
@@ -130,14 +139,26 @@ export async function logout(): Promise<void> {
 export async function updateProfile(patch: Partial<Citizen>): Promise<Citizen> {
   const current = appStore.getState().user;
   if (!current) throw new Error("Not signed in.");
-  
-  if (current.id) {
-    await supabase.from('profiles').update({
-      full_name: patch.name ?? current.name,
-      phone: patch.mobile ?? current.mobile,
-      city: patch.city ?? current.city,
-      updated_at: new Date().toISOString(),
-    }).eq('id', current.id);
+
+  // DF-32: persist ALL editable fields and propagate failures instead of
+  // reporting local success for a write that never landed. profiles has no
+  // ward column, so ward lives in the auth user metadata.
+  const { error: profileError } = await supabase.from('profiles').update({
+    full_name: patch.name ?? current.name,
+    phone: patch.mobile ?? current.mobile,
+    city: patch.city ?? current.city,
+    updated_at: new Date().toISOString(),
+  }).eq('id', current.id);
+  if (profileError) throw new Error(`Could not save your profile: ${profileError.message}`);
+
+  if (patch.ward !== undefined || patch.preferredLanguage !== undefined) {
+    const { error: metaError } = await supabase.auth.updateUser({
+      data: {
+        ...(patch.ward !== undefined ? { ward: patch.ward } : {}),
+        ...(patch.preferredLanguage !== undefined ? { preferredLanguage: patch.preferredLanguage } : {}),
+      },
+    });
+    if (metaError) throw new Error(`Could not save your profile: ${metaError.message}`);
   }
 
   const updated = { ...current, ...patch };

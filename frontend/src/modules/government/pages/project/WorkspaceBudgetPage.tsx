@@ -36,6 +36,7 @@ export function WorkspaceBudgetPage() {
   const [billDrawer, setBillDrawer] = useState<BillItem | null>(null)
   const [headDrawer, setHeadDrawer] = useState<BudgetHead | null>(null)
   const [addHeadOpen, setAddHeadOpen] = useState(false)
+  const [allocating, setAllocating] = useState(false)
   const [newHead, setNewHead] = useState({ head: '', amountCr: '', source: '' })
   const [confirm, setConfirm] = useState<{ title: string; message: string; run: () => void } | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -458,10 +459,21 @@ export function WorkspaceBudgetPage() {
             <Button variant="outline" onClick={() => setAddHeadOpen(false)}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
-              disabled={!newHead.head.trim() || !(Number(newHead.amountCr) > 0) || !newHead.source}
-              onClick={() => {
+              disabled={!newHead.head.trim() || !(Number(newHead.amountCr) > 0) || !newHead.source || allocating}
+              onClick={async () => {
                 const amount = Number(newHead.amountCr)
-                void financeApi.createAllocation(project.id, amount, newHead.head.trim(), newHead.source)
+                // DF-07: persist first (with the project's database UUID) —
+                // the head is added and success announced only after the
+                // insert actually succeeds; failures surface as an error.
+                setAllocating(true)
+                try {
+                  await financeApi.createAllocation(project.dbId ?? project.id, amount, newHead.head.trim(), newHead.source)
+                } catch (err: any) {
+                  showToast(err?.message || 'Budget allocation could not be saved. Please try again.', 'danger')
+                  return
+                } finally {
+                  setAllocating(false)
+                }
                 setHeadState((list) => [
                   ...list,
                   { id: `BH-${Date.now()}`, head: newHead.head.trim(), originalCr: amount, utilizedCr: 0 },
@@ -471,7 +483,7 @@ export function WorkspaceBudgetPage() {
                 setAddHeadOpen(false)
               }}
             >
-              {t('common.submit')}
+              {allocating ? 'Saving…' : t('common.submit')}
             </Button>
           </>
         }

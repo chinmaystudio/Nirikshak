@@ -11,34 +11,32 @@ interface LiveMetrics {
 }
 
 export const ReportsSection: React.FC = () => {
-  const [metrics, setMetrics] = useState<LiveMetrics>({
-    projectsMonitored: 3902,
-    activeProjects: 2912,
-    verifiedProgressUpdates: 52,
-    openPublicIssues: 0,
-    lastUpdated: new Date().toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  });
-  const [loading, setLoading] = useState(false);
+  // DF-11: metrics exist only after a successful query — no hard-coded
+  // starting numbers.
+  const [metrics, setMetrics] = useState<LiveMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchLiveMetrics = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [totalRes, activeRes, verifiedRes, complaintsRes] = await Promise.all([
         supabase.from('public_projects_view').select('id', { count: 'exact', head: true }),
         supabase.from('public_projects_view').select('id', { count: 'exact', head: true }).neq('normalized_status', 'COMPLETED'),
         supabase.from('public_projects_view').select('id', { count: 'exact', head: true }).eq('current_status_verified', true),
-        supabase.from('complaints').select('id', { count: 'exact', head: true })
+        // Open public issues: public complaints view, excluding resolved/closed.
+        supabase.from('public_complaints_view' as any).select('id', { count: 'exact', head: true }).not('status', 'in', '("RESOLVED","CLOSED")')
       ]);
 
+      const failed = [totalRes, activeRes, verifiedRes, complaintsRes].find((r: any) => r.error);
+      if (failed) throw (failed as any).error;
+
       setMetrics({
-        projectsMonitored: totalRes.count ?? 3902,
-        activeProjects: activeRes.count ?? 2912,
-        verifiedProgressUpdates: verifiedRes.count ?? 52,
-        openPublicIssues: complaintsRes.count ?? 0,
+        projectsMonitored: totalRes.count ?? 0,
+        activeProjects: activeRes.count ?? 0,
+        verifiedProgressUpdates: verifiedRes.count ?? 0,
+        openPublicIssues: (complaintsRes as any).count ?? 0,
         lastUpdated: new Date().toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'short',
@@ -47,6 +45,7 @@ export const ReportsSection: React.FC = () => {
       });
     } catch (err) {
       console.error('Failed to fetch live Supabase metrics:', err);
+      setLoadError('Live metrics could not be loaded right now.');
     } finally {
       setLoading(false);
     }
@@ -56,31 +55,34 @@ export const ReportsSection: React.FC = () => {
     fetchLiveMetrics();
   }, []);
 
+  const fmt = (n: number | undefined): string =>
+    metrics && n != null ? n.toLocaleString('en-IN') : '—';
+
   const stats = [
     {
       label: 'PROJECTS MONITORED',
-      value: metrics.projectsMonitored.toLocaleString('en-IN'),
+      value: fmt(metrics?.projectsMonitored),
       desc: 'Total public infrastructure projects cataloged across state and central jurisdictions.',
       icon: Database,
       color: 'text-[#eefc55]'
     },
     {
       label: 'ACTIVE PROJECTS',
-      value: metrics.activeProjects.toLocaleString('en-IN'),
+      value: fmt(metrics?.activeProjects),
       desc: 'Ongoing works currently in planning, tendering, or active site execution.',
       icon: Activity,
       color: 'text-white'
     },
     {
       label: 'VERIFIED PROGRESS UPDATES',
-      value: metrics.verifiedProgressUpdates.toLocaleString('en-IN'),
+      value: fmt(metrics?.verifiedProgressUpdates),
       desc: 'Milestone submissions formally inspected and certified by designated government officers.',
       icon: CheckCircle2,
       color: 'text-emerald-400'
     },
     {
       label: 'OPEN PUBLIC ISSUES',
-      value: metrics.openPublicIssues.toLocaleString('en-IN'),
+      value: fmt(metrics?.openPublicIssues),
       desc: 'Citizen ground complaints currently being processed through government redressal.',
       icon: AlertCircle,
       color: 'text-amber-400'
@@ -98,12 +100,13 @@ export const ReportsSection: React.FC = () => {
               <span>LIVE DATABASE TELEMETRY</span>
             </div>
             <h2 className="text-4xl sm:text-6xl font-extrabold text-white font-display tracking-tight leading-tight">
-              Real Data. <br />
-              <span className="text-[#eefc55]">Not Fabricated Statistics.</span>
+              Live counts, <br />
+              <span className="text-[#eefc55]">queried on page load.</span>
             </h2>
             <p className="text-base sm:text-lg text-slate-200 mt-3 leading-relaxed">
-              Every count below is queried directly from active NIRIKSHAK PostgreSQL tables. Transparent public records updated in real time.
+              Every count below is queried directly from active NIRIKSHAK PostgreSQL tables when this page loads.
             </p>
+            {loadError ? <p className="text-sm text-red-300 mt-2">{loadError}</p> : null}
           </div>
 
           <button
@@ -116,7 +119,7 @@ export const ReportsSection: React.FC = () => {
           </button>
         </div>
 
-        {/* 4 Large Real Metric Blocks */}
+        {/* 4 Large Metric Blocks */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {stats.map((st, idx) => (
             <div
@@ -158,7 +161,7 @@ export const ReportsSection: React.FC = () => {
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <div>
               <span className="text-slate-400">Last Synced: </span>
-              <span className="font-mono text-white font-bold">{metrics.lastUpdated}</span>
+              <span className="font-mono text-white font-bold">{metrics?.lastUpdated ?? '—'}</span>
             </div>
           </div>
         </div>

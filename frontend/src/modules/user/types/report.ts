@@ -15,10 +15,12 @@ export interface ReportAIResult {
   detected: string;
   severity: "high" | "medium" | "low";
   category: string;
-  confidence: number;
+  /** DF-16: null — the on-device heuristic produces no measured confidence. */
+  confidence: number | null;
   department: string;
   projectId: string | null;
-  duplicates: number;
+  /** DF-16: null — duplicates are not actually checked by the heuristic. */
+  duplicates: number | null;
 }
 
 export interface ReportPin {

@@ -14,7 +14,6 @@ import { useProjects } from "@/hooks/useProjects";
 import { toast } from "@/hooks/useToast";
 import { createComplaint } from "@/services/complaints/complaintsService";
 import { analyzeReport } from "@/services/reporting/reportingService";
-import { projectsData } from "@/services/projects/projectsService";
 import { issueCategoryMeta } from "@/constants/issueCategories";
 import { PRIORITY_META } from "@/constants/complaintStatuses";
 import { consumeReportPrefill } from "@/features/reporting/reportFlow";
@@ -156,6 +155,17 @@ export function ReportIssuePage(): JSX.Element {
     patch({ submitting: true });
     const cat = draft.categoryId ? issueCategoryMeta(draft.categoryId) : null;
     const locationText = draft.address + (draft.gps ? ` (GPS ${draft.gps})` : draft.pin ? " (map pin)" : "");
+    // Real coordinates only (DF-44): from the device GPS fix or the map pin.
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    if (draft.gps) {
+      const [la, lo] = draft.gps.split(",").map((s) => Number(s.trim()));
+      if (Number.isFinite(la) && Number.isFinite(lo)) { latitude = la; longitude = lo; }
+    } else if (draft.pin) {
+      const la = Number(draft.pin.lat);
+      const lo = Number(draft.pin.lng);
+      if (Number.isFinite(la) && Number.isFinite(lo)) { latitude = la; longitude = lo; }
+    }
     void createComplaint({
       title: draft.title,
       category: draft.categoryId ?? "other",
@@ -165,6 +175,8 @@ export function ReportIssuePage(): JSX.Element {
       department: draft.aiResult?.department ?? cat?.department ?? "Municipal Commissioner Office",
       ward: draft.ward,
       location: locationText,
+      latitude,
+      longitude,
       description: draft.description,
       evidence: draft.evidence.map((e: EvidenceDraftItem) => ({
         id: e.id,
@@ -178,7 +190,7 @@ export function ReportIssuePage(): JSX.Element {
       })),
       aiSeverity: draft.aiResult?.severity ?? null,
       aiConfidence: draft.aiResult?.confidence ?? null,
-      aiProjectName: draft.aiResult?.projectId ? (projectsData.find((p) => p.id === draft.aiResult?.projectId)?.name ?? null) : null
+      aiProjectName: draft.aiResult?.projectId ? (projects.find((p) => p.id === draft.aiResult?.projectId)?.name ?? null) : null
     })
       .then((complaint) => {
         patch({ submitting: false, submittedId: complaint.id, step: 6 });
@@ -271,7 +283,7 @@ export function ReportIssuePage(): JSX.Element {
                   className="w-full px-3 py-2 border border-outline-variant rounded text-body-md bg-surface-container-lowest"
                 >
                   <option value="">Not linked to a specific project</option>
-                  {(projects.length > 0 ? projects : projectsData).map((p) => (
+                  {projects.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -314,14 +326,14 @@ export function ReportIssuePage(): JSX.Element {
               <SummaryRow label="Ward" value={draft.ward} />
               <SummaryRow
                 label="Related project"
-                value={draft.projectId ? (projectsData.find((x) => x.id === draft.projectId)?.name ?? "—") : "—"}
+                value={draft.projectId ? (projects.find((x) => x.id === draft.projectId)?.name ?? "—") : "—"}
               />
               <SummaryRow label="Evidence" value={`${draft.evidence.length} file(s) attached`} />
               <SummaryRow label="Recommended department" value={draft.aiResult?.department ?? (draft.categoryId ? issueCategoryMeta(draft.categoryId).department : "Municipal Commissioner Office")} />
               {draft.aiResult ? (
                 <SummaryRow
                   label="AI assessment"
-                  value={`${draft.aiResult.severity} severity • ${draft.aiResult.confidence}% confidence${draft.aiResult.duplicates ? ` • ${draft.aiResult.duplicates} similar nearby` : ""}`}
+                  value={`${draft.aiResult.severity} severity • ${draft.aiResult.confidence != null ? `${draft.aiResult.confidence}% confidence` : "indicative confidence (demo)"}${draft.aiResult.duplicates ? ` • ${draft.aiResult.duplicates} similar nearby` : ""}`}
                 />
               ) : null}
             </dl>

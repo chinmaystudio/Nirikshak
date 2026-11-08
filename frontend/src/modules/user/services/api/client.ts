@@ -29,9 +29,13 @@ export function offlineGuard(): void {
   }
 }
 
-export function latency(minMs = 300, maxMs = 600): Promise<void> {
-  const ms = minMs + Math.random() * (maxMs - minMs);
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/**
+ * DF-46: simulated network latency was removed — it imitated backend/AI work
+ * in production. Kept as an immediately-resolving helper so existing callers
+ * (step animations) keep their shape without fake delays.
+ */
+export function latency(_minMs = 0, _maxMs = 0): Promise<void> {
+  return Promise.resolve();
 }
 
 /**

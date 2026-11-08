@@ -1,23 +1,60 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Download, Bookmark, BookmarkCheck, ArrowRight, CheckCircle2, XCircle, CircleAlert, MapPin, Landmark, IndianRupee, CalendarClock } from 'lucide-react';
 import { PageHeader, Card, Tabs, StatusBadge, AIInsight, SectionTitle, Timeline } from '../components/ui';
 import { Link } from '../lib/router';
 import { useStore } from '../lib/store';
-import { getTender, CONTRACTOR } from '../lib/data';
-import { eligibilityRows, eligibilityStatus } from '../lib/eligibility';
+import { getTender } from '../lib/data';
+import type { Tender } from '../lib/data';
+import { eligibilityRows, eligibilityStatus, useContractorProfile } from '../lib/eligibility';
 import { cr, downloadFile, fmtDate, money, daysLeftLabel, cls } from '../lib/utils';
+import { ContractorTenderService } from '../services/tender.service';
 
 export default function TenderDetails({ tenderId }: { tenderId: string }) {
-  const tender = getTender(tenderId);
   const { savedTenders, toggleSaveTender, toast, bids } = useStore();
   const [tab, setTab] = useState('Overview');
+  // First paint comes from the sessionStorage cache (lib/data getTender is
+  // cache-only now — no bundled mock fallback); the effect below then loads
+  // the live record and overrides it.
+  const [tender, setTender] = useState<Tender | undefined>(() => getTender(tenderId));
+  const [notFound, setNotFound] = useState(false);
+  const contractorProfile = useContractorProfile();
+
+  useEffect(() => {
+    let active = true;
+    setTender(getTender(tenderId));
+    setNotFound(false);
+    (async () => {
+      try {
+        const row = await ContractorTenderService.getTender(tenderId);
+        if (!active) return;
+        if (row) {
+          setTender(ContractorTenderService.toTender(row));
+        } else {
+          // Live record does not exist — show the not-found state rather
+          // than any cached/demo substitute.
+          setTender(undefined);
+          setNotFound(true);
+        }
+      } catch (error) {
+        if (!active) return;
+        console.error(`Unable to load tender ${tenderId}:`, error);
+        if (!getTender(tenderId)) {
+          setTender(undefined);
+          setNotFound(true);
+        } else {
+          toast('warn', 'Live tender data unavailable', 'Showing the last cached copy of this tender.');
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [tenderId, toast]);
 
   if (!tender) {
     return (
       <div className="p-6 max-w-3xl mx-auto pt-10">
         <Card className="p-8 text-center">
-          <p className="font-display font-bold text-xl text-slate-800 dark:text-slate-100">Tender not found</p>
-          <p className="text-sm text-slate-500 mt-2">The tender you are looking for does not exist or has been withdrawn.</p>
+          <p className="font-display font-bold text-xl text-slate-800 dark:text-slate-100">{notFound ? 'Tender not found' : 'Loading tender…'}</p>
+          <p className="text-sm text-slate-500 mt-2">{notFound ? 'The tender you are looking for does not exist or has been withdrawn.' : 'Fetching the live tender record.'}</p>
           <Link to="/tenders" className="btn btn-primary mt-5 inline-flex">Back to Tender Management</Link>
         </Card>
       </div>
@@ -25,8 +62,8 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
   }
 
   const isSaved = savedTenders.includes(tender.id);
-  const status = eligibilityStatus(tender);
-  const rows = eligibilityRows(tender);
+  const status = eligibilityStatus(tender, contractorProfile);
+  const rows = eligibilityRows(tender, contractorProfile);
   const bid = bids[tender.id];
 
   const downloadTender = () => {
@@ -112,7 +149,7 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
           <Fact icon={CalendarClock} label="Submission Deadline" value={fmtDate(tender.deadline)} sub={daysLeftLabel(tender.deadline)} />
           <Fact icon={CalendarClock} label="Work Duration" value={`${tender.durationMonths} months`} />
           <Fact icon={MapPin} label="Location" value={tender.location} />
-          <Fact icon={Landmark} label="Eligibility" value={status} badge />
+          <Fact icon={Landmark} label="Indicative Eligibility" value={status} badge />
         </div>
       </Card>
 
@@ -203,7 +240,7 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
                 </table>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Automated check against {CONTRACTOR.name} profile. Final eligibility is confirmed by the department at technical evaluation.
+                Indicative check against {contractorProfile?.organizationName ?? 'your contractor organization'} profile, derived from the tender's published criteria. Final eligibility is confirmed by the department at technical evaluation.
               </p>
             </div>
           )}

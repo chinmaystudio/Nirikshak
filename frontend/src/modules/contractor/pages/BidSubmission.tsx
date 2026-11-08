@@ -8,7 +8,8 @@ import { Link } from '../lib/router';
 import type { UploadDoc } from '../components/ui';
 import { useStore } from '../lib/store';
 import { getTender, CONTRACTOR, BID_STEPS } from '../lib/data';
-import { eligibilityStatus } from '../lib/eligibility';
+import type { Tender } from '../lib/data';
+import { eligibilityStatus, useContractorProfile } from '../lib/eligibility';
 import { cr, money, fmtDate, cls } from '../lib/utils';
 import { ContractorTenderService } from '../services/tender.service';
 
@@ -47,8 +48,12 @@ const EMPTY: BidData = {
 const REQUIRED_DOCS = ['Experience Certificate', 'Equipment Ownership Proof', 'EMD Bank Guarantee', 'Turnover Certificate'];
 
 export default function BidSubmission({ tenderId }: { tenderId: string }) {
-  const tender = getTender(tenderId);
   const { bids, saveBidDraft, submitBid, toast } = useStore();
+  // Paint from the sessionStorage cache (cache-only getTender), then the
+  // live service record overrides it — no bundled mock fallback.
+  const [tender, setTender] = useState<Tender | undefined>(() => getTender(tenderId));
+  const [tenderNotFound, setTenderNotFound] = useState(false);
+  const contractorProfile = useContractorProfile();
   const existing = tender ? bids[tender.id] : undefined;
   const [step, setStep] = useState(existing && existing.status === 'Draft' ? Math.min(existing.step, 6) : 0);
   const [data, setData] = useState<BidData>(EMPTY);
@@ -56,19 +61,63 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submittedRef, setSubmittedRef] = useState<string | null>(existing && existing.ref ? existing.ref : null);
   const [serverSubmittedAt, setServerSubmittedAt] = useState<string | null>(null);
+  const [, setDraftBidId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const row = await ContractorTenderService.getTender(tenderId);
+        if (!active) return;
+        if (row) {
+          setTender(ContractorTenderService.toTender(row));
+        } else if (!getTender(tenderId)) {
+          setTenderNotFound(true);
+        }
+      } catch (error) {
+        if (!active) return;
+        console.error(`Unable to load tender ${tenderId}:`, error);
+        if (!getTender(tenderId)) setTenderNotFound(true);
+      }
+    })();
+    return () => { active = false; };
+  }, [tenderId]);
 
   useEffect(() => {
     let active = true;
     const loadServerBid = async () => {
       try {
         const serverBids = await ContractorTenderService.getMyBids();
+        if (!active) return;
         const serverBid = serverBids.find((bid) => bid.tender_id === tenderId && bid.status === 'SUBMITTED');
-        if (active && serverBid?.bid_reference) {
+        if (serverBid?.bid_reference) {
           setSubmittedRef(serverBid.bid_reference);
           setServerSubmittedAt(serverBid.submitted_at || null);
+          return;
+        }
+        // Restore an existing server DRAFT: prefill the amount (₹ Cr),
+        // methodology, document filename list and financial proposal that
+        // were persisted on the bid row, so a refresh no longer loses them.
+        const draft = serverBids.find((bid) => bid.tender_id === tenderId && bid.status === 'DRAFT');
+        if (draft) {
+          setDraftBidId(draft.id);
+          const savedDocs = Array.isArray(draft.documents)
+            ? (draft.documents as unknown[])
+                .map((d) => (typeof d === 'string' ? { name: d, size: '' } : d && typeof d === 'object' && 'name' in d ? { name: String((d as { name: unknown }).name), size: '' } : null))
+                .filter((d): d is UploadDoc => Boolean(d?.name))
+            : [];
+          const fin = (draft.financial_proposal && typeof draft.financial_proposal === 'object' ? draft.financial_proposal : {}) as Record<string, unknown>;
+          setData((d) => ({
+            ...d,
+            bidAmount: draft.bid_amount != null ? String(draft.bid_amount) : d.bidAmount,
+            methodology: draft.technical_proposal || d.methodology,
+            docs: savedDocs.length > 0 ? savedDocs : d.docs,
+            taxPercent: typeof fin.taxPercent === 'number' ? String(fin.taxPercent) : d.taxPercent,
+            validity: typeof fin.validityDays === 'number' ? String(fin.validityDays) : d.validity,
+          }));
         }
       } catch (error) {
-        console.warn('Unable to restore submitted bid state:', error);
+        console.warn('Unable to restore bid state:', error);
       }
     };
     void loadServerBid();
@@ -79,7 +128,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
     return (
       <div className="p-6 max-w-3xl mx-auto pt-10">
         <Card className="p-8 text-center">
-          <p className="font-display font-bold text-xl text-slate-800 dark:text-slate-100">Tender not found</p>
+          <p className="font-display font-bold text-xl text-slate-800 dark:text-slate-100">{tenderNotFound ? 'Tender not found' : 'Loading tender…'}</p>
           <Link to="/tenders" className="btn btn-primary mt-5 inline-flex">Back to Tender Management</Link>
         </Card>
       </div>
@@ -147,14 +196,33 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
   const saveDraft = (silent?: boolean) => {
     saveBidDraft(tender.id, step, data as unknown as Record<string, unknown>);
     if (amountNum > 0) {
-      void ContractorTenderService.saveDraft({
-        tenderId: tender.id,
-        bidAmount: amountNum,
-        technicalProposal: data.methodology,
-      }).catch((error) => {
-        console.error('Unable to save bid draft:', error);
-        if (!silent) toast('warn', 'Database draft not saved', error.message || 'Please retry.');
-      });
+      void (async () => {
+        try {
+          const saved = await ContractorTenderService.saveDraft({
+            tenderId: tender.id,
+            bidAmount: amountNum,
+            technicalProposal: data.methodology,
+          });
+          setDraftBidId(saved.id);
+          // Persist the wizard's document filename list + financial proposal
+          // onto the still-DRAFT bid row (RLS-legal owner update); throws on
+          // failure so the success toast below is never shown for a partial
+          // save.
+          await ContractorTenderService.saveDraftBidDetails(saved.id, {
+            documents: data.docs.map((d) => d.name),
+            financialProposal: {
+              bidAmount: amountNum, // ₹ Cr
+              taxPercent: Number(data.taxPercent) || 0,
+              validityDays: Number(data.validity) || 0,
+            },
+          });
+          if (!silent) toast('success', 'Draft saved', `Bid for ${tender.code} saved. Continue anytime from My Bids.`);
+        } catch (error) {
+          console.error('Unable to save bid draft:', error);
+          if (!silent) toast('warn', 'Database draft not saved', error instanceof Error ? error.message : 'Please retry.');
+        }
+      })();
+      return;
     }
     if (!silent) toast('success', 'Draft saved', `Bid for ${tender.code} saved. Continue anytime from My Bids.`);
   };
@@ -166,7 +234,8 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
         bidAmount: amountNum,
         technicalProposal: data.methodology,
       });
-      submitBid(tender.id, amountNum);
+      // Only the server-issued bid_reference (NIR-BID-…) is recorded/shown.
+      submitBid(tender.id, amountNum, bid.bid_reference);
       setSubmittedRef(bid.bid_reference);
       setConfirmOpen(false);
       toast('success', 'Bid submitted successfully', `Reference: ${bid.bid_reference}`);
@@ -301,7 +370,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
           <div className="max-w-2xl space-y-4">
             <SectionTitle icon={ShieldCheck} title="02 — Eligibility Declarations" />
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              AI pre-check against {CONTRACTOR.name}: <StatusBadge status={eligibilityStatus(tender)} />. Confirm the declarations below.
+              Indicative pre-check against {CONTRACTOR.name}: <StatusBadge status={eligibilityStatus(tender, contractorProfile)} />. Confirm the declarations below.
             </p>
             {[
               'We meet the turnover and class requirements specified in the tender.',

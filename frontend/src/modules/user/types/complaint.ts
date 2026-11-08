@@ -90,6 +90,8 @@ export interface NewComplaintPayload {
   department: string;
   ward: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
   description: string;
   evidence: EvidenceItem[];
   aiSeverity?: string | null;

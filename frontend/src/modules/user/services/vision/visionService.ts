@@ -40,13 +40,15 @@ function buildResult(profile: VisionProfile, opts: AnalyzeOptions): VisionAnalys
     infrastructureLabel: profile.label,
     shortLabel: profile.shortLabel,
     infrastructureType: profile.type,
-    confidence: profile.confidence - Math.floor(Math.random() * 4),
+    // DF-16: simulated (demo) analysis — never present a random/profile
+    // number as a measured confidence.
+    confidence: null,
     description: profile.description,
     details: profile.details,
     condition,
     authority: profile.authority,
     relatedProject: profile.projectMatch
-      ? { projectId: profile.projectMatch, matchConfidence: 88 + Math.floor(Math.random() * 9) }
+      ? { projectId: profile.projectMatch, matchConfidence: null }
       : null,
     reportCategory: profile.reportCategory,
     saved: true,

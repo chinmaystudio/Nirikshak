@@ -81,8 +81,11 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
             <Icon name="smart_toy" className="text-[20px]" />
           </span>
           <div>
-            <div className={`text-headline-sm font-bold ${embedded ? "text-primary" : "text-surface-container-lowest"}`}>NIRIKSHAK Civic Assistant</div>
-            <div className={`text-label-sm ${embedded ? "text-outline" : "text-surface-variant"}`}>Public information • Guided services • Not an official decision</div>
+            <div className={`text-headline-sm font-bold ${embedded ? "text-primary" : "text-surface-container-lowest"}`}>
+              NIRIKSHAK Civic Assistant{" "}
+              <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold uppercase tracking-wide align-middle">Demo</span>
+            </div>
+            <div className={`text-label-sm ${embedded ? "text-outline" : "text-surface-variant"}`}>Demo helper • Public information • Guided services • Not an official decision</div>
           </div>
         </div>
       </div>

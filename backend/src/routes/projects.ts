@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { supabaseAdmin, supabasePublic, createAuthenticatedClient } from '../services/supabase.js';
 import { CreateProjectSchema } from '../validation/schemas.js';
-import { requireAuth, requireGovernment, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireAuth, requireGovernmentWrite, AuthenticatedRequest } from '../middleware/auth.js';
 
 export const projectsRouter = Router();
 
@@ -90,7 +90,12 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
         query = query.eq('nirikshak_project_id', id);
       }
       const { data, error } = await query.single();
-      if (error || !data) {
+      if (error && error.code !== 'PGRST116') {
+        // DF-01: a real PostgREST failure is a 500, never a masked 404.
+        console.error('Government project detail query failed', { code: error.code, message: error.message });
+        return res.status(500).json({ success: false, error: { code: 'FETCH_ERROR', message: 'Failed to retrieve project details' } });
+      }
+      if (!data) {
         return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Project not found' } });
       }
       return res.json({ success: true, data });
@@ -99,7 +104,7 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
     // Public / Citizen projection (Rules 18, 30: Never expose private contracts, internal complaints, or unverified progress)
     let query = supabasePublic
       .from('projects')
-      .select('id, nirikshak_project_id, project_name, description, sector, subsector, project_authority, state, city, location_text, latitude, longitude, total_cost_inr_crore, planned_start_date, original_completion_date, normalized_status, physical_progress_percent, current_status_verified, is_public, project_milestones(id, milestone_name, sequence_order, target_completion_date, verified_progress, status)')
+      .select('id, nirikshak_project_id, project_name, description, sector, subsector, project_authority, state, city, location_text, latitude, longitude, total_cost_inr_crore, planned_start_date, original_completion_date, normalized_status, physical_progress_percent, current_status_verified, is_public, project_milestones(id, milestone_name, display_order, planned_end_date, verified_progress, status)')
       .eq('is_public', true)
       .is('deleted_at', null);
 
@@ -110,7 +115,13 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
     }
 
     const { data, error } = await query.single();
-    if (error || !data) {
+    if (error && error.code !== 'PGRST116') {
+      // DF-01: distinguish a failed query (500) from a genuine miss (404).
+      // PGRST116 is PostgREST's "0 rows" signal from .single().
+      console.error('Public project detail query failed', { code: error.code, message: error.message });
+      return res.status(500).json({ success: false, error: { code: 'FETCH_ERROR', message: 'Failed to retrieve project details' } });
+    }
+    if (!data) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Project not found' } });
     }
 
@@ -127,12 +138,23 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
 
 // POST /api/projects - Create new project (Government Admin / Officer ONLY)
 // Rules 18, 33: Never allow unauthenticated or citizen callers to create projects
-projectsRouter.post('/', requireAuth, requireGovernment, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const validated = CreateProjectSchema.parse(req.body);
+// DF-38: write guard — auditors are read-only.
+projectsRouter.post('/', requireAuth, requireGovernmentWrite, async (req: AuthenticatedRequest, res: Response) => {
+  // DF-21: safeParse + first-issue message (same pattern as auth.ts/tenders.ts)
+  const parsed = CreateProjectSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || 'Please check the project details.' },
+    });
+  }
 
+  try {
+    const { technicalApprovalDate, ...fields } = parsed.data;
     const projectPayload = {
-      ...validated,
+      ...fields,
+      // DF-20: map the form's camelCase field onto its DB column (migration 033)
+      technical_approval_date: technicalApprovalDate || null,
       government_organization_id: req.organizationId,
       created_by: req.user!.id,
     };
@@ -144,7 +166,14 @@ projectsRouter.post('/', requireAuth, requireGovernment, async (req: Authenticat
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // DF-21: database failures are 500s with a generic message, not 400s
+      console.error('Project creation failed', { code: error.code, message: error.message });
+      return res.status(500).json({
+        success: false,
+        error: { code: 'PROJECT_CREATE_FAILED', message: 'The project could not be created.' },
+      });
+    }
 
     // Record audit log
     await supabaseAdmin.from('audit_logs').insert({
@@ -161,6 +190,7 @@ projectsRouter.post('/', requireAuth, requireGovernment, async (req: Authenticat
 
     res.status(201).json({ success: true, data });
   } catch (err: any) {
-    res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: err.message } });
+    console.error('Unexpected project creation error', err);
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'The project could not be created.' } });
   }
 });

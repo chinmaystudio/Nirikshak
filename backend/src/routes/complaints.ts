@@ -18,9 +18,17 @@ complaintsRouter.post(
   '/',
   rateLimit({ windowMs: 60 * 1000, max: 20 }),
   async (req: Request, res: Response) => {
+    // DF-21: safeParse + first-issue message (same pattern as auth.ts/tenders.ts)
+    const parsed = CreateComplaintSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: parsed.error.issues[0]?.message || 'Please check the complaint details.' },
+      });
+    }
+
     try {
-      const validated = CreateComplaintSchema.parse(req.body);
-      const { evidence_paths, ...compData } = validated;
+      const { evidence_paths, ...compData } = parsed.data;
 
       // Extract optional authenticated user
       let userId: string | null = null;
@@ -58,14 +66,23 @@ complaintsRouter.post(
           ...compData,
           title: sanitizedTitle,
           description: sanitizedDesc,
-          user_id: userId || compData.user_id || null,
+          // DF-22: the author comes solely from the verified Bearer token
+          // (null for anonymous submissions) — never from the request body.
+          user_id: userId,
           reference_number: refNum,
           status: 'SUBMITTED',
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // DF-21: database failures are 500s with a generic message, not 400s
+        console.error('Complaint creation failed', { code: error.code, message: error.message });
+        return res.status(500).json({
+          success: false,
+          error: { code: 'COMPLAINT_CREATE_FAILED', message: 'The complaint could not be submitted.' },
+        });
+      }
 
       if (evidence_paths && evidence_paths.length > 0) {
         const evs = evidence_paths.map((p) => ({
@@ -96,7 +113,8 @@ complaintsRouter.post(
         },
       });
     } catch (err: any) {
-      res.status(400).json({ success: false, error: { code: 'COMPLAINT_ERROR', message: err.message } });
+      console.error('Unexpected complaint creation error', err);
+      res.status(500).json({ success: false, error: { code: 'COMPLAINT_ERROR', message: 'The complaint could not be submitted.' } });
     }
   }
 );

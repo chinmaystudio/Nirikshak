@@ -24,6 +24,8 @@ const BASE_PROJECT_STATUS: Record<ProjectStatus, StatusDescriptor> = {
   at_risk: { key: 'status.atRisk', tone: 'warning', icon: 'warning' },
   completed: { key: 'status.completed', tone: 'success', icon: 'check_circle' },
   on_hold: { key: 'status.onHold', tone: 'neutral', icon: 'pause_circle' },
+  tendered: { key: 'status.tendered', tone: 'info', icon: 'gavel' },
+  awarded: { key: 'status.awarded', tone: 'success', icon: 'emoji_events' },
 }
 
 export function getSafeStatusDescriptor(status?: string): StatusDescriptor {
@@ -71,6 +73,7 @@ export const TENDER_STATUS: Record<TenderStatus, StatusDescriptor> = {
   draft: { key: 'status.draft', tone: 'neutral', icon: 'edit_note' },
   published: { key: 'status.published', tone: 'info', icon: 'campaign' },
   bid_open: { key: 'status.bidOpen', tone: 'info', icon: 'lock_open' },
+  closed: { key: 'status.closed', tone: 'neutral', icon: 'lock' },
   under_evaluation: { key: 'status.underEvaluation', tone: 'warning', icon: 'rate_review' },
   awarded: { key: 'status.awarded', tone: 'success', icon: 'emoji_events' },
   cancelled: { key: 'status.cancelled', tone: 'danger', icon: 'cancel' },

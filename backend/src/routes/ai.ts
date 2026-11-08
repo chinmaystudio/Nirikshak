@@ -84,8 +84,10 @@ aiRouter.post(
 
       const analysis = await provider.analyzeProject(prompt, project as any);
 
-      // Save insight to database using service role for persistence
-      const { data: insight } = await supabaseAdmin
+      // Save insight to database using service role for persistence.
+      // DF-23: check the insert result — previously a failed insert still
+      // produced a 200 that callers read as "saved to the audit trail".
+      const { data: insight, error: insightError } = await supabaseAdmin
         .from('ai_insights')
         .insert({
           project_id: project.id,
@@ -101,6 +103,15 @@ aiRouter.post(
         .select()
         .single();
 
+      const insightSaved = !insightError && !!insight;
+      if (!insightSaved) {
+        console.error('AI insight persistence failed', {
+          code: insightError?.code,
+          message: insightError?.message || 'insert returned no row',
+          project_id: project.id,
+        });
+      }
+
       // Record audit log
       await supabaseAdmin.from('audit_logs').insert({
         actor_id: req.user!.id,
@@ -110,7 +121,8 @@ aiRouter.post(
         new_value: {
           risk_level: analysis.risk_level,
           risk_score: analysis.risk_score,
-          insight_id: insight?.id,
+          insight_id: insight?.id ?? null,
+          insight_saved: insightSaved,
         },
       });
 
@@ -119,7 +131,10 @@ aiRouter.post(
         data: {
           provider: provider.name,
           analysis,
-          saved_insight: insight,
+          // DF-23: saved_insight is null and insight_saved is false when the
+          // analysis ran but could not be persisted — never imply it saved.
+          saved_insight: insightSaved ? insight : null,
+          insight_saved: insightSaved,
         },
       });
     } catch (err: any) {

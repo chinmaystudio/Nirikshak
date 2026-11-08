@@ -18,6 +18,8 @@ export type ProjectStatus =
   | 'at_risk'
   | 'completed'
   | 'on_hold'
+  | 'tendered'
+  | 'awarded'
 
 export type MilestoneStatus = 'upcoming' | 'in_progress' | 'completed' | 'delayed' | 'blocked'
 
@@ -27,6 +29,7 @@ export type TenderStatus =
   | 'draft'
   | 'published'
   | 'bid_open'
+  | 'closed'
   | 'under_evaluation'
   | 'awarded'
   | 'cancelled'
@@ -102,6 +105,8 @@ export interface ProjectFinancials {
 
 export interface Project {
   id: string // e.g. NIR-PWD-2026-0142
+  /** Database UUID of the projects row (db.id) — required for writes keyed by UUID. */
+  dbId?: string
   name: string
   department: string
   district: string
@@ -153,6 +158,8 @@ export interface ApprovalItem {
 }
 
 export interface TenderLot {
+  /** Database UUID of the tender_bids row — required for evaluate/award calls. */
+  bidId?: string
   bidder: string
   quotedAmountCr: number
   technicalScore: number
@@ -163,6 +170,8 @@ export interface TenderLot {
 
 export interface Tender {
   id: string // eNIT / Tender No.
+  /** Database UUID of the tenders row — required for close/award/evaluate calls. */
+  databaseId?: string
   title: string
   department: string
   district: string
@@ -203,6 +212,10 @@ export interface BillItem {
 
 export interface Grievance {
   id: string // GRV-MH-9942
+  /** Database UUID of the complaints row — required for writes keyed by UUID. */
+  dbId?: string
+  /** Citizen-facing reference number (complaints.reference_number), when present. */
+  referenceNumber?: string
   subject: string
   category: string
   projectId?: string

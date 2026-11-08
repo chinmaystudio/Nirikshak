@@ -13,6 +13,10 @@ export const CreateProjectSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   total_cost_inr_crore: z.number().positive().optional(),
+  // DF-20: collected by the government planning form; persisted to the
+  // projects.technical_approval_date column (migration 033). The route
+  // handler maps this camelCase field onto the snake_case column.
+  technicalApprovalDate: z.string().optional(),
   planned_start_date: z.string().optional(),
   original_completion_date: z.string().optional(),
   is_public: z.boolean().default(true),
@@ -56,16 +60,17 @@ export const CreateComplaintSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
-  user_id: z.string().uuid().optional(),
+  // DF-22: no client-supplied user_id. The complaints route derives the
+  // author solely from the Bearer token (null for anonymous submissions);
+  // trusting a body value would let anyone attribute a complaint to any user.
   evidence_paths: z.array(z.string()).optional(),
 });
 
-export const SubmitBidSchema = z.object({
-  tender_id: z.string().uuid(),
-  contractor_organization_id: z.string().uuid(),
-  bid_amount: z.number().positive(),
-  technical_score: z.number().min(0).max(100).optional(),
-  financial_score: z.number().min(0).max(100).optional(),
+// Government bid evaluation (QCBS). combined_score is computed server-side
+// as round(0.7 * technical + 0.3 * financial, 2); clients never send it.
+export const EvaluateBidSchema = z.object({
+  technical_score: z.number().min(0).max(100),
+  financial_score: z.number().min(0).max(100),
 });
 
 export const RiskLevelEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'UNKNOWN']);

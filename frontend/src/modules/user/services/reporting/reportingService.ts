@@ -28,16 +28,15 @@ export async function analyzeReport(input: ReportAnalysisInput): Promise<ReportA
   const cat = issueCategoryMeta(input.categoryId);
   const projectId = input.projectId ?? CATEGORY_PROJECT_HINTS[input.categoryId] ?? null;
   const detected = input.title.trim() !== "" ? input.title.trim() : `${cat.label} (from report text)`;
-  const duplicates = ["pothole", "water-leakage", "safety-hazard"].includes(input.categoryId)
-    ? 1 + Math.floor(Math.random() * 3)
-    : 0;
   return {
     detected,
     severity: input.priority === "high" || input.priority === "critical" ? "high" : input.priority === "medium" ? "medium" : "low",
     category: cat.label,
-    confidence: 86 + Math.floor(Math.random() * 9),
+    // DF-16: this is an on-device heuristic (demo) — it measures neither a
+    // confidence score nor duplicate reports, so both stay null.
+    confidence: null,
     department: cat.department,
     projectId,
-    duplicates
+    duplicates: null
   };
 }

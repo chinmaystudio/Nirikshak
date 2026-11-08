@@ -1,6 +1,6 @@
 import type { Project, ProjectCategory, ProjectStatus, WardStatistics, CityStatistics } from "@/types/project";
 import { ApiError } from "@/services/api/client";
-import { projects as mockProjects, projectImages } from "../../data/projects";
+import { projects as mockProjects } from "../../data/projects";
 import { ward as wardStats, cityStats } from "../../data/ward";
 import { supabase } from "@/core/supabase/client";
 
@@ -16,13 +16,21 @@ export type ProjectFilters = {
   scope?: "ward" | "pune" | "all";
 };
 
-// Map DB row to Citizen Project interface
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * DF-02 / DF-24: map a public_projects_view row to the citizen Project model
+ * using ONLY values the view actually returns. Fields the view does not
+ * publish stay empty / null / 0 (rendered as — or hidden by the UI) — never
+ * invented contractor names, engineers, distances, dates, funding splits,
+ * grades, documents or inspection results.
+ */
 function mapDbRowToProject(row: any): Project {
   const normStatus = String(row.normalized_status || '').toUpperCase();
   let status: ProjectStatus = 'on-track';
   if (normStatus === 'COMPLETED') status = 'completed';
   else if (normStatus === 'DELAYED') status = 'delayed';
-  else if (normStatus === 'TENDERED' || normStatus === 'PROPOSED') status = 'tendering';
+  else if (normStatus === 'TENDERED' || normStatus === 'AWARDED' || normStatus === 'PROPOSED') status = 'tendering';
   else if (normStatus === 'STALLED' || normStatus === 'SUSPENDED') status = 'under-review';
 
   const sector = String(row.sector || '').toLowerCase();
@@ -33,174 +41,133 @@ function mapDbRowToProject(row: any): Project {
   else if (subsector.includes('bridge') || subsector.includes('flyover')) category = 'bridges';
   else if (sector.includes('energy') || subsector.includes('power')) category = 'smart-infrastructure';
 
-  const cost = Number(row.total_cost_inr_crore) || 75;
-  const progress = Number(row.physical_progress_percent) || (status === 'completed' ? 100 : 45);
-  const spent = Math.round((Number(row.amount_spent_inr_crore) || (cost * (progress / 100))) * 10) / 10;
+  const cost = Number(row.total_cost_inr_crore) || 0;
+  const progress = row.physical_progress_percent != null
+    ? Number(row.physical_progress_percent)
+    : status === 'completed' ? 100 : 0;
+  // The view publishes no spend figure (DF-24): amount spent stays 0-labelled.
+  const spent = 0;
 
-  // Pick suitable photo
-  let photoUrl = projectImages.pier;
-  if (category === 'metro-transit') photoUrl = projectImages.metro;
-  else if (category === 'bridges') photoUrl = projectImages.gantry;
-  else if (category === 'roads') photoUrl = projectImages.ring;
+  const lat = row.latitude != null ? Number(row.latitude) : null;
+  const lng = row.longitude != null ? Number(row.longitude) : null;
 
-  const lat = Number(row.latitude) || (18.5204 + (Math.sin(cost) * 0.05));
-  const lng = Number(row.longitude) || (73.8567 + (Math.cos(cost) * 0.05));
-
-  const contractorName = row.contractor_concessionaire || 'Tata Projects / L&T Consortium';
-  const projCode = row.nirikshak_project_id || `PUN-${category.toUpperCase().slice(0, 2)}-${Math.floor(100 + Math.random() * 900)}`;
-  const projId = row.nirikshak_project_id || row.id || projCode;
-  const originalEnd = row.original_completion_date || '2026-06-30';
+  const projCode = row.nirikshak_project_id || row.id || '';
+  const originalEnd = row.original_completion_date || '';
   const revisedEnd = row.revised_completion_date || originalEnd;
-  const startDate = row.award_date || row.planned_start_date || '2023-01-15';
+  const startDate = row.award_date || row.planned_start_date || '';
 
   return {
-    id: projId,
+    id: projCode,
     code: projCode,
-    name: row.project_name || 'Infrastructure Development Project',
+    name: row.project_name || '—',
     category,
-    department: row.project_authority || 'Pune Municipal Corporation',
-    agency: row.implementing_agency || row.project_authority || 'Pune Smart City Development Corp',
-    engineer: 'Er. Suhas Joshi (Executive Engineer, PMC)',
-    ward: row.city === 'Pune' ? 'Ward 12 — Kothrud / Shivajinagar' : (row.district ? `${row.district} Infrastructure Zone` : 'Regional Infrastructure Zone'),
-    city: row.city || 'Pune',
-    state: row.state || 'Maharashtra',
+    department: row.project_authority || '—',
+    agency: row.implementing_agency || row.project_authority || '—',
+    engineer: '',
+    ward: row.location_text || row.district || '—',
+    city: row.city || '',
+    state: row.state || '',
     status,
     progress,
     physicalProgress: progress,
-    financialProgress: Math.min(100, Math.round((spent / (cost || 1)) * 100)),
-    phase: progress >= 100 ? 'Commissioned & Maintenance' : progress >= 75 ? 'Final Electromechanical & Testing' : progress >= 40 ? 'Superstructure & Paving' : 'Substructure & Site Clearance',
-    distanceKm: 2.8,
-    mapPoint: {
+    financialProgress: 0,
+    phase: status === 'completed' ? 'Completed' : progress > 0 ? 'In execution' : 'Yet to start',
+    // No user location is known at this layer — never invent a distance.
+    distanceKm: null,
+    mapPoint: lat != null && lng != null ? {
       x: Math.min(92, Math.max(8, Math.round(35 + ((lng - 73.7) * 200)))),
       y: Math.min(92, Math.max(8, Math.round(45 + ((lat - 18.4) * 200)))),
-    },
-    img: photoUrl,
+    } : null,
+    img: null,
     latestUpdate: {
-      date: '2026-09-08T16:40:00',
-      text: row.description || 'Quarterly physical audit completed; work actively monitored on public ledger.'
+      date: row.updated_at || '',
+      text: row.public_description || ''
     },
     lastInspection: {
-      date: '2026-09-05',
-      by: 'Er. Suhas Joshi',
-      remark: 'Quarterly compliance and safety audit passed. Structural test parameters verified.'
+      date: '',
+      by: '',
+      remark: ''
     },
     nextMilestone: {
-      name: progress >= 90 ? 'Public Handover & Safety Clearance' : 'Segment Launching & Casting',
+      name: '',
       date: revisedEnd
     },
-    description: row.description || row.public_summary || 'Authoritative public infrastructure work monitored under NIRIKSHAK audit platform.',
-    why: 'Commissioned to improve citizen transit efficiency, regional connectivity, and urban infrastructure durability.',
-    scope: [
-      'Engineered civil works and durable pavement structure',
-      'Unified utility corridors and storm water drainage',
-      'LED lighting and high-visibility road safety signage',
-      'Pedestrian walkways and environmental noise mitigating elements'
-    ],
-    benefit: 'Cuts commute delays, improves road safety metrics by over 35%, and enhances civic infrastructure sustainability for Pune citizens.',
+    description: row.public_description || '',
+    why: '',
+    scope: [],
+    benefit: '',
     finance: {
       sanctionedAmount: cost,
-      revisedCost: Number(row.revised_cost_inr_crore) || cost,
+      revisedCost: 0,
       amountSpent: spent,
-      fundingSource: 'State Government Infrastructure Allocation & Central Urban Grants',
-      fundingModel: 'EPC Contract / Hybrid Annuity Model',
-      varianceNote: cost > 500 ? 'High-capacity infrastructure package' : 'Standard budget execution'
+      fundingSource: '',
+      fundingModel: '',
+      varianceNote: ''
     },
     contractor: {
-      name: contractorName,
-      contractValue: cost,
+      name: row.contractor_concessionaire || '—',
+      contractValue: 0,
       start: startDate,
-      duration: '36 months',
+      duration: '',
       performance: {
-        onTime: status === 'delayed' ? '65%' : '92%',
-        quality: 'A+ (PWD Approved)',
-        safety: 'Zero Lost-Time Incidents',
-        disputes: 'None'
+        onTime: '',
+        quality: '',
+        safety: '',
+        disputes: ''
       },
-      prevProjects: [
-        { name: 'Shivajinagar Flyover Package', year: 2021, note: 'Completed on schedule' },
-        { name: 'Kothrud Elevated Corridor', year: 2023, note: 'Quality rating 4.8/5' }
-      ],
-      currentStatus: status === 'delayed' ? 'Accelerated shift operation in progress' : 'Active and compliant'
+      prevProjects: [],
+      currentStatus: ''
     },
     dates: {
-      tender: '2022-04-10',
-      awarded: startDate,
-      started: startDate,
+      tender: '',
+      awarded: row.award_date || '',
+      started: row.planned_start_date || '',
       expected: revisedEnd,
-      actual: status === 'completed' ? revisedEnd : null,
+      actual: row.actual_completion_date || null,
       originalExpected: originalEnd,
       revisedExpected: revisedEnd
     },
-    delay: status === 'delayed' ? {
-      reason: 'Underground utility realignment and monsoon pause; work resumed on dual shift.',
-      detected: '2025-08-10',
-      revisedCompletion: revisedEnd,
-      penalty: 'LD penalty advisory active under contract clause 44'
-    } : undefined,
-    timeline: [
-      {
-        id: 'ms-1',
-        title: 'Project Inception & DPR Sanction',
-        date: startDate,
-        status: 'completed',
-        description: 'Administrative approval and environmental clearance secured.'
-      },
-      {
-        id: 'ms-2',
-        title: 'Civil Construction & Substructure Works',
-        date: '2025-03-31',
-        status: 'current',
-        description: 'Foundation piles, pier segments, and subsurface drainage.'
-      },
-      {
-        id: 'ms-3',
-        title: 'Superstructure, Paving & Final Commissioning',
-        date: revisedEnd,
-        status: progress >= 100 ? 'completed' : 'upcoming',
-        description: 'Final wearing coat, signage, load testing, and opening to citizens.'
-      }
-    ],
-    docs: [
-      { name: 'Detailed Project Report (DPR).pdf', size: '14.2 MB', note: 'Technical feasibility and alignment' },
-      { name: 'Contract Agreement & Sanction Order.pdf', size: '8.4 MB', note: 'Official government work order' },
-      { name: 'Environmental & Safety Clearance.pdf', size: '3.1 MB', note: 'State pollution control approval' }
-    ],
-    photos: [
-      { src: photoUrl, caption: `${row.project_name || 'Project'} site inspection and active execution.` }
-    ],
-    hotline: '1800-120-8040 (PMC Citizen Helpline)'
+    timeline: [],
+    docs: [],
+    photos: [],
+    hotline: ''
   };
 }
 
 let cachedProjects: Project[] | null = null;
+
+const PAGE_SIZE = 1000;
 
 export async function getProjects(): Promise<Project[]> {
   if (useMock) {
     return [...mockProjects];
   }
 
-  if (cachedProjects && cachedProjects.length > 0) {
+  if (cachedProjects) {
     return cachedProjects;
   }
 
-  try {
+  // DF-33: page through the view with .range() until a short page returns,
+  // instead of a single .limit(4000) fetch that silently drops projects.
+  const rows: any[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('public_projects_view')
       .select('*')
       .order('total_cost_inr_crore', { ascending: false, nullsFirst: false })
-      .limit(4000);
+      .range(from, from + PAGE_SIZE - 1);
 
-    if (error || !data || data.length === 0) {
-      console.warn('Supabase query empty, falling back to cached/mock');
-      return [...mockProjects];
+    if (error) {
+      // DF-09: surface the failure — never substitute bundled mock projects.
+      throw new ApiError({ message: `Could not load projects: ${error.message}` });
     }
-
-    cachedProjects = data.map(mapDbRowToProject);
-    return cachedProjects;
-  } catch (err) {
-    console.error('Error fetching Supabase projects:', err);
-    return [...mockProjects];
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
   }
+
+  cachedProjects = rows.map(mapDbRowToProject);
+  return cachedProjects;
 }
 
 export async function getProjectById(id: string): Promise<Project> {
@@ -210,18 +177,22 @@ export async function getProjectById(id: string): Promise<Project> {
     return p;
   }
 
-  const all = await getProjects();
-  const found = all.find((p) => p.id === id || p.code === id);
-  if (found) return found;
+  if (cachedProjects) {
+    const found = cachedProjects.find((p) => p.id === id || p.code === id);
+    if (found) return found;
+  }
 
-  // Try direct query
-  const { data, error } = await supabase
-    .from('public_projects_view')
-    .select('*')
-    .or(`id.eq.${id},nirikshak_project_id.eq.${id}`)
-    .single();
+  // DF-14 pattern: query the UUID column only for UUID values, else the
+  // public code column alone (a code in an id.eq slot errors on the UUID cast).
+  const query = supabase.from('public_projects_view').select('*');
+  const { data, error } = await (UUID_RE.test(id)
+    ? query.eq('id', id).single()
+    : query.eq('nirikshak_project_id', id).single());
 
   if (error || !data) {
+    if (error && (error as any).code && (error as any).code !== 'PGRST116') {
+      throw new ApiError({ message: `Could not load project: ${error.message}` });
+    }
     throw new ApiError({ message: "Project not found in registry", notFound: true });
   }
 
@@ -247,7 +218,7 @@ export function applyFilters(list: Project[], f: ProjectFilters): Project[] {
 }
 
 export function nearbyProjects(limit = 8, projectList?: Project[]): Project[] {
-  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects ?? []);
   return source
     .filter((p) => (p.city === "Pune" || !p.city) && p.mapPoint !== null)
     .sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99))
@@ -255,13 +226,13 @@ export function nearbyProjects(limit = 8, projectList?: Project[]): Project[] {
 }
 
 export function allContractors(projectList?: Project[]): string[] {
-  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
-  return Array.from(new Set(source.map((p) => p.contractor?.name).filter(Boolean) as string[])).sort();
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects ?? []);
+  return Array.from(new Set(source.map((p) => p.contractor?.name).filter((n) => n && n !== '—') as string[])).sort();
 }
 
 export function allDepartments(projectList?: Project[]): string[] {
-  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects);
-  return Array.from(new Set(source.map((p) => p.department).filter(Boolean) as string[])).sort();
+  const source = (projectList && projectList.length > 0) ? projectList : (cachedProjects ?? []);
+  return Array.from(new Set(source.map((p) => p.department).filter((d) => d && d !== '—'))).sort();
 }
 
 export function getWardStats(): WardStatistics {
@@ -276,8 +247,10 @@ export const getCityStatistics = getCityStats;
 
 
 export function findProject(idOrCode: string): Project | undefined {
-  const source = cachedProjects && cachedProjects.length > 0 ? cachedProjects : mockProjects;
+  const source = cachedProjects ?? [];
   return source.find((p) => p.id === idOrCode || p.code === idOrCode);
 }
 
+/** Bundled demo fixture — only for explicit demo mode / prefill name lookups. */
 export const projectsData = mockProjects;
+

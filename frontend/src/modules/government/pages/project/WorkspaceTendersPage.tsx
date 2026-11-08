@@ -13,7 +13,23 @@ import { TextField, Select, TextArea } from '@/components/ui/Fields'
 import { PageHeader, KpiRow, FilterBar, KpiCard } from '@/components/blocks/Page'
 import { formatCr, formatDate } from '@/utils/format'
 import { TENDER_STATUS } from '@/utils/status'
-import type { Tender } from '@/types'
+import type { Tender, TenderLot } from '@/types'
+
+/**
+ * Lifecycle actions added by the tender port (close / evaluate / award).
+ * They exist on the Supabase implementation of tendersApi; the mock
+ * implementation does not provide them, so access is guarded — in mock
+ * mode the actions report themselves unavailable instead of pretending.
+ */
+const tenderActions = tendersApi as typeof tendersApi & {
+  close?: (id: string) => Promise<void>
+  award?: (tenderDbId: string, bidId: string) => Promise<unknown>
+  evaluateBid?: (
+    tenderDbId: string,
+    bidId: string,
+    scores: { technical_score: number; financial_score: number },
+  ) => Promise<void>
+}
 
 const PROCUREMENT_STAGES = [
   { key: 'draft', label: 'Draft', icon: 'edit_note' },
@@ -28,6 +44,8 @@ function stageIndex(status: Tender['status']): number {
   if (status === 'draft') return 0
   if (status === 'published') return 1
   if (status === 'bid_open') return 2
+  // 'closed' = bid submission closed, evaluation not yet recorded.
+  if (status === 'closed') return 2
   if (status === 'under_evaluation') return 3
   if (status === 'awarded') return 5
   return 1
@@ -44,11 +62,41 @@ export function WorkspaceTendersPage() {
   const [detail, setDetail] = useState<Tender | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [closingId, setClosingId] = useState<string | null>(null)
   const [newTender, setNewTender] = useState({ title: '', estimate: '', mode: 'e-Tender', scopeSummary: '' })
 
   useEffect(() => {
     setTenderList(tenders)
   }, [tenders])
+
+  async function refreshTenders() {
+    try {
+      const all = await tendersApi.all()
+      const scoped = all.filter((x) => x.projectId === projectId)
+      setTenderList(scoped)
+      setDetail((prev) => (prev ? (scoped.find((x) => x.id === prev.id) ?? prev) : prev))
+    } catch {
+      // Keep the current register on screen; the action handlers surface
+      // their own errors, a failed background refresh must not blank it.
+    }
+  }
+
+  async function handleCloseTender(tender: Tender) {
+    if (!tenderActions.close) {
+      showToast('Closing bids is unavailable while demo mode is enabled.', 'warning')
+      return
+    }
+    setClosingId(tender.id)
+    try {
+      await tenderActions.close(tender.databaseId ?? tender.id)
+      showToast(`Bids closed for tender ${tender.id}.`, 'success')
+      await refreshTenders()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to close bids for this tender.', 'danger')
+    } finally {
+      setClosingId(null)
+    }
+  }
 
   async function handleCreateTender() {
     if (!newTender.title.trim() || !(Number(newTender.estimate) > 0)) return
@@ -172,9 +220,22 @@ export function WorkspaceTendersPage() {
             { key: 'stage', header: 'Stage', render: (x) => <span className="text-caption text-fg-muted">{PROCUREMENT_STAGES[stageIndex(x.status)].label}</span> },
           ]}
           rowActions={(x) => (
-            <Button variant="outline" size="sm" className="!min-h-7 !px-2.5" onClick={() => setDetail(x)}>
-              {t('common.view')}
-            </Button>
+            <span className="inline-flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="!min-h-7 !px-2.5" onClick={() => setDetail(x)}>
+                {t('common.view')}
+              </Button>
+              {x.status === 'published' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="!min-h-7 !px-2.5"
+                  disabled={closingId === x.id}
+                  onClick={() => void handleCloseTender(x)}
+                >
+                  {closingId === x.id ? 'Closing…' : 'Close Bids'}
+                </Button>
+              )}
+            </span>
           )}
           emptyState={
             <div className="p-8 text-center">
@@ -191,7 +252,7 @@ export function WorkspaceTendersPage() {
 
       {/* Tender detail drawer */}
       <Drawer open={detail !== null} onClose={() => setDetail(null)} title={detail?.id ?? ''} titleIcon="gavel" width="max-w-xl">
-        {detail && <TenderDetail tender={detail} />}
+        {detail && <TenderDetail tender={detail} onChanged={refreshTenders} />}
       </Drawer>
 
       {/* Create tender */}
@@ -240,7 +301,7 @@ function cnStage(reached: boolean) {
 }
 
 /** Tender drawer: overview, bids, evaluation, comparison, award. */
-function TenderDetail({ tender }: { tender: Tender }) {
+function TenderDetail({ tender, onChanged }: { tender: Tender; onChanged: () => Promise<void> | void }) {
   const { t } = useI18n()
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -267,7 +328,7 @@ function TenderDetail({ tender }: { tender: Tender }) {
       {tender.lots?.length ? (
         <Panel title="Bids — Technical & Financial Evaluation" icon="table_chart" bodyClassName="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-body">
+            <table className="w-full min-w-[720px] text-body">
               <thead>
                 <tr className="nk-table-header">
                   <th className="px-4 text-left">Bidder</th>
@@ -275,11 +336,12 @@ function TenderDetail({ tender }: { tender: Tender }) {
                   <th className="px-3 text-right">Tech.</th>
                   <th className="px-3 text-right">Fin.</th>
                   <th className="px-3 text-left">Status</th>
+                  <th className="px-3 text-left">Evaluate / Award</th>
                 </tr>
               </thead>
               <tbody>
                 {tender.lots.map((l) => (
-                  <tr key={l.bidder} className="border-t border-border hover:bg-surface-2">
+                  <tr key={l.bidId ?? l.bidder} className="border-t border-border hover:bg-surface-2">
                     <td className="px-4 py-2.5 font-medium text-fg">{l.bidder}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{formatCr(l.quotedAmountCr)}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{l.technicalScore}</td>
@@ -288,6 +350,9 @@ function TenderDetail({ tender }: { tender: Tender }) {
                       <Badge tone={l.bidStatus === 'accepted' ? 'success' : l.bidStatus === 'rejected' ? 'danger' : 'info'} dot>
                         {l.bidStatus.replace('_', ' ')}
                       </Badge>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <BidActions tender={tender} lot={l} onChanged={onChanged} />
                     </td>
                   </tr>
                 ))}
@@ -314,6 +379,116 @@ function TenderDetail({ tender }: { tender: Tender }) {
       )}
 
       <p className="text-caption text-fg-subtle">{t('common.mockDataNote')}</p>
+    </div>
+  )
+}
+
+/** Per-bid evaluation inputs (technical/financial 0–100) + award action. */
+function BidActions({
+  tender,
+  lot,
+  onChanged,
+}: {
+  tender: Tender
+  lot: TenderLot
+  onChanged: () => Promise<void> | void
+}) {
+  const { showToast } = useToast()
+  const [technical, setTechnical] = useState(lot.technicalScore ? String(lot.technicalScore) : '')
+  const [financial, setFinancial] = useState(lot.financialScore ? String(lot.financialScore) : '')
+  const [busy, setBusy] = useState<'evaluate' | 'award' | null>(null)
+
+  const canAward = lot.bidStatus === 'under_review' && tender.status !== 'awarded'
+
+  async function handleEvaluate() {
+    if (!tenderActions.evaluateBid) {
+      showToast('Bid evaluation is unavailable while demo mode is enabled.', 'warning')
+      return
+    }
+    if (!tender.databaseId || !lot.bidId) {
+      showToast('This bid cannot be evaluated — its database reference is missing.', 'danger')
+      return
+    }
+    const technicalScore = Number(technical)
+    const financialScore = Number(financial)
+    if (!(technicalScore >= 0 && technicalScore <= 100) || !(financialScore >= 0 && financialScore <= 100)) {
+      showToast('Technical and financial scores must be between 0 and 100.', 'danger')
+      return
+    }
+    setBusy('evaluate')
+    try {
+      await tenderActions.evaluateBid(tender.databaseId, lot.bidId, {
+        technical_score: technicalScore,
+        financial_score: financialScore,
+      })
+      showToast(`Evaluation saved for ${lot.bidder}.`, 'success')
+      await onChanged()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to save the bid evaluation.', 'danger')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function handleAward() {
+    if (!tenderActions.award) {
+      showToast('Awarding a tender is unavailable while demo mode is enabled.', 'warning')
+      return
+    }
+    if (!tender.databaseId || !lot.bidId) {
+      showToast('This bid cannot be awarded — its database reference is missing.', 'danger')
+      return
+    }
+    const confirmed = window.confirm(
+      `Award tender ${tender.id} to ${lot.bidder} for ${formatCr(lot.quotedAmountCr)}? This creates the contract and cannot be undone.`,
+    )
+    if (!confirmed) return
+    setBusy('award')
+    try {
+      await tenderActions.award(tender.databaseId, lot.bidId)
+      showToast(`Tender ${tender.id} awarded to ${lot.bidder}.`, 'success')
+      await onChanged()
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to award this tender.', 'danger')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={0.5}
+          value={technical}
+          onChange={(e) => setTechnical(e.target.value)}
+          placeholder="Tech"
+          aria-label={`Technical score for ${lot.bidder}`}
+          className="h-8 w-16 rounded-control border border-border-strong bg-surface px-2 text-right text-body-small text-fg"
+        />
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={0.5}
+          value={financial}
+          onChange={(e) => setFinancial(e.target.value)}
+          placeholder="Fin"
+          aria-label={`Financial score for ${lot.bidder}`}
+          className="h-8 w-16 rounded-control border border-border-strong bg-surface px-2 text-right text-body-small text-fg"
+        />
+        <Button variant="outline" size="sm" className="!min-h-7 !px-2.5" disabled={busy !== null} onClick={() => void handleEvaluate()}>
+          {busy === 'evaluate' ? 'Saving…' : 'Evaluate'}
+        </Button>
+      </div>
+      {canAward && (
+        <Button variant="primary" size="sm" className="!min-h-7 !px-2.5" disabled={busy !== null} onClick={() => void handleAward()}>
+          {busy === 'award' ? 'Awarding…' : 'Award'}
+        </Button>
+      )}
     </div>
   )
 }

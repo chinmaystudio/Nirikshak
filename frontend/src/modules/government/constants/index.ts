@@ -435,7 +435,7 @@ export function buildWorkspaceNav(projectId: string): NavNode[] {
 
 /* ---------- Mock API switch (spec: clearly label demo data) ---------- */
 export const USE_MOCK_API =
-  (import.meta.env.VITE_USE_MOCK_API ?? 'true') !== 'false'
+  import.meta.env.VITE_USE_MOCK_API === 'true'
 
 /**
  * Approval workspace sidebar — mirrors the project workspace: every section

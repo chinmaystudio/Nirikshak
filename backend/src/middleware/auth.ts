@@ -127,6 +127,22 @@ export function requireGovernment(req: AuthenticatedRequest, res: Response, next
 }
 
 /**
+ * Enforces government role for WRITE routes (DF-38).
+ * Identical to requireGovernment except that `auditor` is excluded:
+ * auditors keep read access, but must not create projects/tenders,
+ * review progress, or close/evaluate tenders through the API.
+ */
+export function requireGovernmentWrite(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  const govWriteRoles = [
+    'government_admin',
+    'project_officer',
+    'government_engineer',
+    'chief_engineer',
+  ];
+  return requireRole(govWriteRoles)(req, res, next);
+}
+
+/**
  * Enforces contractor role.
  */
 export function requireContractor(req: AuthenticatedRequest, res: Response, next: NextFunction): void {

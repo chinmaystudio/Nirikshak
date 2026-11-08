@@ -101,15 +101,19 @@ export const appStore = {
     emit();
   },
   resetSession(): void {
+    // DF-43: clear EVERYTHING user-scoped on logout / account switch —
+    // vision history, comments, confirmations, upvotes, read-alerts and
+    // settings must not leak to the next account on this browser.
     state = {
-      ...state,
-      user: null,
+      ...DEFAULT_STATE,
+      settings: { ...DEFAULT_STATE.settings },
+      readAlerts: [],
+      confirmed: [],
+      upvoted: [],
+      comments: {},
       created: [],
       chat: [],
-      lastSubmitted: null,
-      locationPrefill: null,
-      visionPrefill: null,
-      next: null
+      vision: []
     };
     persist();
     emit();

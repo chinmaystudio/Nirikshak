@@ -21,8 +21,11 @@ export function AssistantPage(): JSX.Element {
             <Icon name="smart_toy" className="text-[26px]" />
           </span>
           <div>
-            <h1 className="text-headline-sm font-bold text-primary">NIRIKSHAK Civic Assistant</h1>
-            <p className="text-label-sm text-on-surface-variant">AI guidance over public records — advisory, not official decisions.</p>
+            <h1 className="text-headline-sm font-bold text-primary">
+              NIRIKSHAK Civic Assistant{" "}
+              <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold uppercase tracking-wide align-middle">Demo</span>
+            </h1>
+            <p className="text-label-sm text-on-surface-variant">Demo helper over public records — advisory, not official decisions.</p>
           </div>
         </div>
         <div className="space-y-2 pt-2 border-t border-outline-variant/30">

@@ -40,7 +40,7 @@ export default function ReportUpdate({ project }: { project: Project }) {
 
   const saveDraft = () => {
     if (!validate()) return;
-    addReport({
+    void addReport({
       projectId: project.id,
       milestone,
       progress: Number(progress) || project.progress,
@@ -56,58 +56,43 @@ export default function ReportUpdate({ project }: { project: Project }) {
     reset();
   };
 
+  const [submitting, setSubmitting] = useState(false);
+
   const submit = async () => {
-    if (!validate()) return;
-    addReport({
-      projectId: project.id,
-      milestone,
-      progress: Number(progress) || project.progress,
-      prevProgress: project.progress,
-      completed,
-      planned,
-      challenges,
-      photos: photos.map((p) => p.name),
-      docs: docs.map((d) => d.name),
-      status: 'Under Government Review',
-    });
-
+    if (!validate() || submitting) return;
+    setSubmitting(true);
     try {
-      const { supabase } = await import('@/core/supabase/client');
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(project.id);
-      let targetProjectId = isUuid ? project.id : null;
-      if (!targetProjectId) {
-        const { data: projData } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('nirikshak_project_id', project.code || project.id)
-          .maybeSingle();
-        if (projData) targetProjectId = (projData as any).id;
-      }
-
-      if (targetProjectId) {
-        const summary = [
-          completed ? `Completed: ${completed}` : '',
-          planned ? `Planned: ${planned}` : '',
-          challenges ? `Challenges: ${challenges}` : '',
-        ].filter(Boolean).join('\n');
-
-        const { error: rpcErr } = await supabase.rpc('submit_progress_update', {
-          p_project_id: targetProjectId,
-          p_reported_progress: Number(progress) || project.progress,
-          p_description: summary || 'Physical progress update submitted via Contractor Portal.',
-          p_milestone_id: null,
-        });
-
-        if (rpcErr) {
-          console.warn('Live Supabase progress update notice:', rpcErr.message);
-        } else {
-          toast('success', 'Submitted to Government', 'Update has been submitted for official verification.');
-        }
-      }
+      // DF-15: addReport with submitToGovernment posts the update — evidence
+      // (photo/document names from the form) included — to the backend route
+      // POST /api/progress/submit, which runs the submit_progress_update RPC.
+      // It rejects on ANY failure (backend/RPC error, unresolvable project,
+      // expired session), and only a resolved promise may reach the success
+      // UI below. Previously RPC errors were console.warn'd, a failed project
+      // lookup silently skipped the submission, and the success modal showed
+      // unconditionally.
+      await addReport(
+        {
+          projectId: project.id,
+          milestone,
+          progress: Number(progress) || project.progress,
+          prevProgress: project.progress,
+          completed,
+          planned,
+          challenges,
+          photos: photos.map((p) => p.name),
+          docs: docs.map((d) => d.name),
+          status: 'Under Government Review',
+        },
+        { submitToGovernment: true },
+      );
     } catch (e) {
-      console.warn('Supabase submit_progress_update dispatch notice:', e);
+      toast('warn', 'Progress update not submitted', e instanceof Error ? e.message : 'Please check your connection and retry.');
+      setConfirmOpen(false);
+      setSubmitting(false);
+      return;
     }
-
+    setSubmitting(false);
+    toast('success', 'Submitted to Government', 'Update has been submitted for official verification.');
     setConfirmOpen(false);
     setSuccessOpen(true);
     reset();

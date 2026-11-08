@@ -9,7 +9,7 @@ import type { VisionAnalysis } from "@/types/infrastructure";
 export function AiBadge(): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed text-primary text-label-sm font-bold border border-primary-container/20">
-      <Icon name="auto_awesome" className="text-[13px]" /> AI-ASSISTED
+      <Icon name="auto_awesome" className="text-[13px]" /> DEMO — SIMULATED ANALYSIS
     </span>
   );
 }

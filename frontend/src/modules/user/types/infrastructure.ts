@@ -38,7 +38,8 @@ export interface VisionAuthority {
 
 export interface VisionProjectMatch {
   projectId: string;
-  matchConfidence: number;
+  /** DF-16: null — the demo matcher produces no measured confidence. */
+  matchConfidence: number | null;
 }
 
 export type VisionImageSource = "camera" | "upload";
@@ -51,7 +52,8 @@ export interface VisionAnalysis {
   infrastructureLabel: string;
   shortLabel: string;
   infrastructureType: string;
-  confidence: number;
+  /** DF-16: null — simulated analysis must not present invented percentages. */
+  confidence: number | null;
   description: string;
   details: VisionDetails;
   condition: VisionCondition;

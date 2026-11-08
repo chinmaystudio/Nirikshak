@@ -26,10 +26,13 @@ export function AIVerification({ stepIndex, running, result, onRun }: AIVerifica
           <Icon name="psychology" className="text-[22px]" />
         </span>
         <div>
-          <div className="text-label-md font-bold text-primary">AI-Assisted Classification</div>
+          <div className="text-label-md font-bold text-primary">
+            AI-Assisted Classification{" "}
+            <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold uppercase tracking-wide">Demo</span>
+          </div>
           <p className="text-body-sm text-on-surface-variant">
-            Before submission, the system cross-checks your report against project records, similar complaints and location data. AI only{" "}
-            <strong>assists verification</strong> — the final decision always rests with department officials.
+            This demo helper suggests a category, severity and department from your report text. It does not run a live
+            verification — the final decision always rests with department officials.
           </p>
         </div>
       </div>
@@ -70,16 +73,16 @@ function AIResultCard({ result }: { result: ReportAIResult }): JSX.Element {
         </span>
         <div>
           <div className="text-headline-sm font-bold text-surface-container-lowest">AI ANALYSIS COMPLETE</div>
-          <div className="text-label-sm text-surface-variant">Verification assistance • advisory only</div>
+          <div className="text-label-sm text-surface-variant">Demo — on-device heuristic • advisory only, not a measured analysis</div>
         </div>
       </div>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-body-sm">
         <ResultCell label="Issue detected" value={result.detected} />
         <ResultCell label="Likely category" value={result.category} />
         <ResultCell label="Severity" value={result.severity} tone={sevTone} />
-        <ResultCell label="Confidence" value={`${result.confidence}%`} />
+        <ResultCell label="Confidence" value={result.confidence != null ? `${result.confidence}%` : "Indicative (demo)"} />
         <ResultCell label="Recommended department" value={result.department} />
-        <ResultCell label="Duplicate reports nearby" value={result.duplicates > 0 ? `${result.duplicates} similar report(s)` : "None found"} />
+        <ResultCell label="Duplicate reports nearby" value={result.duplicates == null ? "Not checked (demo)" : result.duplicates > 0 ? `${result.duplicates} similar report(s)` : "None found"} />
       </dl>
       {result.projectId && projectName ? (
         <div className="bg-surface-container-lowest/10 border border-surface-container-high/30 rounded-lg p-3 text-body-sm">

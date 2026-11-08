@@ -21,6 +21,8 @@ const RegisterSchema = z.discriminatedUnion('accountType', [
     email: z.string().trim().email().max(254),
     password: z.string().min(8).max(128),
     fullName: z.string().trim().min(3).max(120),
+    // DF-37: honour the role the applicant requested, when one is sent.
+    requestedRole: z.enum(['government_admin', 'chief_engineer', 'project_officer', 'government_engineer', 'auditor']).optional(),
     employeeId: z.string().trim().min(2).max(80),
     department: z.string().trim().min(2).max(160),
     designation: z.string().trim().min(2).max(120),
@@ -32,6 +34,8 @@ const RegisterSchema = z.discriminatedUnion('accountType', [
     email: z.string().trim().email().max(254),
     password: z.string().min(8).max(128),
     fullName: z.string().trim().min(3).max(120),
+    // DF-37: honour the role the applicant requested, when one is sent.
+    requestedRole: z.enum(['contractor_admin', 'contractor_manager', 'contractor_engineer', 'contractor_site_engineer']).optional(),
     phone: z.string().trim().regex(/^\d{10}$/),
     companyName: z.string().trim().min(2).max(180),
     registrationCin: z.string().trim().min(2).max(40),
@@ -70,7 +74,8 @@ authRouter.post(
       });
     } else if (input.accountType === 'government') {
       Object.assign(metadata, {
-        requested_role: 'government_engineer',
+        // DF-37: use the requested role when the payload carries one
+        requested_role: input.requestedRole || 'government_engineer',
         employee_id: input.employeeId,
         department: input.department,
         designation: input.designation,
@@ -79,7 +84,8 @@ authRouter.post(
       });
     } else {
       Object.assign(metadata, {
-        requested_role: 'contractor_admin',
+        // DF-37: use the requested role when the payload carries one
+        requested_role: input.requestedRole || 'contractor_admin',
         phone: input.phone,
         company_name: input.companyName,
         registration_cin: input.registrationCin,

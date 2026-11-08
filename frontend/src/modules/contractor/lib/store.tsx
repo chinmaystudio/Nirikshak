@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import type { ToastItem } from '../components/ui';
 import {
   INITIAL_NOTIFICATIONS, INITIAL_WORKERS, INITIAL_RESOURCES, INITIAL_INVOICES,
-  INITIAL_REPORTS, INITIAL_MESSAGES, INITIAL_DOCS, INITIAL_BIDS,
+  INITIAL_REPORTS, INITIAL_MESSAGES, INITIAL_DOCS,
 } from './data';
 import type {
   Notification, Worker, ResourceRow, Invoice, ProgressReport, Message,
@@ -43,7 +43,11 @@ interface Store {
 
   projects: Project[];
   reports: ProgressReport[];
-  addReport: (r: Omit<ProgressReport, 'id' | 'submittedAt'>) => string;
+  // With { submitToGovernment: true } the report is submitted through the
+  // backend (POST /api/progress/submit, evidence included) BEFORE it is
+  // recorded locally; the returned promise rejects on any failure so callers
+  // can block their success UI. Without the flag it only records a local draft.
+  addReport: (r: Omit<ProgressReport, 'id' | 'submittedAt'>, opts?: { submitToGovernment?: boolean }) => Promise<string>;
   setReportStatus: (id: string, status: ProgressReport['status'], note?: string) => void;
 
   workers: Record<string, Worker[]>;
@@ -66,7 +70,9 @@ interface Store {
 
   bids: Record<string, Bid>;
   saveBidDraft: (tenderId: string, step: number, data: Record<string, unknown>) => void;
-  submitBid: (tenderId: string, bidValue: number) => string;
+  // bidReference MUST be the server-issued reference (NIR-BID-…) returned by
+  // ContractorTenderService.submitBid — the store never invents one.
+  submitBid: (tenderId: string, bidValue: number, bidReference: string) => string;
 
   savedTenders: string[];
   toggleSaveTender: (id: string) => void;
@@ -197,29 +203,83 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [session?.user?.id, session?.organization?.id]);
 
   const [reports, setReports] = useState<ProgressReport[]>(() => DEMO_MODE ? clone(INITIAL_REPORTS) : []);
-  const addReport = useCallback((r: Omit<ProgressReport, 'id' | 'submittedAt'>) => {
+  const addReport = useCallback(async (r: Omit<ProgressReport, 'id' | 'submittedAt'>, opts?: { submitToGovernment?: boolean }) => {
+    if (opts?.submitToGovernment) {
+      // DF-15: submit through the backend route (POST /api/progress/submit),
+      // which invokes the submit_progress_update RPC with the caller's JWT
+      // and records the evidence rows. Every failure throws — the report is
+      // only recorded locally (and success UI only shown) after the backend
+      // confirms the submission.
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      if (!apiBaseUrl) throw new Error('Progress submission service is not configured (VITE_API_BASE_URL missing).');
+
+      const { supabase } = await import('@/core/supabase/client');
+
+      // Resolve the project to its database UUID. A failed lookup is a loud
+      // error, never a silent skip (the previous implementation warned to
+      // the console and still showed the success modal).
+      const project = projects.find((item) => item.id === r.projectId || item.code === r.projectId);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let targetProjectId = project && isUuid.test(project.id) ? project.id : isUuid.test(r.projectId) ? r.projectId : null;
+      if (!targetProjectId) {
+        const lookupCode = project?.code || r.projectId;
+        const { data: projData, error: lookupError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('nirikshak_project_id', lookupCode)
+          .maybeSingle();
+        if (lookupError) throw new Error(`Could not resolve the project for this update: ${lookupError.message}`);
+        if (!projData) throw new Error('Could not resolve the project for this update. The update was not submitted.');
+        targetProjectId = (projData as { id: string }).id;
+      }
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (sessionError || !accessToken) throw new Error('Your session has expired. Please sign in again.');
+
+      const summary = [
+        r.completed ? `Completed: ${r.completed}` : '',
+        r.planned ? `Planned: ${r.planned}` : '',
+        r.challenges ? `Challenges: ${r.challenges}` : '',
+      ].filter(Boolean).join('\n');
+
+      // Evidence collected in the form (site photos + documents) is sent as
+      // evidence metadata — previously it was silently dropped.
+      const evidence = [
+        ...r.photos.map((name) => ({ evidence_type: 'photo' as const, storage_path: name, metadata: { file_name: name, source: 'contractor-portal' } })),
+        ...r.docs.map((name) => ({ evidence_type: 'report' as const, storage_path: name, metadata: { file_name: name, source: 'contractor-portal' } })),
+      ];
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      let response: Response;
+      try {
+        response = await fetch(`${apiBaseUrl}/api/progress/submit`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            project_id: targetProjectId,
+            reported_progress: r.progress,
+            description: summary || 'Physical progress update submitted via Contractor Portal.',
+            ...(evidence.length > 0 ? { evidence } : {}),
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error?.message || 'The progress update was rejected by the server. It has not been submitted.');
+      }
+    }
+
     const id = uid('rep');
     const newRep = { ...r, id, submittedAt: new Date().toISOString() };
     setReports((rs) => [newRep, ...rs]);
-
-    // Send to Supabase via secure submit_progress_update RPC for authoritative verification (Rule 26)
-    try {
-      import('@/core/supabase/client').then(({ supabase }) => {
-        const project = projects.find((item) => item.id === r.projectId || item.code === r.projectId);
-        if (!project) return;
-        supabase.rpc('submit_progress_update', {
-          p_project_id: project.id,
-          p_reported_progress: r.progress,
-          p_description: r.completed || r.challenges || 'Contractor progress report submission',
-          p_milestone_id: null,
-        }).then(({ error }) => {
-          if (error) console.warn('Contractor progress submit_progress_update notice:', error.message);
-        });
-      });
-    } catch {
-      /* offline or mock */
-    }
-
     return id;
   }, [projects]);
   const setReportStatus = useCallback((id: string, status: ProgressReport['status'], note?: string) => {
@@ -296,7 +356,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const [bids, setBids] = useState<Record<string, Bid>>(() => DEMO_MODE ? clone(INITIAL_BIDS) : {});
+  // Local bid state starts empty: server bids (ContractorTenderService
+  // .getMyBids) are the truth, and the demo INITIAL_BIDS fixtures now live in
+  // src/demo/contractorDemoData.ts, unimported by live code.
+  const [bids, setBids] = useState<Record<string, Bid>>({});
   const saveBidDraft = useCallback((tenderId: string, step: number, data: Record<string, unknown>) => {
     setBids((bs) => ({
       ...bs,
@@ -310,8 +373,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
     }));
   }, []);
-  const submitBid = useCallback((tenderId: string, bidValue: number) => {
-    const ref = `NRK-BID-2026-${Math.floor(3200 + Math.random() * 700)}`;
+  const submitBid = useCallback((tenderId: string, bidValue: number, bidReference: string) => {
+    // Only the server-issued bid reference (NIR-BID-…, generated by the
+    // save_tender_bid RPC) may be recorded — a locally invented reference
+    // (the old NRK-BID-… generator) diverged from the database truth.
+    if (!bidReference) {
+      throw new Error('Cannot record a submitted bid without the server-issued bid reference.');
+    }
     setBids((bs) => ({
       ...bs,
       [tenderId]: {
@@ -321,11 +389,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         step: 7,
         updatedAt: new Date().toISOString(),
         submittedAt: new Date().toISOString(),
-        ref,
+        ref: bidReference,
         bidValue,
       },
     }));
-    return ref;
+    return bidReference;
   }, []);
 
   const [savedTenders, setSavedTenders] = useState<string[]>([]);

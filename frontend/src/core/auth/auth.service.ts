@@ -14,7 +14,16 @@ export class AuthService {
     return message || 'Authentication failed. Please try again.';
   }
 
-  private static async registerWithBackend(payload: Record<string, unknown>): Promise<void> {
+  /**
+   * DF-18/DF-19: register against the backend and RETURN its payload
+   * ({ userId, accountType, requiresApproval }) so callers can drive the
+   * post-registration UX from requiresApproval. Failures branch on the HTTP
+   * status / backend error.code (e.g. 409 ACCOUNT_EXISTS) instead of
+   * collapsing everything into one generic message.
+   */
+  private static async registerWithBackend(
+    payload: Record<string, unknown>
+  ): Promise<{ userId: string; accountType: string; requiresApproval: boolean }> {
     if (!this.apiBaseUrl) throw new Error('Registration service is temporarily unavailable.');
     // 60s timeout: backend cold starts (Render/Vercel) can be slow.
     const controller = new AbortController();
@@ -26,7 +35,24 @@ export class AuthService {
       signal: controller.signal,
     }).finally(() => clearTimeout(timeoutId));
     const result = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(result?.error?.message || 'Registration failed. Please try again.');
+    if (!response.ok) {
+      const code: string | undefined = result?.error?.code;
+      const backendMessage: string | undefined = result?.error?.message;
+      let message = backendMessage || 'Registration failed. Please try again.';
+      if (response.status === 409 || code === 'ACCOUNT_EXISTS') {
+        message = 'An account with this email already exists. Please sign in instead.';
+      }
+      const err = new Error(message) as Error & { status?: number; code?: string };
+      err.status = response.status;
+      err.code = code;
+      throw err;
+    }
+    const data = result?.data ?? {};
+    return {
+      userId: data.userId,
+      accountType: data.accountType,
+      requiresApproval: Boolean(data.requiresApproval),
+    };
   }
   /**
    * Resolves authoritative user profile, organization, and role from Supabase DB.
@@ -60,7 +86,10 @@ export class AuthService {
         .limit(1);
 
       if (memberError) {
-        console.warn('Membership lookup error:', memberError);
+        // Do NOT swallow this into a silent "citizen" demotion — a failed
+        // membership lookup must surface, or officers lose their portal
+        // with no explanation.
+        throw memberError;
       }
 
       const memberData = memberRows && memberRows.length > 0 ? memberRows[0] : null;
@@ -76,11 +105,12 @@ export class AuthService {
         }
       } else {
         // Requirement 16: Check for pending Government or Contractor access requests
-        const { data: govReq } = await supabase
+        const { data: govReq, error: govReqError } = await supabase
           .from('government_access_requests')
           .select('id, status, department, designation')
           .eq('user_id', user.id)
           .maybeSingle();
+        if (govReqError) throw govReqError;
 
         if (govReq) {
           if (govReq.status === 'PENDING') {
@@ -97,11 +127,12 @@ export class AuthService {
             };
           }
         } else {
-          const { data: contReq } = await supabase
+          const { data: contReq, error: contReqError } = await supabase
             .from('contractor_access_requests')
             .select('id, status, company_name')
             .eq('user_id', user.id)
             .maybeSingle();
+          if (contReqError) throw contReqError;
 
           if (contReq) {
             if (contReq.status === 'PENDING') {
@@ -260,9 +291,10 @@ export class AuthService {
     password: string;
     requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, officialEmail, employeeId, department, designation, state, district, password } = payload;
-    
-    await this.registerWithBackend({
+    const { fullName, officialEmail, employeeId, department, designation, state, district, password, requestedRole } = payload;
+
+    // DF-37: forward the requested role end-to-end.
+    const registration = await this.registerWithBackend({
       accountType: 'government',
       email: officialEmail,
       password,
@@ -272,10 +304,14 @@ export class AuthService {
       designation,
       state,
       district,
+      ...(requestedRole ? { requestedRole } : {}),
     });
     return {
       user: null,
-      message: 'Registration request submitted. Your Government access is pending administrator approval.',
+      // DF-19: the message follows the backend's requiresApproval flag.
+      message: registration.requiresApproval
+        ? 'Registration request submitted. Your Government access is pending administrator approval.'
+        : 'Registration complete. Your Government account is active — you can sign in now.',
     };
   }
 
@@ -292,9 +328,10 @@ export class AuthService {
     password: string;
     requestedRole?: string;
   }): Promise<{ user: User | null; message: string }> {
-    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password } = payload;
+    const { fullName, email, phone, companyName, registrationCin, gstin, contractorClass, state, district, password, requestedRole } = payload;
 
-    await this.registerWithBackend({
+    // DF-37: forward the requested role end-to-end.
+    const registration = await this.registerWithBackend({
       accountType: 'contractor',
       email,
       password,
@@ -306,10 +343,14 @@ export class AuthService {
       contractorClass,
       state,
       district,
+      ...(requestedRole ? { requestedRole } : {}),
     });
     return {
       user: null,
-      message: 'Your contractor organization verification is pending.',
+      // DF-19: the message follows the backend's requiresApproval flag.
+      message: registration.requiresApproval
+        ? 'Your contractor organization verification is pending.'
+        : 'Registration complete. Your contractor account is active — you can sign in now.',
     };
   }
 

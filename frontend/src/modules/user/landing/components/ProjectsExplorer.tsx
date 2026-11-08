@@ -18,82 +18,17 @@ interface PublicProjectRow {
   updated_at: string;
 }
 
-const FALLBACK_PROJECTS: PublicProjectRow[] = [
-  {
-    id: 'b1000000-0000-0000-0000-000000000005',
-    nirikshak_project_id: 'NIR-PUNE-3C842EE8214DBC84',
-    project_name: 'Pune Ring Road — Eastern & Western Corridors',
-    project_authority: 'Maharashtra State Road Development Corporation (MSRDC)',
-    location_text: 'Pune Outer Ring, Maharashtra',
-    state: 'Maharashtra',
-    total_cost_inr_crore: 26831,
-    normalized_status: 'UNDER_CONSTRUCTION',
-    physical_progress_percent: 24.5,
-    current_status_verified: true,
-    updated_at: '2026-09-25T22:31:16.670482+00:00'
-  },
-  {
-    id: 'b1000000-0000-0000-0000-000000000002',
-    nirikshak_project_id: 'NIR-PUNE-B015C41DB7149E9E',
-    project_name: 'Pune Metro Phase I — PCMC-Swargate & Vanaz-Ramwadi',
-    project_authority: 'Maharashtra Metro Rail Corporation Limited (Maha Metro)',
-    location_text: 'Pune / Pimpri-Chinchwad, Maharashtra',
-    state: 'Maharashtra',
-    total_cost_inr_crore: 11420,
-    normalized_status: 'COMPLETED',
-    physical_progress_percent: 66,
-    current_status_verified: true,
-    updated_at: '2026-09-26T15:25:11.524+00:00'
-  },
-  {
-    id: 'b1000000-0000-0000-0000-000000000001',
-    nirikshak_project_id: 'NIR-PUNE-1C6ACEADF93FFB1A',
-    project_name: 'Pune Metro Line 3 — Hinjawadi to Shivajinagar',
-    project_authority: 'Pune Metropolitan Region Development Authority (PMRDA)',
-    location_text: 'Hinjawadi-Shivajinagar, Pune, Maharashtra',
-    state: 'Maharashtra',
-    total_cost_inr_crore: 8313,
-    normalized_status: 'UNDER_CONSTRUCTION',
-    physical_progress_percent: 66,
-    current_status_verified: true,
-    updated_at: '2026-09-26T15:26:28.505+00:00'
-  },
-  {
-    id: 'b1000000-0000-0000-0000-000000000007',
-    nirikshak_project_id: 'NIR-PUNE-8F4219EBA174C302',
-    project_name: 'Pune 24x7 Equitably Distributed Water Supply Project',
-    project_authority: 'Pune Municipal Corporation (PMC)',
-    location_text: 'Municipal Zones, Pune, Maharashtra',
-    state: 'Maharashtra',
-    total_cost_inr_crore: 2550,
-    normalized_status: 'UNDER_CONSTRUCTION',
-    physical_progress_percent: 82,
-    current_status_verified: true,
-    updated_at: '2026-09-25T22:31:16.670482+00:00'
-  },
-  {
-    id: 'b1000000-0000-0000-0000-000000000004',
-    nirikshak_project_id: 'NIR-PUNE-D292712EECA3204A',
-    project_name: 'Mumbai-Pune Expressway Capacity Augmentation',
-    project_authority: 'Maharashtra State Road Development Corporation Limited (MSRDC)',
-    location_text: 'Mumbai-Pune Corridor, Maharashtra',
-    state: 'Maharashtra',
-    total_cost_inr_crore: 2136,
-    normalized_status: 'COMPLETED',
-    physical_progress_percent: 100,
-    current_status_verified: true,
-    updated_at: '2026-09-25T22:31:16.670482+00:00'
-  }
-];
-
 export const ProjectsExplorer: React.FC = () => {
-  const [projects, setProjects] = useState<PublicProjectRow[]>(FALLBACK_PROJECTS);
-  const [loading, setLoading] = useState(false);
+  // DF-11: start empty/loading — rows appear only from a successful query.
+  const [projects, setProjects] = useState<PublicProjectRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadProjects() {
       try {
         setLoading(true);
+        setLoadError(null);
         const { data, error } = await supabase
           .from('public_projects_view')
           .select('id, nirikshak_project_id, project_name, project_authority, location_text, state, total_cost_inr_crore, normalized_status, physical_progress_percent, current_status_verified, updated_at')
@@ -101,11 +36,11 @@ export const ProjectsExplorer: React.FC = () => {
           .order('total_cost_inr_crore', { ascending: false })
           .limit(5);
 
-        if (data && data.length > 0 && !error) {
-          setProjects(data as PublicProjectRow[]);
-        }
+        if (error) throw error;
+        setProjects((data ?? []) as PublicProjectRow[]);
       } catch (err) {
         console.error('Error fetching public projects:', err);
+        setLoadError('Public project records could not be loaded right now. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -173,6 +108,19 @@ export const ProjectsExplorer: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10 text-slate-200">
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 px-6 text-center text-slate-400">Loading public project records…</td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 px-6 text-center text-red-300">{loadError}</td>
+                  </tr>
+                ) : projects.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 px-6 text-center text-slate-400">No public project records are available right now.</td>
+                  </tr>
+                ) : null}
                 {projects.map((p) => (
                   <tr
                     key={p.id}
@@ -228,7 +176,7 @@ export const ProjectsExplorer: React.FC = () => {
               onClick={() => navigate(ROUTES.PROJECTS)}
               className="text-[#eefc55] hover:underline font-bold inline-flex items-center gap-1.5"
             >
-              <span>Explore all 3,900+ projects in Citizen Portal</span>
+              <span>Explore all projects in Citizen Portal</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
