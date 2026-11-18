@@ -101,9 +101,6 @@ jobs:
   secrets:
     name: Secret scan (working tree)
     runs-on: ubuntu-latest
-    # Report-only until the first clean run has been reviewed; then delete
-    # this line so a detected secret blocks the merge.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: gitleaks
