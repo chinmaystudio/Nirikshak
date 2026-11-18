@@ -10,7 +10,7 @@ wb_path = r"E:\Nirikshak\NIRIKSHAK_India_Infrastructure_Audit_Workbook_Pune_2000
 wb = openpyxl.load_workbook(wb_path, read_only=True)
 
 SUPABASE_URL = "https://dmkhkgqyzevhxpxsrgng.supabase.co"
-ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjE3NTIsImV4cCI6MjEwNTkzNzc1Mn0.xloAq7KOhn7wyGNSXKXuAZDLuu4dxEjXVNjby9zOgoU"
+ANON_KEY = os.environ["SUPABASE_ANON_KEY"]
 
 def clean_str(val):
     if val is None:

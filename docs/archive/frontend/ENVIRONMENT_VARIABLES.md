@@ -5,7 +5,7 @@ All frontend variables are prefixed with `VITE_` and bundled into the client bui
 ```env
 # Supabase Connectivity
 VITE_SUPABASE_URL=https://dmkhkgqyzevhxpxsrgng.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NTIwNDEsImV4cCI6MjA5MDEyODA0MX0.vDbg0xJ5N5Fm0yEIdjD3c3vj2R86kE715aV3Vd0eRvg
+VITE_SUPABASE_PUBLISHABLE_KEY=<redacted — set from your Supabase project>
 
 # Feature Toggles
 VITE_USE_MOCK_API=false
@@ -22,7 +22,7 @@ Server-side secrets managed in Vercel environment settings:
 ```env
 # Supabase Database & Auth Access
 SUPABASE_URL=https://dmkhkgqyzevhxpxsrgng.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NTIwNDEsImV4cCI6MjA5MDEyODA0MX0.vDbg0xJ5N5Fm0yEIdjD3c3vj2R86kE715aV3Vd0eRvg
+SUPABASE_ANON_KEY=<redacted — set from your Supabase project>
 SUPABASE_SERVICE_ROLE_KEY=
 
 # AI Provider Configuration

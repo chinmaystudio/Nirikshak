@@ -29,7 +29,7 @@ if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSH
 
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://dmkhkgqyzevhxpxsrgng.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxODAxODcsImV4cCI6MjA1ODc1NjE4N30.C3n_N_mF2Tq-N7Kqm_z8r2H1f1_Q1O8Y1Z2_E9A-x_o';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY!;
 
 const ACCOUNTS = {
   government: {
