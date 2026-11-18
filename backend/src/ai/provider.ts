@@ -65,14 +65,36 @@ export function sanitizeContext(data: any): any {
   return data;
 }
 
+/**
+ * Candidate models, tried in order. The configured model (OPENROUTER_MODEL)
+ * goes first; the rest are fallbacks so a single retired/renamed model id
+ * can never take the whole AI pipeline down again — that is exactly what
+ * happened with 'nvidia/nemotron-3-super-120b-a12b:free', which OpenRouter
+ * retired (every analysis returned HTTP 404 while the key was valid).
+ * Verified against GET https://openrouter.ai/api/v1/models on 2026-11-18.
+ */
+export const AI_MODEL_CANDIDATES: string[] = [
+  ...(process.env.OPENROUTER_MODEL ? [process.env.OPENROUTER_MODEL] : []),
+  'nvidia/nemotron-3-super-120b-a12b',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'nvidia/nemotron-3.5-lightning:free',
+].filter((v, i, a) => a.indexOf(v) === i);
+
 export class OpenRouterProvider implements LLMProvider {
   readonly name = 'OpenRouter (Nemotron)';
   private apiKey: string;
-  private model: string;
+  /** Metadata of the most recent run, for the ai_runs audit row. */
+  public lastRun: {
+    model: string;
+    latencyMs: number;
+    totalTokens: number | null;
+    promptHash: string;
+    status: 'SUCCESS' | 'FAILED';
+  } | null = null;
 
   constructor() {
     this.apiKey = process.env.OPENROUTER_API_KEY || '';
-    this.model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
   }
 
   async analyzeProject(prompt: string, context: Record<string, unknown>): Promise<ProjectRiskAnalysis> {
@@ -113,56 +135,79 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`;
     const promptHash = crypto.createHash('sha256').update(userPrompt).digest('hex').slice(0, 16);
     const startTime = Date.now();
 
-    // Rule 63: Validate structured response using Zod. On invalid output retry once, then FAILED.
-    let attempts = 0;
-    const maxAttempts = 2;
+    // Rule 63: Validate structured response using Zod. On invalid output
+    // retry once per model, then move to the next candidate model; FAILED
+    // only when every candidate is exhausted. Model-level failures
+    // (404 retired id, 402 no credit, 429 rate limit) skip straight to the
+    // next candidate instead of burning retries.
     let lastError: Error | null = null;
 
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.apiKey}`,
-            'HTTP-Referer': 'https://nirikshak.gov.in',
-            'X-Title': 'NIRIKSHAK Infrastructure Audit',
-          },
-          body: JSON.stringify({
-            model: this.model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.2,
-          }),
-        });
+    for (const model of AI_MODEL_CANDIDATES) {
+      const maxAttempts = 2;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`,
+              'HTTP-Referer': 'https://nirikshak.gov.in',
+              'X-Title': 'NIRIKSHAK Infrastructure Audit',
+            },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              response_format: { type: 'json_object' },
+              temperature: 0.2,
+            }),
+          });
 
-        if (!response.ok) {
-          throw new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`);
+          if (!response.ok) {
+            const modelLevel = [401, 402, 404, 429].includes(response.status);
+            throw Object.assign(
+              new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`),
+              { modelLevel }
+            );
+          }
+
+          const data = await response.json();
+          const rawContent = data.choices[0]?.message?.content || '{}';
+          const parsed = JSON.parse(rawContent);
+          const validated = ProjectRiskAnalysisSchema.parse(parsed);
+
+          const latency = Date.now() - startTime;
+          this.lastRun = {
+            model,
+            latencyMs: latency,
+            totalTokens: data.usage?.total_tokens ?? null,
+            promptHash,
+            status: 'SUCCESS',
+          };
+          // Rule 64: Log only metadata, never raw sensitive prompts
+          console.info(`[AI_LOG] provider=OpenRouter model=${model} latency=${latency}ms tokens=${data.usage?.total_tokens ?? 0} status=SUCCESS promptHash=${promptHash}`);
+
+          return validated;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[AI_LOG] model=${model} attempt ${attempt} failed: ${err.message}. promptHash=${promptHash}`);
+          if (err?.modelLevel) break; // next candidate model
         }
-
-        const data = await response.json();
-        const rawContent = data.choices[0]?.message?.content || '{}';
-        const parsed = JSON.parse(rawContent);
-        const validated = ProjectRiskAnalysisSchema.parse(parsed);
-
-        const latency = Date.now() - startTime;
-        // Rule 64: Log only metadata, never raw sensitive prompts
-        console.info(`[AI_LOG] provider=OpenRouter model=${this.model} latency=${latency}ms tokens=${data.usage?.total_tokens ?? 0} status=SUCCESS promptHash=${promptHash}`);
-
-        return validated;
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[AI_LOG] Attempt ${attempts} failed: ${err.message}. promptHash=${promptHash}`);
       }
     }
 
     const latency = Date.now() - startTime;
-    console.error(`[AI_LOG] provider=OpenRouter model=${this.model} latency=${latency}ms status=FAILED promptHash=${promptHash} error=${lastError?.message}`);
-    throw new Error(`AI_ANALYSIS_FAILED: Provider output failed schema validation: ${lastError?.message}`);
+    this.lastRun = {
+      model: AI_MODEL_CANDIDATES[AI_MODEL_CANDIDATES.length - 1],
+      latencyMs: latency,
+      totalTokens: null,
+      promptHash,
+      status: 'FAILED',
+    };
+    console.error(`[AI_LOG] provider=OpenRouter latency=${latency}ms status=FAILED promptHash=${promptHash} error=${lastError?.message}`);
+    throw new Error(`AI_ANALYSIS_FAILED: All candidate models failed. Last error: ${lastError?.message}`);
   }
 }
 

@@ -79,29 +79,146 @@ aiRouter.post(
         }
       }
 
-      const provider = getLLMProvider();
-      const prompt = `Conduct an exhaustive multidimensional infrastructure audit for ${project.project_name}. Identify schedule slippage, financial variances, and risk indicators.`;
+      // Enrich the analysis context with the project's real operational
+      // data. Previously the model saw only headline project fields plus
+      // milestones and delay_events (a table with zero rows), so its
+      // output could not be project-specific. Aggregates are computed
+      // here, from the database, at request time.
+      const pid = project.id;
+      const [finRes, inspRes, progRes, compRes, contractRes] = await Promise.all([
+        supabaseAdmin
+          .from('financial_updates')
+          .select('update_type, amount_inr_crore, cumulative_spent_inr_crore, fiscal_year, created_at')
+          .eq('project_id', pid)
+          .order('created_at', { ascending: false })
+          .limit(12),
+        supabaseAdmin
+          .from('inspections')
+          .select('inspection_type, status, scheduled_date, overall_rating, created_at')
+          .eq('project_id', pid)
+          .order('created_at', { ascending: false })
+          .limit(8),
+        supabaseAdmin
+          .from('progress_updates')
+          .select('verification_status, reported_progress_percent, created_at')
+          .eq('project_id', pid)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabaseAdmin
+          .from('complaints')
+          .select('category, severity, status, created_at')
+          .eq('project_id', pid)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        supabaseAdmin
+          .from('contracts')
+          .select('status, contract_value_inr_crore, award_date, scheduled_completion_date')
+          .eq('project_id', pid)
+          .limit(5),
+      ]);
+      const countBy = (rows: any[] | null, key: string) =>
+        (rows ?? []).reduce((acc: Record<string, number>, r: any) => {
+          const k = String(r?.[key] ?? 'UNKNOWN');
+          acc[k] = (acc[k] ?? 0) + 1;
+          return acc;
+        }, {});
+      const enrichedContext = {
+        project,
+        finance: {
+          recent_updates: finRes.data ?? [],
+          total_updates: (finRes.data ?? []).length,
+        },
+        inspections: {
+          recent: inspRes.data ?? [],
+          by_status: countBy(inspRes.data, 'status'),
+        },
+        progress: {
+          by_verification_status: countBy(progRes.data, 'verification_status'),
+          latest_reported_percent: progRes.data?.[0]?.reported_progress_percent ?? null,
+        },
+        complaints: {
+          total_recent: (compRes.data ?? []).length,
+          by_status: countBy(compRes.data, 'status'),
+          by_severity: countBy(compRes.data, 'severity'),
+          by_category: countBy(compRes.data, 'category'),
+        },
+        contracts: contractRes.data ?? [],
+      };
 
-      const analysis = await provider.analyzeProject(prompt, project as any);
+      const provider = getLLMProvider();
+      const prompt = `Conduct an exhaustive multidimensional infrastructure audit for ${project.project_name}. Identify schedule slippage, financial variances, and risk indicators. Base every claim on the supplied project, finance, inspection, progress, complaint and contract data; where a data source is empty, say the evidence is insufficient instead of speculating.`;
+
+      const analysis = await provider.analyzeProject(prompt, enrichedContext as any);
+
+      // Record the run (AI_ARCHITECTURE.md: insights are linked to ai_runs).
+      const runMeta = (provider as any).lastRun as
+        | { model: string; latencyMs: number; totalTokens: number | null; promptHash: string }
+        | null;
+      let aiRunId: string | null = null;
+      {
+        const { data: runRow, error: runErr } = await supabaseAdmin
+          .from('ai_runs')
+          .insert({
+            project_id: pid,
+            task: 'project_risk_analysis',
+            provider: provider.name,
+            model: runMeta?.model ?? 'unknown',
+            prompt_version: 'v2',
+            input_hash: runMeta?.promptHash ?? null,
+            status: 'SUCCESS',
+            output_tokens: runMeta?.totalTokens ?? null,
+            latency_ms: runMeta?.latencyMs ?? null,
+            completed_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+        if (runErr) {
+          console.error('AI run persistence failed', { code: runErr.code, message: runErr.message, project_id: pid });
+        } else {
+          aiRunId = runRow?.id ?? null;
+        }
+      }
 
       // Save insight to database using service role for persistence.
       // DF-23: check the insert result — previously a failed insert still
       // produced a 200 that callers read as "saved to the audit trail".
-      const { data: insight, error: insightError } = await supabaseAdmin
+      // Confidence is NULL: the provider schema returns no confidence, and
+      // the previous hard-coded 0.92 (and the column's old 0.85 default)
+      // were fabricated numbers presented as model certainty.
+      const insightPayload: Record<string, unknown> = {
+        project_id: pid,
+        ai_run_id: aiRunId,
+        insight_type: 'project_risk',
+        title: `${analysis.risk_level} Risk: ${project.project_name}`,
+        summary: analysis.summary,
+        severity: analysis.risk_level,
+        confidence: null,
+        evidence: analysis.evidence,
+        recommended_actions: analysis.recommended_actions,
+        status: 'ACTIVE',
+        // Migration 036 columns: full structured breakdown + risk score.
+        risk_score: analysis.risk_score,
+        details: {
+          schedule: analysis.schedule,
+          finance: analysis.finance,
+          environment: analysis.environment,
+        },
+      };
+      let { data: insight, error: insightError } = await supabaseAdmin
         .from('ai_insights')
-        .insert({
-          project_id: project.id,
-          insight_type: 'schedule_risk',
-          title: `${analysis.risk_level} Risk: ${project.project_name}`,
-          summary: analysis.summary,
-          severity: analysis.risk_level,
-          confidence: 0.92,
-          evidence: analysis.evidence,
-          recommended_actions: analysis.recommended_actions,
-          status: 'ACTIVE',
-        })
+        .insert(insightPayload)
         .select()
         .single();
+      if (insightError && /risk_score|details/.test(insightError.message || '')) {
+        // 036 not applied yet on this database — persist without the new
+        // columns rather than losing the analysis.
+        const { risk_score: _rs, details: _d, ...legacyPayload } = insightPayload;
+        ({ data: insight, error: insightError } = await supabaseAdmin
+          .from('ai_insights')
+          .insert(legacyPayload)
+          .select()
+          .single());
+      }
 
       const insightSaved = !insightError && !!insight;
       if (!insightSaved) {
@@ -130,6 +247,7 @@ aiRouter.post(
         success: true,
         data: {
           provider: provider.name,
+          provider_model: runMeta?.model ?? null,
           analysis,
           // DF-23: saved_insight is null and insight_saved is false when the
           // analysis ran but could not be persisted — never imply it saved.

@@ -53,7 +53,10 @@ export const ReviewProgressSchema = z.object({
 });
 
 export const CreateComplaintSchema = z.object({
-  project_id: z.string().uuid(),
+  // Nullable: citizens can file a general grievance without linking a
+  // project (the column is nullable and the frontend omits it then);
+  // requiring it made every project-less complaint fail with a 400.
+  project_id: z.string().uuid().nullable().optional(),
   category: z.string().min(2),
   title: z.string().min(5),
   description: z.string().min(10),
