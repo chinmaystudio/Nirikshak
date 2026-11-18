@@ -7,8 +7,10 @@
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/ops/remove-test-accounts.ts          # dry run
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/ops/remove-test-accounts.ts --apply  # delete
  *
- * Deleting an auth user cascades to its profile and memberships. Audit-log
- * rows that reference the user id are kept (append-only).
+ * Accounts with audit history cannot be deleted (audit_logs.actor_id
+ * references the user and the audit log is append-only), so those are
+ * disabled instead: banned indefinitely, so no session can be refreshed. The audit
+ * trail keeps who did what.
  */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
@@ -40,6 +42,17 @@ for (const m of matches) console.log(`  ${m.email}  ${m.id}`);
 if (apply) {
   for (const m of matches) {
     const { error } = await admin.auth.admin.deleteUser(m.id);
-    console.log(error ? `  FAILED ${m.email}: ${error.message}` : `  deleted ${m.email}`);
+    if (!error) {
+      console.log(`  deleted ${m.email}`);
+      continue;
+    }
+    // Typically a foreign key from the append-only audit log: disable instead.
+    const { error: banError } = await admin.auth.admin.updateUserById(m.id, { ban_duration: '876000h' });
+    if (banError) {
+      console.log(`  FAILED ${m.email}: ${error.message}; ban also failed: ${banError.message}`);
+      continue;
+    }
+    // A banned user cannot refresh a session; any current access token expires within the hour.
+    console.log(`  disabled ${m.email} (has audit history: ${error.message})`);
   }
 }

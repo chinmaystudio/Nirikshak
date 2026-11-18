@@ -19,7 +19,7 @@ The application code works against the database both before and after migrations
 
 1. **Check the live database first.** In the Supabase SQL editor, run `backend/supabase/test/audit_live_policies.sql` and keep the output for the record.
 2. **Back up.** Enable Point-in-Time Recovery (paid plan) or take a manual backup (Database → Backups).
-3. **Apply migrations `040` to `045`** in file-name order in the SQL editor. Each file is idempotent. (`032_z_schema_drift_baseline.sql` and the guarded statements in `025`–`027` only matter for a fresh database. On production they do nothing, so they don't need applying.)
+3. **Apply migrations `040` to `046`** in file-name order in the SQL editor. Each file is idempotent. (`032_z_schema_drift_baseline.sql` and the guarded statements in `025`–`027` only matter for a fresh database. On production they do nothing, so they don't need applying.)
    - `041` assigns every project with no owner, either to a government organisation whose name equals the project's `project_authority`, or to a new organisation **Nirikshak Platform Administration** (an oversight organisation). The NOTICE output reports the counts.
    - `043` turns on two-step verification for all government and contractor writes immediately. Deploy the new frontend (step 6) right after it.
 4. **Run `audit_live_policies.sql` again.** Every section should now be empty, except the test-account list (step 7).
@@ -29,7 +29,7 @@ The application code works against the database both before and after migrations
    - Authentication → URL configuration: set the Site URL and redirect URLs to the production frontend.
    - Authentication → Rate limits: review the defaults.
 6. **Deploy.** Set the new backend variables (section 1) and then run the *Deploy production* workflow (Actions → Deploy production → Run workflow).
-7. **Remove test accounts.** Their passwords were published in this repository's history.
+7. **Remove test accounts.** Their passwords were published in this repository's history. Accounts that appear in the audit log cannot be deleted (the audit log is append-only), so the script disables those indefinitely instead.
    ```bash
    cd backend
    SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx tsx scripts/ops/remove-test-accounts.ts          # review the list

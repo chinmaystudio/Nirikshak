@@ -47,6 +47,17 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION public.storage_first_folder_uuid(text), public.storage_second_folder_uuid(text) TO anon, authenticated, service_role;
 
+-- Older broad policies found in production (created outside migrations).
+-- Storage policies are permissive (OR-ed), so these would override the
+-- owner-folder rules below; they are replaced.
+DROP POLICY IF EXISTS "Progress Evidence Read" ON storage.objects;
+DROP POLICY IF EXISTS "Progress Evidence Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Government Documents Access" ON storage.objects;
+DROP POLICY IF EXISTS "Contractor Documents Read" ON storage.objects;
+DROP POLICY IF EXISTS "Contractor Documents Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Complaint Evidence Read" ON storage.objects;
+DROP POLICY IF EXISTS "Complaint Evidence Upload" ON storage.objects;
+
 -- progress-evidence ---------------------------------------------------------
 DROP POLICY IF EXISTS "progress evidence upload by assigned contractor" ON storage.objects;
 CREATE POLICY "progress evidence upload by assigned contractor" ON storage.objects
