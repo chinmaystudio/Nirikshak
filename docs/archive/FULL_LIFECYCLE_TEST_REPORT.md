@@ -33,13 +33,13 @@ All 7 test accounts are provisioned directly in Supabase Auth (`auth.users`), li
 
 | Role | Entity / Organization | Email | Password | Supabase User UUID | Verified |
 | :--- | :--- | :--- | :--- | :--- | :---: |
-| **Government Admin** | Pune Infrastructure Monitoring Authority | `government.e2e@nirikshak.local` | `NirikshakGovE2E#2026` | `c1128b8f-c8c4-4416-b269-d65d17ad6834` | **YES** |
-| **Contractor 1** | Apex Infrastructure Pvt Ltd | `contractor1.e2e@nirikshak.local` | `NirikshakC1#2026` | `8371fc76-49b9-41d9-a607-f77d4c0d6aef` | **YES** |
-| **Contractor 2** | Bharat Urban Engineering Ltd | `contractor2.e2e@nirikshak.local` | `NirikshakC2#2026` | `044a5f4e-6d31-41ff-bf86-5e70c24ec9d0` | **YES** |
-| **Contractor 3** | Crestline Infra Projects Pvt Ltd | `contractor3.e2e@nirikshak.local` | `NirikshakC3#2026` | `6e60f5de-ee79-4ab1-a658-2d2c858407a6` | **YES** |
-| **Contractor 4** | Deccan Civil Engineering Ltd | `contractor4.e2e@nirikshak.local` | `NirikshakC4#2026` | `baf0c0d3-3775-4b6b-b28e-4b486aa6f782` | **YES** |
-| **Contractor 5** | Evergreen Smart Infrastructure Pvt Ltd | `contractor5.e2e@nirikshak.local` | `NirikshakC5#2026` | `bfdea5db-1067-4999-9a86-c891abc9e19d` | **YES** |
-| **Citizen** | E2E Citizen Tester | `citizen.e2e@nirikshak.local` | `NirikshakCitizenE2E#2026` | `e475d043-adc0-42c9-9547-8d4beb6be9f7` | **YES** |
+| **Government Admin** | Pune Infrastructure Monitoring Authority | `government.e2e@nirikshak.local` | `[REDACTED — rotated]` | `c1128b8f-c8c4-4416-b269-d65d17ad6834` | **YES** |
+| **Contractor 1** | Apex Infrastructure Pvt Ltd | `contractor1.e2e@nirikshak.local` | `[REDACTED — rotated]` | `8371fc76-49b9-41d9-a607-f77d4c0d6aef` | **YES** |
+| **Contractor 2** | Bharat Urban Engineering Ltd | `contractor2.e2e@nirikshak.local` | `[REDACTED — rotated]` | `044a5f4e-6d31-41ff-bf86-5e70c24ec9d0` | **YES** |
+| **Contractor 3** | Crestline Infra Projects Pvt Ltd | `contractor3.e2e@nirikshak.local` | `[REDACTED — rotated]` | `6e60f5de-ee79-4ab1-a658-2d2c858407a6` | **YES** |
+| **Contractor 4** | Deccan Civil Engineering Ltd | `contractor4.e2e@nirikshak.local` | `[REDACTED — rotated]` | `baf0c0d3-3775-4b6b-b28e-4b486aa6f782` | **YES** |
+| **Contractor 5** | Evergreen Smart Infrastructure Pvt Ltd | `contractor5.e2e@nirikshak.local` | `[REDACTED — rotated]` | `bfdea5db-1067-4999-9a86-c891abc9e19d` | **YES** |
+| **Citizen** | E2E Citizen Tester | `citizen.e2e@nirikshak.local` | `[REDACTED — rotated]` | `e475d043-adc0-42c9-9547-8d4beb6be9f7` | **YES** |
 
 ---
 

@@ -29,9 +29,9 @@ NIRIKSHAK has completed comprehensive architectural isolation, database synchron
 
 | Portal | URL | Email | Password | Role | Status |
 | :--- | :--- | :--- | :--- | :--- | :---: |
-| **Government** | `/government/login` | `government.test@nirikshak.local` | `NirikshakGov#2026` | `government_admin` | **VERIFIED WORKING** |
-| **Contractor** | `/contractor/login` | `contractor.test@nirikshak.local` | `NirikshakContractor#2026` | `contractor_admin` | **VERIFIED WORKING** |
-| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `NirikshakCitizen#2026` | `citizen` | **VERIFIED WORKING** |
+| **Government** | `/government/login` | `government.test@nirikshak.local` | `[REDACTED — rotated]` | `government_admin` | **VERIFIED WORKING** |
+| **Contractor** | `/contractor/login` | `contractor.test@nirikshak.local` | `[REDACTED — rotated]` | `contractor_admin` | **VERIFIED WORKING** |
+| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `[REDACTED — rotated]` | `citizen` | **VERIFIED WORKING** |
 
 ---
 

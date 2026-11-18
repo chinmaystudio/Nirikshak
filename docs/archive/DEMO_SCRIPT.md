@@ -11,9 +11,9 @@
 ### Credentials Reference
 | Role | Portal URL | Login Email | Password |
 | :--- | :--- | :--- | :--- |
-| **Government Admin** | `/government/login` | `government.test@nirikshak.local` | `NirikshakGov#2026` |
-| **Contractor Admin** | `/contractor/login` | `contractor.test@nirikshak.local` | `NirikshakContractor#2026` |
-| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `NirikshakCitizen#2026` |
+| **Government Admin** | `/government/login` | `government.test@nirikshak.local` | `[REDACTED — rotated]` |
+| **Contractor Admin** | `/contractor/login` | `contractor.test@nirikshak.local` | `[REDACTED — rotated]` |
+| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `[REDACTED — rotated]` |
 
 ---
 

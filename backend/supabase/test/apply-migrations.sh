@@ -6,6 +6,6 @@ here="$(cd "$(dirname "$0")" && pwd)"
 : "${DATABASE_URL:?DATABASE_URL is required}"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$here/00_supabase_shim.sql"
 for f in $(ls "$here/../migrations"/*.sql | sort); do
-  echo "applying $(basename "$f")"
+  echo "applying $(basename "$f")" >&2
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$f"
 done

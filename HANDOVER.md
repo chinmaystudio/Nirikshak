@@ -1,160 +1,82 @@
-# Nirikshak — Handover Document
+# NIRIKSHAK — Handover document
 
-**Status as of 18 Nov 2026:** Production system, live and verified end-to-end.
-Prepared for handover to the operating government department.
+Prepared for the operating government department. Read this together with [docs/OPERATIONS_RUNBOOK.md](docs/OPERATIONS_RUNBOOK.md) (how to run it) and [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) (who can do what).
 
----
+## 1. What the system is
 
-## 1. What Nirikshak is
+A public-infrastructure transparency and delivery platform with three portals in one web application. All three use a single PostgreSQL database (Supabase) that enforces every access rule:
 
-A public-infrastructure transparency and delivery platform with three portals
-served from one web application, all connected through a single database —
-there is no mock or demo data anywhere in the production system:
+- **Government portal:** project registry and oversight; tenders with sealed bids, an evaluation committee, two-key bid opening, committee scoring (QCBS) and award; progress verification; budget and finance; contractors; complaints; AI risk insights (advisory); reports; access approvals; audit log.
+- **Contractor portal:** tender discovery and bidding; assigned projects; progress reports with uploaded photo and document evidence; workers, resources and invoices; correspondence with the department.
+- **Citizen portal:** verified public project information, nearby projects, complaint filing with photo evidence and tracking, AI photo scan, and an assistant that answers only from the public project registry.
 
-- **Government portal** — project registry and oversight, tender management
-  (publish → bid → QCBS evaluation → award), progress verification, budget and
-  finance tracking, contractor directory, complaints oversight, AI risk
-  insights, reports, access-request approvals.
-- **Contractor portal** — organisation workspace for awarded contractors:
-  assigned projects, milestone/progress reporting with evidence, workers and
-  resources registers, document register, invoices/bills, government
-  correspondence, tender discovery and bid submission.
-- **Citizen portal** — public project tracking (3,921 projects), nearby
-  projects, community complaint feed, complaint filing (with or without a
-  linked project), AI photo scan of infrastructure issues, and an AI assistant
-  that answers from the live project registry.
+## 2. Architecture
 
-## 2. Live system
-
-| Component | Where | Notes |
-|---|---|---|
-| Web app (all 3 portals) | https://nirikshak.pages.dev | Cloudflare Pages, direct-upload deploys |
-| Backend API | https://backend-one-omega-16.vercel.app | Vercel; auto-deploys from GitHub `main` |
-| Database / Auth / Storage APIs | Supabase project `dmkhkgqyzevhxpxsrgng` | Postgres + Row Level Security on every table |
-| Source code | GitHub `chinmaystudio/Nirikshak` | `main` is always the deployable state |
-| AI provider | OpenRouter (NVIDIA Nemotron family) | Backend-only; key lives in Vercel env vars |
-
-A second backend copy exists on Render (`nirikshak-backend-pgqm.onrender.com`)
-from an earlier deployment; the production frontend uses the Vercel backend.
-
-## 3. Architecture in one page
-
-- **Single source of truth:** Supabase Postgres. The portals never talk to
-  each other directly; every cross-portal flow (progress submitted by a
-  contractor → verified by government → visible to citizens) is a database
-  state change guarded by RLS and, for critical transitions, by RPC functions
-  (`approve_progress_update`, `award_contract`, `save_tender_bid`,
-  `submit_progress_update`, `withdraw_tender_bid`).
-- **Access model:** users belong to organisations (`organization_members`).
-  Government authority, contractor assignment and citizen access are all
-  enforced in the database by RLS policies — the frontend cannot widen them.
-- **AI (advisory only):** `POST /api/ai/analyze/:projectId` (government /
-  assigned contractor) builds a context from the project's real record —
-  computed schedule/budget signals plus finance, inspections, progress,
-  complaints and contracts — and stores a structured, Zod-validated insight
-  in `ai_insights`, linked to an `ai_runs` audit row. Risk level is derived
-  server-side from the risk score with fixed bands (0–24 LOW, 25–49 MEDIUM,
-  50–74 HIGH, 75–100 CRITICAL) so an insight can never contradict itself.
-  Citizen AI: `POST /api/ai/vision` (photo analysis) and `POST /api/ai/ask`
-  (registry-grounded Q&A). The AI never approves, awards or certifies
-  anything; if the provider is unavailable the API returns an error rather
-  than a fabricated answer.
-- **Schema history:** migrations `001`–`038` in
-  `backend/supabase/migrations/`, all applied to the production database.
-
-## 4. Verified state (18 Nov 2026 end-to-end sweep)
-
-Exercised live with the seeded accounts (see §6):
-
-- Government: 24 feature checks passed — registry/summary views (3,921
-  projects), tenders (46) and bids (109), approvals queue, contractors (19
-  organisations, 39 contracts), finance (130 updates), inspections,
-  complaints, documents, AI insights, access requests, audit log.
-- Citizen: public registry (count, paging, search, filters), community feed,
-  project-linked and project-less complaint filing, AI ask + vision — all
-  working. (Project-less filing required migration 038; applied and
-  re-verified.)
-- Contractor: 20 of 22 checks passed — organisation identity, 5 assigned
-  projects, tenders/bids (incl. server-side bid validation), progress /
-  inspections / finance reads, full create→read→delete round-trips on the
-  workers / resources / messages / invoices tables (migration 037), and
-  document upload under the new RLS policy. The two gaps found — no
-  contractor DELETE policy for their own document rows, and stale
-  `profiles.role` labels on the seeded test accounts — are fixed by
-  migration 039.
-- AI analysis re-run live after the consistency fix: title, badge, severity
-  and score agree (e.g. MEDIUM / 40) and the summary cites the project's
-  actual figures.
-
-## 5. Data reality — read before demonstrating
-
-The project registry is real imported data (3,921 projects; sanctioned cost
-present for 3,885), but the import carried almost no operational history:
-
-- Planned start / completion dates exist for only **2** projects; physical
-  progress for **33**; milestones cover ~3% of projects; `delay_events` is
-  empty; finance/inspection history is seed-scale (130 / 16 rows).
-- Consequence: for most projects the AI correctly reports schedule/finance
-  evidence as missing — that is the honest answer for those records, not a
-  malfunction. Insights become substantive as departments and contractors
-  record dates, milestones, progress, finance and inspections through the
-  portals (all of those workflows are live and verified).
-- Tender QCBS scores are persisted for only 2 of 109 historical bids
-  (pre-system awards); evaluations run through the portal persist full
-  technical/financial/combined scores.
-- Progress-evidence photos: the storage path exists; historical progress
-  updates were seeded without photos, so evidence counts read zero until
-  contractors submit updates with evidence through the portal.
-- Notifications are written by the workflow RPCs (award, progress
-  submission/approval, access decisions). Inboxes are empty until those
-  workflows run in the app — seeded rows bypassed them.
-- The seeded contractor test organisation has no GSTIN / registration
-  number recorded (the profile page shows "—"); legal identifiers are
-  captured at organisation registration and were never part of the seed.
-
-## 6. Seeded test accounts (change/remove before real rollout)
-
-| Portal | Email | Password |
-|---|---|---|
-| Government | government.test@nirikshak.local | NirikshakGov#2026 |
-| Contractor | contractor.test@nirikshak.local | NirikshakContractor#2026 |
-| Citizen | citizen.test@nirikshak.local | NirikshakCitizen#2026 |
-
-The contractor test account belongs to the organisation
-"Nirikshak Test Infrastructure Pvt Ltd".
-
-## 7. Operating the system
-
-**Deploy the web app** (from a checkout of `main`):
-
-```bash
-cd frontend
-npm run build
-npx wrangler pages deploy dist --project-name nirikshak
+```
+Browser (React SPA, Cloudflare Pages)
+   │  publishable key + user JWT          │  user JWT
+   ▼                                      ▼
+Supabase (Postgres + RLS, Auth, Storage) ◄── Backend API (Express, Vercel)
+                                              │  zero-data-retention requests
+                                              ▼
+                                         OpenRouter (AI, advisory only)
 ```
 
-**Deploy the backend:** push to `main` — Vercel builds and deploys
-automatically. Backend env vars (Vercel project settings): `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, optional
-`OPENROUTER_MODEL` (a built-in fallback chain of Nemotron models is used
-otherwise), `FRONTEND_URL` / CORS origins.
+- **Single source of truth:** the database. Cross-portal flows are database state changes protected by RLS. Critical transitions run in database functions: submit/approve progress, set committee, open bids, evaluate, award, approve access, complaint status.
+- **The backend** handles registration, AI, and inputs that need server-side validation, such as complaints and progress evidence. It calls workflow functions with the caller's own token, so the database rules apply to it as well.
+- **Schema of record:** `backend/supabase/migrations/001`–`045`. Since this handover, the schema can be rebuilt from the migrations alone, and CI does exactly that on every change.
 
-**Database changes:** add a numbered migration under
-`backend/supabase/migrations/` and apply it in the Supabase SQL Editor
-(project `dmkhkgqyzevhxpxsrgng`). Never edit an already-applied migration.
+## 3. State at handover
 
-**Frontend env** (`frontend/.env.production`): `VITE_SUPABASE_URL`,
-`VITE_SUPABASE_PUBLISHABLE_KEY` (public by design — data is protected by
-RLS, not by hiding this key), `VITE_API_BASE_URL`.
+| Area | Status |
+| :--- | :--- |
+| Build | Frontend (3 portals) and backend typecheck and build with no errors |
+| Dependencies | `npm audit`: 0 vulnerabilities (frontend and backend) |
+| Backend tests | 38 unit/HTTP tests pass |
+| Database security tests | 78 checks pass on a database rebuilt from migrations 001–045 |
+| CI | Runs all of the above, plus a dependency audit and a secret scan, on every push and pull request |
 
-## 8. Known limitations (accepted, documented)
+### Changes made in the production-readiness pass
 
-- Document registers store metadata; binary file storage for uploads is not
-  wired (the UI states this at the point of upload).
-- Contractor performance evaluation is computed from live project data
-  (schedule, complaints, inspections) rather than stored scores.
-- The citizen AI assistant retrieves from a sample of registry rows;
-  answers are labelled with their source (AI vs project-data fallback).
-- Free-tier/edge constraints of the current hosting plans apply
-  (Vercel/Cloudflare/Supabase); all are upgradeable in place without code
-  changes.
+- **Two-step verification** is required for every government and contractor account and enforced in the database. The former 2FA/OTP screens accepted any code and have been removed.
+- **Sealed bids:** officers cannot see bids until two committee members open them after the due date. Each committee member scores separately, and an award needs the required number of evaluations. Bid amounts no longer appear in the audit log.
+- **Tenancy:** every project and tender now has an owner. Projects without one were previously writable by every government organisation. A read-only oversight role covers cross-organisation monitoring.
+- **Closed data exposures** found when replaying the migrations:
+  - Every user's name and phone were readable without logging in.
+  - Two import tables had RLS switched off.
+  - Anyone could forge audit-log rows and complaint-status history.
+  - Internal complaint notes were readable through public tracking.
+- **Evidence is now real:** contractor progress photos and documents and citizen complaint photos are uploaded to private storage. Previously only the file names were saved.
+- **Registration:** email confirmation, official email domains for government applicants, no self-approval, and stronger passwords for official accounts.
+- **AI:** zero-data-retention routing, no free (prompt-logging) model endpoints by default, timeouts, and no internal errors shown to users.
+- **Operations:**
+  - Rate limits can be shared across server instances through Redis, and they key on the real client IP.
+  - Optional Cloudflare Turnstile bot protection on public forms.
+  - Hard-coded test passwords removed from code and documentation.
+  - Landing-page media reduced from 209 MB to 12 MB.
+
+## 4. What the department must do before go-live
+
+These steps need the department's own accounts; they cannot be done from the code. The runbook gives each one in detail.
+
+1. Run `audit_live_policies.sql` on the live database, back it up, and apply migrations **040–045**.
+2. Turn on *Confirm email* in Supabase Auth; check that TOTP MFA is enabled.
+3. Deploy the new frontend and backend straight after migration 043, which enforces MFA.
+4. **Delete the seeded test accounts** (`scripts/ops/remove-test-accounts.ts`). Their passwords were published in the repository history.
+5. **Rotate** the Supabase service-role key, the OpenRouter key and the hosting tokens, then transfer every cloud account to department ownership.
+6. Create the first department administrator, mark the monitoring organisation as oversight, and move projects held by *Nirikshak Platform Administration* to their real authorities.
+7. Create Upstash Redis and Cloudflare Turnstile and set their keys (strongly recommended).
+8. Move to paid hosting with data in India (Supabase `ap-south-1` or a MeitY-empanelled provider), choose AI models with zero-data-retention endpoints, and publish a DPDP Act privacy notice.
+9. Commission a CERT-In-empanelled security audit (VAPT) of the deployed system.
+
+## 5. Data reality
+
+The project registry is real imported data: 3,921 projects, with sanctioned cost for 3,885. The import carried little operational history: planned dates exist for 2 projects, physical progress for 33, and milestones for about 3%. For most projects the AI therefore reports that schedule and finance evidence is missing. That is the correct answer for those records, not a malfunction. Insights become useful as departments and contractors record dates, milestones, progress, finance and inspections through the portals. Plan a data-entry drive before public launch.
+
+## 6. Known limitations
+
+- Officers can see that evidence was uploaded and how much, but there is no in-portal viewer for evidence images yet. Files are readable through Supabase Storage by authorised users.
+- Contractor document registers and bid documents still record metadata only. Progress evidence and complaint evidence are stored as real files.
+- Resetting a lost authenticator is an API call (runbook §3); there is no button in the portal yet.
+- The citizen assistant answers from a bounded sample of matching registry rows and labels each answer with its source.
+- End-to-end browser tests (`tests/e2e`) need a staging project and are not part of CI.

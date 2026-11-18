@@ -9,7 +9,7 @@
 ## 1. Government Administration Portal
 - **Portal URL**: `/government/login`
 - **Email**: `government.test@nirikshak.local`
-- **Password**: `NirikshakGov#2026`
+- **Password**: `[REDACTED — rotated]`
 - **Assigned Role**: `government_admin`
 - **Organization**: Pune Infrastructure Monitoring Authority
 - **Officer Name**: Er. Rajesh Patil (Chief Engineer)
@@ -20,7 +20,7 @@
 ## 2. Contractor Portal
 - **Portal URL**: `/contractor/login`
 - **Email**: `contractor.test@nirikshak.local`
-- **Password**: `NirikshakContractor#2026`
+- **Password**: `[REDACTED — rotated]`
 - **Assigned Role**: `contractor_admin`
 - **Organization**: Nirikshak Test Infrastructure Pvt Ltd
 - **Representative Name**: Vikram Shinde (Managing Director)
@@ -31,7 +31,7 @@
 ## 3. Citizen Portal
 - **Portal URL**: `/user` (or citizen login at `/user/login`)
 - **Email**: `citizen.test@nirikshak.local`
-- **Password**: `NirikshakCitizen#2026`
+- **Password**: `[REDACTED — rotated]`
 - **Assigned Role**: `citizen`
 - **Citizen Name**: Aarav Deshmukh
 - **Permissions**: Track public project physical progress, lodge complaints, track personal complaints, view public geo-inspections and alerts.

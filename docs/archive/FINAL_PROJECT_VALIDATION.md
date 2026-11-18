@@ -31,9 +31,9 @@ All three development test accounts were verified via real Supabase Auth `signIn
 
 | Portal | URL | Email | Password | Role | Browser / Runtime Status |
 | :--- | :--- | :--- | :--- | :--- | :---: |
-| **Government** | `/government/login` | `government.test@nirikshak.local` | `NirikshakGov#2026` | `government_admin` | **VERIFIED WORKING** |
-| **Contractor** | `/contractor/login` | `contractor.test@nirikshak.local` | `NirikshakContractor#2026` | `contractor_admin` | **VERIFIED WORKING** |
-| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `NirikshakCitizen#2026` | `citizen` | **VERIFIED WORKING** |
+| **Government** | `/government/login` | `government.test@nirikshak.local` | `[REDACTED — rotated]` | `government_admin` | **VERIFIED WORKING** |
+| **Contractor** | `/contractor/login` | `contractor.test@nirikshak.local` | `[REDACTED — rotated]` | `contractor_admin` | **VERIFIED WORKING** |
+| **Citizen** | `/user/login` | `citizen.test@nirikshak.local` | `[REDACTED — rotated]` | `citizen` | **VERIFIED WORKING** |
 
 - **Legacy Mock Bypass Eradicated**: `nirikshan.ts.v1` local storage bypass was removed from the Citizen portal. No user can access personal routes (`/user/home`, `/user/complaints`, `/user/profile`) without an active Supabase JWT session.
 - **Contractor Default Identity Removal**: Replaced hardcoded "Balaji Infraprojects" defaults with authenticated organization session bindings.

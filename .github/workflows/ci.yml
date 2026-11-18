@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   frontend:
-    name: Frontend typecheck and build
+    name: Frontend typecheck, audit and build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,12 +28,20 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+      - name: Dependency audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run build
-      - name: Verify no leaked secrets in frontend bundle
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-publishable-key
+          VITE_API_BASE_URL: https://ci-placeholder.example
+      - name: No secrets or demo credentials in the bundle
         run: |
-          ! grep -rn "SUPABASE_SERVICE_ROLE_KEY" frontend/dist/ || exit 1
-          ! grep -rn "OPENROUTER_API_KEY" frontend/dist/ || exit 1
+          set -e
+          if grep -rEn "service_role|SUPABASE_SERVICE_ROLE_KEY|OPENROUTER_API_KEY|sk-or-v1-|#2026|@nirikshak\.local|government@gmail\.com" dist/; then
+            echo "::error::Secret, server-only variable or demo credential found in the frontend bundle"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
@@ -42,14 +50,8 @@ jobs:
           retention-days: 7
 
   backend:
-    name: Backend typecheck, security tests, and build
+    name: Backend typecheck, tests, audit and build
     runs-on: ubuntu-latest
-    env:
-      # Non-secret placeholders required at module initialization. Tests mock all
-      # external calls and never connect to this URL.
-      SUPABASE_URL: http://127.0.0.1:54321
-      SUPABASE_ANON_KEY: ci-anon-key
-      SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
     defaults:
       run:
         working-directory: backend
@@ -62,8 +64,10 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: npm run typecheck
-      - name: Run Backend & Security Attack Test Suite
+      - name: Unit and HTTP tests
         run: npm test
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
@@ -71,3 +75,38 @@ jobs:
           path: backend/dist
           if-no-files-found: error
           retention-days: 7
+
+  database:
+    name: Migrations replay + database security tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild schema from migrations and run RLS / workflow tests
+        env:
+          ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: bash backend/supabase/test/run-db-tests.sh
+
+  secrets:
+    name: Secret scan (working tree)
+    runs-on: ubuntu-latest
+    # Report-only until the first clean run has been reviewed; then delete
+    # this line so a detected secret blocks the merge.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 \
+            detect --source /repo --no-git --redact --exit-code 1 --config /repo/.gitleaks.toml

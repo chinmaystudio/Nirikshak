@@ -25,9 +25,9 @@ All three roles verified operational via Supabase Auth cryptographic challenge:
 
 | Account Role | Email | Password | Supabase Auth Status | Profile Binding |
 | :--- | :--- | :--- | :---: | :---: |
-| **Government Admin** | `government.test@nirikshak.local` | `NirikshakGov#2026` | **VERIFIED WORKING** | `government_admin` |
-| **Contractor Admin** | `contractor.test@nirikshak.local` | `NirikshakContractor#2026` | **VERIFIED WORKING** | `contractor_admin` |
-| **Citizen** | `citizen.test@nirikshak.local` | `NirikshakCitizen#2026` | **VERIFIED WORKING** | `citizen` |
+| **Government Admin** | `government.test@nirikshak.local` | `[REDACTED — rotated]` | **VERIFIED WORKING** | `government_admin` |
+| **Contractor Admin** | `contractor.test@nirikshak.local` | `[REDACTED — rotated]` | **VERIFIED WORKING** | `contractor_admin` |
+| **Citizen** | `citizen.test@nirikshak.local` | `[REDACTED — rotated]` | **VERIFIED WORKING** | `citizen` |
 
 ---
 
