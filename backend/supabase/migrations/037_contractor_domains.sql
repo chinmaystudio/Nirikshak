@@ -14,6 +14,13 @@
 -- uploads were RLS-rejected).
 --
 -- Run ONLY AFTER 001–036. Idempotent (IF NOT EXISTS / DROP POLICY IF EXISTS).
+-- NOTE (live-DB correction, 2026-11-18): the live dmkh database does NOT
+-- have belongs_to_organization(uuid) although migration 001 defines it —
+-- the first apply failed on exactly that (42883) and rolled back. Org
+-- membership is therefore tested inline against organization_members,
+-- the same pattern save_tender_bid uses live. can_access_project(uuid),
+-- is_government_user() and get_user_organization_id() were verified to
+-- exist live via pg_proc before this correction.
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
@@ -90,8 +97,18 @@ CREATE POLICY project_workers_select ON public.project_workers FOR SELECT
 
 DROP POLICY IF EXISTS project_workers_write ON public.project_workers;
 CREATE POLICY project_workers_write ON public.project_workers FOR ALL
-  USING (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id))
-  WITH CHECK (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id));
+  USING (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id));
 
 -- ---------------------------------------------------------------------------
 -- Project resources (machinery / equipment / vehicles / materials)
@@ -121,8 +138,18 @@ CREATE POLICY project_resources_select ON public.project_resources FOR SELECT
 
 DROP POLICY IF EXISTS project_resources_write ON public.project_resources;
 CREATE POLICY project_resources_write ON public.project_resources FOR ALL
-  USING (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id))
-  WITH CHECK (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id));
+  USING (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id));
 
 -- ---------------------------------------------------------------------------
 -- Contractor invoices (bills raised by the contractor against a project;
@@ -151,13 +178,28 @@ DROP POLICY IF EXISTS contractor_invoices_select ON public.contractor_invoices;
 CREATE POLICY contractor_invoices_select ON public.contractor_invoices FOR SELECT
   USING (
     public.is_government_user()
-    OR public.belongs_to_organization(contractor_organization_id)
+    OR EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  )
   );
 
 DROP POLICY IF EXISTS contractor_invoices_write ON public.contractor_invoices;
 CREATE POLICY contractor_invoices_write ON public.contractor_invoices FOR ALL
-  USING (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id))
-  WITH CHECK (public.belongs_to_organization(contractor_organization_id) AND public.can_access_project(project_id));
+  USING (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.organization_members om
+    WHERE om.user_id = (SELECT auth.uid())
+      AND om.organization_id = contractor_organization_id
+      AND lower(om.status) = 'active'
+  ) AND public.can_access_project(project_id));
 
 DROP POLICY IF EXISTS contractor_invoices_gov_update ON public.contractor_invoices;
 CREATE POLICY contractor_invoices_gov_update ON public.contractor_invoices FOR UPDATE
