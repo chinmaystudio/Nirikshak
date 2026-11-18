@@ -382,7 +382,7 @@ aiRouter.post(
             .toLowerCase()
             .replace(/[^a-z0-9\s]/g, ' ')
             .split(/\s+/)
-            .filter((w) => w.length > 3)
+            .filter((w: string) => w.length > 3)
         )
       ).slice(0, 5);
 
