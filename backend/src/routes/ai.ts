@@ -211,7 +211,15 @@ aiRouter.post(
       // contradiction users saw as random predictions.
       const bandFor = (score: number): string =>
         score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : score >= 25 ? 'MEDIUM' : 'LOW';
-      const analysis = { ...rawAnalysis, risk_level: bandFor(rawAnalysis.risk_score) as typeof rawAnalysis.risk_level };
+      const safeScore =
+        typeof rawAnalysis.risk_score === 'number' && Number.isFinite(rawAnalysis.risk_score)
+          ? Math.min(100, Math.max(0, rawAnalysis.risk_score))
+          : 0;
+      const analysis = {
+        ...rawAnalysis,
+        risk_score: safeScore,
+        risk_level: bandFor(safeScore) as typeof rawAnalysis.risk_level,
+      };
 
       // Record the run (AI_ARCHITECTURE.md: insights are linked to ai_runs).
       const runMeta = (provider as any).lastRun as
