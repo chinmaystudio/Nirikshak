@@ -29,7 +29,7 @@ GRANT EXECUTE ON FUNCTION public.is_contractor_user() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_government_user() TO authenticated;
 
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM anon, authenticated, PUBLIC;
-REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM anon, authenticated, PUBLIC;
+DO $$ BEGIN IF to_regprocedure('public.rls_auto_enable()') IS NOT NULL THEN EXECUTE $q$REVOKE ALL ON FUNCTION public.rls_auto_enable() FROM anon, authenticated, PUBLIC$q$; END IF; END $$; -- guarded: fresh-db replay
 REVOKE ALL ON FUNCTION public.set_project_gov_org() FROM anon, authenticated, PUBLIC;
-REVOKE ALL ON FUNCTION public.seed_projects_batch(jsonb) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.seed_projects_batch(jsonb) TO service_role;
+DO $$ BEGIN IF to_regprocedure('public.seed_projects_batch(jsonb)') IS NOT NULL THEN EXECUTE $q$REVOKE ALL ON FUNCTION public.seed_projects_batch(jsonb) FROM anon, authenticated, PUBLIC$q$; END IF; END $$; -- guarded: fresh-db replay
+DO $$ BEGIN IF to_regprocedure('public.seed_projects_batch(jsonb)') IS NOT NULL THEN EXECUTE $q$GRANT EXECUTE ON FUNCTION public.seed_projects_batch(jsonb) TO service_role$q$; END IF; END $$; -- guarded: fresh-db replay
