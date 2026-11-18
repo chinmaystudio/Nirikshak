@@ -214,3 +214,83 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`;
 export function getLLMProvider(): LLMProvider {
   return new OpenRouterProvider();
 }
+
+/** Vision-capable candidates for the citizen infrastructure scanner. */
+export const AI_VISION_MODEL_CANDIDATES: string[] = [
+  'nvidia/nemotron-3.5-super-vl:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+];
+
+export interface ChatJsonResult {
+  json: any;
+  model: string;
+  latencyMs: number;
+  totalTokens: number | null;
+}
+
+/**
+ * Generic chat-completions JSON call with the same discipline as the risk
+ * provider: no fabrication — throws AI_ANALYSIS_UNAVAILABLE without a key,
+ * walks the candidate list on model-level failures, parses JSON strictly.
+ * `userContent` may be a string or OpenRouter content parts (text + image).
+ */
+export async function chatJson(
+  systemPrompt: string,
+  userContent: string | Array<Record<string, unknown>>,
+  models: string[]
+): Promise<ChatJsonResult> {
+  const apiKey = process.env.OPENROUTER_API_KEY || '';
+  if (!apiKey) {
+    throw new Error('AI_ANALYSIS_UNAVAILABLE: OPENROUTER_API_KEY is not configured on this server');
+  }
+  const startTime = Date.now();
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://nirikshak.gov.in',
+            'X-Title': 'NIRIKSHAK Infrastructure Audit',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userContent },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.2,
+          }),
+        });
+        if (!response.ok) {
+          const modelLevel = [401, 402, 404, 429].includes(response.status);
+          throw Object.assign(
+            new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`),
+            { modelLevel }
+          );
+        }
+        const data = await response.json();
+        const raw = data.choices[0]?.message?.content || '{}';
+        const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+        const json = JSON.parse(cleaned);
+        return {
+          json,
+          model,
+          latencyMs: Date.now() - startTime,
+          totalTokens: data.usage?.total_tokens ?? null,
+        };
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[AI_LOG] chatJson model=${model} attempt ${attempt} failed: ${err.message}`);
+        if (err?.modelLevel) break;
+      }
+    }
+  }
+  throw new Error(`AI_ANALYSIS_FAILED: All candidate models failed. Last error: ${lastError?.message}`);
+}

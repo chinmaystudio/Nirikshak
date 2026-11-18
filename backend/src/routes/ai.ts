@@ -1,5 +1,10 @@
 import { Router, Response } from 'express';
-import { getLLMProvider } from '../ai/provider.js';
+import {
+  getLLMProvider,
+  chatJson,
+  AI_MODEL_CANDIDATES,
+  AI_VISION_MODEL_CANDIDATES,
+} from '../ai/provider.js';
 import { supabaseAdmin } from '../services/supabase.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/security.js';
@@ -264,6 +269,191 @@ aiRouter.post(
           code: isUnavailable ? 'AI_UNAVAILABLE' : 'AI_ERROR',
           message: err.message || 'AI risk analysis processing failed',
         },
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/ai/vision — citizen infrastructure scanner (public, rate limited)
+// The image is analysed by a real vision model. Previously the frontend
+// "scanner" never looked at the photo at all: it cycled bundled profiles by
+// visit count and invented the result. This endpoint replaces that.
+// ---------------------------------------------------------------------------
+aiRouter.post(
+  '/vision',
+  rateLimit({ windowMs: 60 * 1000, max: 6 }),
+  async (req: any, res: Response) => {
+    try {
+      const image = req.body?.image;
+      const hint = typeof req.body?.hint === 'string' ? req.body.hint.slice(0, 200) : '';
+      if (
+        typeof image !== 'string' ||
+        !/^data:image\/(jpeg|jpg|png|webp);base64,/.test(image) ||
+        image.length > 4_500_000
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'A JPEG/PNG/WebP image (data URL, max ~3.3 MB) is required.' },
+        });
+      }
+
+      const system = `You are NIRIKSHAK Vision, an infrastructure identification assistant for Indian public works.
+Look at the photo and identify the infrastructure shown. Use ONLY what is visible in the image; do not invent project names, costs, or authorities beyond a generic responsible-authority type.
+Return VALID JSON ONLY:
+{
+  "label": string,               // e.g. "Asphalt road with potholes"
+  "infrastructure_type": string, // one of: road, bridge, water, sanitation, power, rail, building, other, not_infrastructure
+  "condition_summary": string,   // 1-2 sentences on visible condition
+  "visible_issues": string[],    // concrete visible defects, [] if none
+  "authority_hint": string,      // generic authority type, e.g. "Municipal corporation / PWD"
+  "confidence": number | null    // your own 0-1 certainty, null if unsure
+}`;
+      const result = await chatJson(
+        system,
+        [
+          { type: 'text', text: hint ? `Citizen note: ${hint}\nIdentify the infrastructure in this photo.` : 'Identify the infrastructure in this photo.' },
+          { type: 'image_url', image_url: { url: image } },
+        ],
+        AI_VISION_MODEL_CANDIDATES
+      );
+
+      const j = result.json ?? {};
+      const analysis = {
+        label: typeof j.label === 'string' ? j.label : 'Unidentified infrastructure',
+        infrastructure_type: typeof j.infrastructure_type === 'string' ? j.infrastructure_type : 'other',
+        condition_summary: typeof j.condition_summary === 'string' ? j.condition_summary : '',
+        visible_issues: Array.isArray(j.visible_issues) ? j.visible_issues.filter((x: any) => typeof x === 'string').slice(0, 8) : [],
+        authority_hint: typeof j.authority_hint === 'string' ? j.authority_hint : '',
+        confidence: typeof j.confidence === 'number' ? Math.min(1, Math.max(0, j.confidence)) : null,
+      };
+
+      await supabaseAdmin.from('ai_runs').insert({
+        project_id: null,
+        task: 'vision_scan',
+        provider: 'OpenRouter (Nemotron VL)',
+        model: result.model,
+        prompt_version: 'v1',
+        status: 'SUCCESS',
+        output_tokens: result.totalTokens,
+        latency_ms: result.latencyMs,
+        completed_at: new Date().toISOString(),
+      });
+
+      res.json({ success: true, data: { analysis, model: result.model } });
+    } catch (err: any) {
+      const isUnavailable = err.message?.includes('AI_ANALYSIS_UNAVAILABLE');
+      res.status(isUnavailable ? 503 : 502).json({
+        success: false,
+        error: {
+          code: isUnavailable ? 'AI_UNAVAILABLE' : 'AI_ERROR',
+          message: isUnavailable
+            ? 'AI vision is not configured on this server.'
+            : 'The vision model could not analyse this image. Please try again.',
+        },
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/ai/ask — citizen assistant grounded in the public project
+// database (public, rate limited). Retrieval first: matching projects are
+// fetched from public_projects_view, and the model may only use those rows.
+// If the model is unavailable, the answer is composed deterministically
+// from the same rows and labelled source='project_data' — never invented.
+// ---------------------------------------------------------------------------
+aiRouter.post(
+  '/ask',
+  rateLimit({ windowMs: 60 * 1000, max: 10 }),
+  async (req: any, res: Response) => {
+    try {
+      const question = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+      if (question.length < 3 || question.length > 500) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'VALIDATION_ERROR', message: 'A question of 3–500 characters is required.' },
+        });
+      }
+
+      const tokens = Array.from(
+        new Set(
+          question
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, ' ')
+            .split(/\s+/)
+            .filter((w) => w.length > 3)
+        )
+      ).slice(0, 5);
+
+      const cols =
+        'id, project_name, sector, city, district, state, normalized_status, physical_progress_percent, total_cost_inr_crore, contractor_name';
+      let projects: any[] = [];
+      if (tokens.length > 0) {
+        const orFilter = tokens
+          .map((t) => `project_name.ilike.%${t}%,sector.ilike.%${t}%,city.ilike.%${t}%,district.ilike.%${t}%`)
+          .join(',');
+        const { data } = await supabaseAdmin
+          .from('public_projects_view')
+          .select(cols)
+          .or(orFilter)
+          .limit(8);
+        projects = data ?? [];
+      }
+      if (projects.length === 0) {
+        const { data } = await supabaseAdmin
+          .from('public_projects_view')
+          .select(cols)
+          .order('updated_at', { ascending: false })
+          .limit(8);
+        projects = data ?? [];
+      }
+      const { count: totalPublic } = await supabaseAdmin
+        .from('public_projects_view')
+        .select('id', { count: 'exact', head: true });
+
+      const context = {
+        total_public_projects: totalPublic ?? null,
+        matched_projects: projects,
+      };
+
+      try {
+        const result = await chatJson(
+          `You are the NIRIKSHAK citizen assistant. Answer the citizen's question using ONLY the supplied public project data. If the data does not contain the answer, say so plainly and suggest what the citizen can check (project page or filing a complaint). Never invent projects, figures, dates, or officials.
+Return VALID JSON ONLY: { "answer": string, "referenced_project_ids": string[] }`,
+          `Question: ${question}\n\nPublic project data:\n${JSON.stringify(context, null, 2)}`,
+          AI_MODEL_CANDIDATES
+        );
+        const answer =
+          typeof result.json?.answer === 'string' && result.json.answer.trim()
+            ? result.json.answer.trim()
+            : null;
+        if (answer) {
+          return res.json({
+            success: true,
+            data: { answer, model: result.model, source: 'ai', projects },
+          });
+        }
+        throw new Error('empty answer');
+      } catch {
+        // Deterministic fallback composed from the retrieved rows only.
+        const lines = projects.slice(0, 5).map(
+          (p) =>
+            `• ${p.project_name} (${p.city ?? p.district ?? p.state ?? '—'}) — status ${p.normalized_status ?? '—'}, physical progress ${p.physical_progress_percent ?? '—'}%`
+        );
+        const answer =
+          projects.length > 0
+            ? `The AI assistant is unavailable right now, so here is the matching live project data for your question:\n${lines.join('\n')}\nOpen a project page for full details, or file a complaint if you spotted an issue.`
+            : 'The AI assistant is unavailable right now and no matching public projects were found. Please try a project name, city, or sector.';
+        return res.json({
+          success: true,
+          data: { answer, model: null, source: 'project_data', projects },
+        });
+      }
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error: { code: 'AI_ERROR', message: err.message || 'Assistant failed' },
       });
     }
   }
