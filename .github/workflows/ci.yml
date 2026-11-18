@@ -109,4 +109,4 @@ jobs:
       - name: gitleaks
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3 \
-            detect --source /repo --no-git --redact --exit-code 1 --config /repo/.gitleaks.toml
+            detect --source /repo --no-git --redact --verbose --exit-code 1 --config /repo/.gitleaks.toml
