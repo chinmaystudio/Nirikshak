@@ -542,12 +542,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         r.challenges ? `Challenges: ${r.challenges}` : '',
       ].filter(Boolean).join('\n');
 
-      // Evidence collected in the form (site photos + documents) is sent as
-      // evidence metadata — previously it was silently dropped.
-      const evidence = [
-        ...r.photos.map((name) => ({ evidence_type: 'photo' as const, storage_path: name, metadata: { file_name: name, source: 'contractor-portal' } })),
-        ...r.docs.map((name) => ({ evidence_type: 'report' as const, storage_path: name, metadata: { file_name: name, source: 'contractor-portal' } })),
-      ];
+      // Evidence files are uploaded to the private progress-evidence bucket
+      // under "<contractor org>/<project>/" (storage RLS, migration 045);
+      // the progress update then references the stored objects.
+      const contractorOrgId = contractorOrganization?.id;
+      const photoFiles = r.photoFiles ?? [];
+      const docFiles = r.docFiles ?? [];
+      if ((r.photos.length > photoFiles.length || r.docs.length > docFiles.length)) {
+        throw new Error('Some attached files could not be read. Please attach them again before submitting.');
+      }
+      if ((photoFiles.length > 0 || docFiles.length > 0) && !contractorOrgId) {
+        throw new Error('Your session is not linked to a contractor organization, so evidence cannot be uploaded.');
+      }
+      const { buildObjectKey, uploadToBucket } = await import('@/core/storage/upload');
+      const evidence: Array<{ evidence_type: 'photo' | 'report'; storage_path: string; metadata: Record<string, unknown> }> = [];
+      for (const [files, type] of [[photoFiles, 'photo'], [docFiles, 'report']] as const) {
+        for (const file of files) {
+          const path = await uploadToBucket('progress-evidence', buildObjectKey([contractorOrgId!, targetProjectId], file.name), file);
+          evidence.push({ evidence_type: type, storage_path: path, metadata: { file_name: file.name, size_bytes: file.size, mime_type: file.type, source: 'contractor-portal' } });
+        }
+      }
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
@@ -577,10 +591,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     const id = uid('rep');
-    const newRep = { ...r, id, submittedAt: new Date().toISOString() };
+    const { photoFiles: _pf, docFiles: _df, ...persisted } = r;
+    const newRep = { ...persisted, id, submittedAt: new Date().toISOString() };
     setReports((rs) => [newRep, ...rs]);
     return id;
-  }, [projects]);
+  }, [projects, contractorOrganization?.id]);
   const setReportStatus = useCallback((id: string, status: ProgressReport['status'], note?: string) => {
     setReports((rs) => rs.map((r) => (r.id === id ? { ...r, status, reviewerNote: note ?? r.reviewerNote } : r)));
   }, []);

@@ -1,3 +1,5 @@
+import { humanHeaders } from '@/core/security/turnstile';
+import { buildObjectKey, dataUrlToBlob, uploadToBucket } from '@/core/storage/upload';
 import type { Complaint, EvidenceItem, NewComplaintPayload, ComplaintFeedback } from "@/types/complaint";
 import { ApiError, fetchWithTimeout } from "@/services/api/client";
 import { supabase } from "@/core/supabase/client";
@@ -152,6 +154,18 @@ async function resolveComplaintRow(id: string): Promise<{ uuid: string; status: 
   return { uuid: data.id as string, status: String(data.status || 'SUBMITTED') };
 }
 
+async function uploadEvidenceItems(userId: string, items: EvidenceItem[]): Promise<string[]> {
+  const paths: string[] = [];
+  for (const item of items) {
+    if (!item.thumb || !item.thumb.startsWith('data:')) {
+      throw new ApiError({ message: `"${item.name}" could not be read for upload. Please attach it again.` });
+    }
+    const blob = dataUrlToBlob(item.thumb);
+    paths.push(await uploadToBucket('complaint-evidence', buildObjectKey([userId], item.name), blob));
+  }
+  return paths;
+}
+
 export async function createComplaint(payload: NewComplaintPayload): Promise<Complaint> {
   // DF-04: creation goes through the backend, which generates the NIR-CMP
   // reference, derives user_id from the Bearer token, and persists evidence
@@ -191,17 +205,25 @@ export async function createComplaint(payload: NewComplaintPayload): Promise<Com
   if (projectUuid) body.project_id = projectUuid;
   if (payload.latitude != null) body.latitude = payload.latitude;
   if (payload.longitude != null) body.longitude = payload.longitude;
-  const evidencePaths = (payload.evidence || []).map((e) =>
-    e.thumb && !e.thumb.startsWith('data:') ? e.thumb : e.name
-  );
-  if (evidencePaths.length > 0) body.evidence_paths = evidencePaths;
+  // Evidence files are uploaded to private storage first (complaint-evidence,
+  // under the signed-in citizen's folder), then referenced by path.
+  const evidenceItems = payload.evidence || [];
+  if (evidenceItems.length > 0) {
+    const userId = sessionData?.session?.user?.id;
+    if (!userId) {
+      throw new ApiError({ message: 'Please sign in to attach photos or videos to a complaint.', status: 401, code: 'SIGN_IN_REQUIRED' });
+    }
+    body.evidence_paths = await uploadEvidenceItems(userId, evidenceItems);
+  }
 
+  const human = await humanHeaders();
   let response: Response;
   try {
     response = await fetchWithTimeout(`${baseUrl}/api/complaints`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...human,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
@@ -236,70 +258,55 @@ export async function upvoteComplaint(id: string): Promise<Complaint> {
   throw new Error('Complaint upvotes are not supported. Use the community issue flow instead.');
 }
 
-/** DF-05: real status write + complaint_updates audit row; throws on error. */
-async function applyStatusChange(id: string, newStatus: string, notes?: string): Promise<Complaint> {
-  const { uuid, status: previous } = await resolveComplaintRow(id);
-  const patch: { status: string; updated_at: string; resolved_at?: string } = {
-    status: newStatus,
-    updated_at: new Date().toISOString(),
-  };
-  if (newStatus === 'RESOLVED') patch.resolved_at = new Date().toISOString();
-
-  const { error: updateError } = await supabase.from('complaints').update(patch).eq('id', uuid);
-  if (updateError) throw new ApiError({ message: `Could not update the complaint: ${updateError.message}` });
-
-  const { data: userData } = await supabase.auth.getUser();
-  const { error: logError } = await supabase.from('complaint_updates').insert({
-    complaint_id: uuid,
-    previous_status: previous,
-    new_status: newStatus,
-    notes: notes ?? null,
-    actor_id: userData?.user?.id ?? null,
-  });
-  if (logError) throw new ApiError({ message: `Status saved, but the audit entry failed: ${logError.message}` });
-
+/**
+ * Citizen actions on their own complaint go through the database function
+ * citizen_complaint_action (migration 040): it checks ownership, allows only
+ * valid transitions and writes the status history with the real actor.
+ */
+async function citizenAction(id: string, action: 'ESCALATE' | 'REOPEN' | 'CONFIRM_RESOLVED' | 'FEEDBACK', note?: string): Promise<Complaint> {
+  const { uuid } = await resolveComplaintRow(id);
+  const { error } = await supabase.rpc('citizen_complaint_action' as never, {
+    p_complaint_id: uuid,
+    p_action: action,
+    p_note: note ?? null,
+  } as never);
+  if (error) throw new ApiError({ message: `Could not update the complaint: ${error.message}` });
   return getComplaintById(id);
 }
 
 export async function submitFeedback(id: string, fb: ComplaintFeedback): Promise<Complaint> {
-  const { uuid, status } = await resolveComplaintRow(id);
-  const { data: userData } = await supabase.auth.getUser();
-  const { error } = await supabase.from('complaint_updates').insert({
-    complaint_id: uuid,
-    previous_status: status,
-    new_status: status,
-    notes: `Citizen feedback — rating ${fb.rating}/5${fb.comment ? `: ${fb.comment}` : ''}`,
-    actor_id: userData?.user?.id ?? null,
-  });
-  if (error) throw new ApiError({ message: `Could not save your feedback: ${error.message}` });
-  const fresh = await getComplaintById(id);
+  const fresh = await citizenAction(id, 'FEEDBACK', `Citizen feedback — rating ${fb.rating}/5${fb.comment ? `: ${fb.comment}` : ''}`);
   return { ...fresh, feedback: fb };
 }
 
 export async function requestEscalation(id: string, reason?: string): Promise<Complaint> {
-  return applyStatusChange(id, 'ESCALATED', reason ? `Citizen escalation: ${reason}` : 'Citizen requested escalation');
+  return citizenAction(id, 'ESCALATE', reason ? `Citizen escalation: ${reason}` : 'Citizen requested escalation');
 }
 
 export const escalateComplaint = requestEscalation;
 
 export async function reopenComplaint(id: string, reason?: string): Promise<Complaint> {
-  return applyStatusChange(id, 'SUBMITTED', reason ? `Citizen reopened: ${reason}` : 'Citizen reopened the complaint');
+  return citizenAction(id, 'REOPEN', reason ? `Citizen reopened: ${reason}` : 'Citizen reopened the complaint');
 }
 
 export async function addEvidence(id: string, item: EvidenceItem): Promise<Complaint> {
   const { uuid } = await resolveComplaintRow(id);
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData?.session?.user?.id;
+  if (!userId) throw new ApiError({ message: 'Please sign in to attach evidence.', status: 401 });
+  const [path] = await uploadEvidenceItems(userId, [item]);
   const { error } = await supabase.from('complaint_evidence').insert({
     complaint_id: uuid,
     file_name: item.name,
-    storage_path: item.thumb && !item.thumb.startsWith('data:') ? item.thumb : item.name,
-    mime_type: item.kind === 'video' ? 'video/*' : 'image/*',
+    storage_path: path,
+    mime_type: item.kind === 'video' ? 'video/mp4' : 'image/jpeg',
   });
   if (error) throw new ApiError({ message: `Could not attach evidence: ${error.message}` });
   return getComplaintById(id);
 }
 
 export async function markResolved(id: string, note?: string): Promise<Complaint> {
-  return applyStatusChange(id, 'RESOLVED', note ? `Citizen confirmed resolution: ${note}` : 'Citizen confirmed resolution');
+  return citizenAction(id, 'CONFIRM_RESOLVED', note ? `Citizen confirmed resolution: ${note}` : 'Citizen confirmed resolution');
 }
 
 export function activeComplaintCount(complaintsList: Complaint[]): number {

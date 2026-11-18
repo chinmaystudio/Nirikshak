@@ -1,3 +1,4 @@
+import { humanHeaders } from "@/core/security/turnstile";
 import type { VisionAnalysis, VisionImageSource } from "@/types/infrastructure";
 import type { IssueCategory } from "@/types/community";
 import { ApiError, fetchWithTimeout, offlineGuard } from "@/services/api/client";
@@ -154,11 +155,12 @@ export async function analyzeInfrastructure(opts: AnalyzeOptions): Promise<Visio
 
   const image = await compressImage(opts.imageDataUrl, 1024, 0.82);
 
+  const human = await humanHeaders();
   let response: Response;
   try {
     response = await fetchWithTimeout(`${baseUrl}/api/ai/vision`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...human },
       body: JSON.stringify({ image, ...(opts.hint ? { hint: opts.hint } : {}) })
     });
   } catch {

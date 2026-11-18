@@ -81,6 +81,8 @@ export default function ReportUpdate({ project }: { project: Project }) {
           challenges,
           photos: photos.map((p) => p.name),
           docs: docs.map((d) => d.name),
+          photoFiles: photos.map((p) => p.file).filter((f): f is File => Boolean(f)),
+          docFiles: docs.map((d) => d.file).filter((f): f is File => Boolean(f)),
           status: 'Under Government Review',
         },
         { submitToGovernment: true },

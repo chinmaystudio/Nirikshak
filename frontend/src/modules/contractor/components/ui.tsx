@@ -520,6 +520,8 @@ export function Timeline({ items }: { items: { label: string; date?: string; sta
 export interface UploadDoc {
   name: string;
   size: string;
+  /** The selected file, kept so it can be uploaded to storage on submit. */
+  file?: File;
 }
 
 export function DocumentUploader({
@@ -541,7 +543,7 @@ export function DocumentUploader({
     if (!files) return;
     const next = [...docs];
     for (const f of Array.from(files)) {
-      next.push({ name: f.name, size: f.size > 1048576 ? `${(f.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB` });
+      next.push({ name: f.name, size: f.size > 1048576 ? `${(f.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1024))} KB`, file: f });
     }
     onChange(multiple ? next : [next[next.length - 1]]);
   };

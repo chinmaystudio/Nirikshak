@@ -25,8 +25,8 @@ export function RegisterPage() {
       setErrorMsg('Passwords do not match.');
       return;
     }
-    if (password.length < 8) {
-      setErrorMsg('Password must be at least 8 characters long.');
+    if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      setErrorMsg('Password must be at least 12 characters and include upper and lower case letters, a digit and a symbol.');
       return;
     }
 

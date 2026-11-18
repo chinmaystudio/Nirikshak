@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { supabasePublic } from '../services/supabase.js';
+import { supabaseAdmin, supabasePublic } from '../services/supabase.js';
+import { requireAuth, requireMfa, AuthenticatedRequest } from '../middleware/auth.js';
 import { rateLimit, requireHuman } from '../middleware/security.js';
 
 export const authRouter = Router();
@@ -175,5 +176,57 @@ authRouter.post(
         requiresEmailVerification: !data.session,
       },
     });
+  }
+);
+
+
+// POST /api/auth/mfa/reset - an organization administrator removes a
+// colleague's authenticator (lost phone). The colleague enrols a new one at
+// their next sign-in. The administrator must themselves be MFA-verified,
+// cannot reset their own factor, and the reset is written to the audit log.
+authRouter.post(
+  '/mfa/reset',
+  rateLimit({ windowMs: 60 * 60 * 1000, max: 20 }),
+  requireAuth,
+  requireMfa,
+  async (req: AuthenticatedRequest, res) => {
+    const target = typeof req.body?.user_id === 'string' ? req.body.user_id : '';
+    if (!/^[0-9a-f-]{36}$/i.test(target)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_USER', message: 'user_id is required.' } });
+    }
+    if (!['government_admin', 'contractor_admin'].includes(req.role || '') || !req.organizationId) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Only an organization administrator can reset two-step verification.' } });
+    }
+    if (target === req.user!.id) {
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Ask another administrator to reset your own two-step verification.' } });
+    }
+    const { data: member } = await supabaseAdmin
+      .from('organization_members')
+      .select('id')
+      .eq('user_id', target)
+      .eq('organization_id', req.organizationId)
+      .maybeSingle();
+    if (!member) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'That user is not a member of your organization.' } });
+    }
+    const { data: factors, error: listError } = await supabaseAdmin.auth.admin.mfa.listFactors({ userId: target });
+    if (listError) {
+      console.error('MFA factor listing failed', { message: listError.message });
+      return res.status(500).json({ success: false, error: { code: 'MFA_RESET_FAILED', message: 'Two-step verification could not be reset.' } });
+    }
+    let removed = 0;
+    for (const f of factors?.factors ?? []) {
+      const { error } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ id: f.id, userId: target });
+      if (!error) removed++;
+    }
+    await supabaseAdmin.from('audit_logs').insert({
+      actor_id: req.user!.id,
+      actor_organization_id: req.organizationId,
+      action: 'MFA_RESET',
+      entity_type: 'auth.users',
+      entity_id: target,
+      new_value: { factors_removed: removed },
+    });
+    return res.json({ success: true, data: { factors_removed: removed } });
   }
 );

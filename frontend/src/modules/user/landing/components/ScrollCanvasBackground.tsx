@@ -38,7 +38,7 @@ export const ScrollCanvasBackground: React.FC = () => {
 
     const getFramePath = (index: number) => {
       const paddedIndex = String(index).padStart(6, '0');
-      return `/frames/frame_${paddedIndex}.png`;
+      return `/frames/frame_${paddedIndex}.webp`;
     };
 
     const resizeCanvas = () => {

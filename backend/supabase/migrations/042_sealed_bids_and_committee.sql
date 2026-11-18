@@ -172,6 +172,35 @@ $$;
 REVOKE ALL ON FUNCTION public.get_tender_bid_summary(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_tender_bid_summary(uuid) TO authenticated;
 
+-- Counts for every tender the caller may see (register view), without
+-- revealing any bid row before opening.
+CREATE OR REPLACE FUNCTION public.get_tender_bid_counts()
+RETURNS TABLE (tender_id uuid, submitted_bids integer, bids_opened_at timestamptz,
+               opening_approvals integer, min_opening_members integer, committee_size integer,
+               is_committee_member boolean, technical_weight numeric, min_evaluators integer)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+  SELECT t.id,
+         (SELECT count(*)::int FROM public.tender_bids b
+           WHERE b.tender_id = t.id AND b.deleted_at IS NULL AND b.status NOT IN ('DRAFT', 'WITHDRAWN')),
+         t.bids_opened_at,
+         (SELECT count(*)::int FROM public.tender_bid_opening_approvals a WHERE a.tender_id = t.id),
+         t.min_opening_members,
+         (SELECT count(*)::int FROM public.tender_committee_members m WHERE m.tender_id = t.id),
+         EXISTS (SELECT 1 FROM public.tender_committee_members m WHERE m.tender_id = t.id AND m.user_id = (SELECT auth.uid())),
+         t.technical_weight,
+         t.min_evaluators
+  FROM public.tenders t
+  WHERE t.deleted_at IS NULL
+    AND public.is_government_user()
+    AND (t.issuing_organization_id = public.get_user_organization_id() OR public.is_oversight_user());
+$$;
+REVOKE ALL ON FUNCTION public.get_tender_bid_counts() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_tender_bid_counts() TO authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Committee management (issuing organization's government_admin / chief_engineer)
 -- ---------------------------------------------------------------------------

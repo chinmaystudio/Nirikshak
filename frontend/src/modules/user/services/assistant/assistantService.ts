@@ -1,3 +1,4 @@
+import { humanHeaders } from "@/core/security/turnstile";
 import type { AssistantReply, ChatMessage } from "@/types/api";
 import { ApiError, fetchWithTimeout, offlineGuard } from "@/services/api/client";
 import { environment } from "@/config/environment";
@@ -19,11 +20,12 @@ export async function respond(text: string, _ctx: AssistantContext | null): Prom
     throw new ApiError({ message: "Assistant service is not configured (missing API base URL)." });
   }
 
+  const human = await humanHeaders();
   let response: Response;
   try {
     response = await fetchWithTimeout(`${baseUrl}/api/ai/ask`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...human },
       body: JSON.stringify({ question: text })
     });
   } catch {

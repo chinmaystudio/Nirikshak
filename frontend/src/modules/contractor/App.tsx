@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import { useAuth } from '@/core/auth/useAuth';
 import { CONTRACTOR_ROLES } from '@/core/auth/auth.types';
 import { AccessDeniedPage } from '@/core/auth/AccessDeniedPage';
+import { MfaGate } from '@/core/auth/MfaGate';
 
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -67,6 +68,15 @@ function Router() {
     return <AccessDeniedPage currentRole={role} allowedRoles={CONTRACTOR_ROLES} pendingApproval={session.pendingApproval} />;
   }
 
+  // Official portal: two-step verification (aal2) before any content.
+  return (
+    <MfaGate portalName="Contractor Portal">
+      <AuthorizedRoutes path={path} activePath={activePath} />
+    </MfaGate>
+  );
+}
+
+function AuthorizedRoutes({ path, activePath }: { path: string; activePath: string }) {
   // Tender routes
   let m = match('/tenders/:tenderId/bid/ai-assist', activePath);
   if (m) return <Layout><BidAIAssist tenderId={m.tenderId} /></Layout>;

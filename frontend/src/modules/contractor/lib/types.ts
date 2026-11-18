@@ -157,6 +157,9 @@ export interface ProgressReport {
   challenges: string;
   photos: string[];
   docs: string[];
+  /** Files behind `photos` / `docs`, uploaded to progress-evidence on submit. */
+  photoFiles?: File[];
+  docFiles?: File[];
   submittedAt: string;
   status: 'Draft' | 'Submitted' | 'Under Government Review' | 'Approved' | 'Changes Requested';
   reviewerNote?: string;

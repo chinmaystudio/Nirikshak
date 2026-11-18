@@ -1,3 +1,4 @@
+import { humanHeaders } from '@/core/security/turnstile';
 import { supabase } from '@/core/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import type { AppRole, AppSession, Profile, Organization, OrganizationMember } from './auth.types';
@@ -23,14 +24,15 @@ export class AuthService {
    */
   private static async registerWithBackend(
     payload: Record<string, unknown>
-  ): Promise<{ userId: string; accountType: string; requiresApproval: boolean }> {
+  ): Promise<{ userId: string; accountType: string; requiresApproval: boolean; requiresEmailVerification: boolean }> {
     if (!this.apiBaseUrl) throw new Error('Registration service is temporarily unavailable.');
     // 60s timeout: backend cold starts (Render/Vercel) can be slow.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const human = await humanHeaders();
     const response = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...human },
       body: JSON.stringify(payload),
       signal: controller.signal,
     }).finally(() => clearTimeout(timeoutId));
@@ -52,6 +54,7 @@ export class AuthService {
       userId: data.userId,
       accountType: data.accountType,
       requiresApproval: Boolean(data.requiresApproval),
+      requiresEmailVerification: Boolean(data.requiresEmailVerification),
     };
   }
   /**
@@ -256,7 +259,7 @@ export class AuthService {
     fullName: string;
     phone?: string;
     metadata?: Record<string, any>;
-  }): Promise<{ user: User | null; session: Session | null }> {
+  }): Promise<{ user: User | null; session: Session | null; requiresEmailVerification?: boolean }> {
     const { email, password, fullName, phone, metadata = {} } = payload;
 
     // Sanitize metadata: remove any attempt to inject privileged roles or organization IDs
@@ -265,7 +268,7 @@ export class AuthService {
     delete (safeMetadata as any).organization_id;
     delete (safeMetadata as any).is_admin;
 
-    await this.registerWithBackend({
+    const registration = await this.registerWithBackend({
       accountType: 'citizen',
       email,
       password,
@@ -275,6 +278,11 @@ export class AuthService {
       ward: safeMetadata.ward,
       preferredLanguage: safeMetadata.preferredLanguage,
     });
+    // With email confirmation on (production), the account cannot sign in
+    // until the link in the confirmation email is opened.
+    if (registration.requiresEmailVerification) {
+      return { user: null, session: null, requiresEmailVerification: true };
+    }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.user || !data.session) throw new Error(this.friendlyError(error?.message));
     return data;
@@ -309,9 +317,10 @@ export class AuthService {
     return {
       user: null,
       // DF-19: the message follows the backend's requiresApproval flag.
-      message: registration.requiresApproval
-        ? 'Registration request submitted. Your Government access is pending administrator approval.'
-        : 'Registration complete. Your Government account is active — you can sign in now.',
+      message: (registration.requiresEmailVerification ? 'Check your official email and open the confirmation link. ' : '') +
+        (registration.requiresApproval
+          ? 'Your Government access request will then be reviewed by an administrator.'
+          : 'Your Government account is active — you can sign in now.'),
     };
   }
 
@@ -348,9 +357,10 @@ export class AuthService {
     return {
       user: null,
       // DF-19: the message follows the backend's requiresApproval flag.
-      message: registration.requiresApproval
-        ? 'Your contractor organization verification is pending.'
-        : 'Registration complete. Your contractor account is active — you can sign in now.',
+      message: (registration.requiresEmailVerification ? 'Check your email and open the confirmation link. ' : '') +
+        (registration.requiresApproval
+          ? 'Your contractor organization will then be verified by the department.'
+          : 'Your contractor account is active — you can sign in now.'),
     };
   }
 

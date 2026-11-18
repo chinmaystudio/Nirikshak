@@ -22,22 +22,6 @@ export const OfficialLoginModal: React.FC<OfficialLoginModalProps> = ({
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Test credentials are shown ONLY when explicitly enabled for a demo
-  // build (VITE_SHOW_DEMO_CREDENTIALS=true) — never in production. This
-  // matches the gating on the three portal login pages.
-  const showDemoCredentials = import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
-
-  const fillDemoCredentials = () => {
-    if (role === 'officer') {
-      setOfficerId('government@gmail.com');
-      setPassword('government');
-    } else {
-      setOfficerId('contractor.test@nirikshak.local');
-      setPassword('NirikshakContractor#2026');
-    }
-    setErrorMsg(null);
-  };
-
   const handleGoogleLogin = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
@@ -169,24 +153,6 @@ export const OfficialLoginModal: React.FC<OfficialLoginModalProps> = ({
                   <span>Contractor</span>
                 </button>
               </div>
-
-              {/* Demo auto-fill banner — demo builds only (see showDemoCredentials) */}
-              {showDemoCredentials && (
-                <div className="mb-4 p-2.5 bg-amber-500/10 border border-amber-300 rounded-xl flex items-center justify-between gap-2">
-                  <div className="text-[11px] text-amber-950">
-                    <span className="font-bold">Test Credentials: </span>
-                    <span className="font-mono">{role === 'officer' ? 'government@gmail.com / government' : 'contractor.test@nirikshak.local / NirikshakContractor#2026'}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={fillDemoCredentials}
-                    className="px-2.5 py-1 text-[11px] font-bold bg-[#eefc55] hover:bg-[#e2f23e] border border-[#d6e838] text-neutral-900 rounded-lg shadow-2xs cursor-pointer whitespace-nowrap"
-                  >
-                    Fill Demo
-                  </button>
-                </div>
-              )}
-
               {errorMsg && (
                 <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />

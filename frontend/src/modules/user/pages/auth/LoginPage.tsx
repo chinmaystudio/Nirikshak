@@ -22,8 +22,6 @@ export function LoginPage(): JSX.Element {
   const [helpOpen, setHelpOpen] = useState(false);
   const { t } = useT();
 
-  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === "true";
-
   const handleLogin = async (e?: React.FormEvent): Promise<void> => {
     if (e) e.preventDefault();
     if (!email.trim() || !password) {
@@ -60,11 +58,6 @@ export function LoginPage(): JSX.Element {
     }
   };
 
-  const fillDemo = (): void => {
-    setEmail("citizen.test@nirikshak.local");
-    setPassword("NirikshakCitizen#2026");
-    setErrorMsg(null);
-  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -198,28 +191,6 @@ export function LoginPage(): JSX.Element {
             <span>Sign In with Google</span>
           </button>
 
-          {isDev && (
-            <div className="mt-5 rounded-lg border border-outline-variant bg-surface-container p-3.5 text-xs text-on-surface-variant">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-primary flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Demo Citizen Credentials (Dev Only)
-                </span>
-                <button
-                  type="button"
-                  onClick={fillDemo}
-                  className="text-[11px] font-semibold text-secondary hover:underline bg-secondary/10 px-2 py-0.5 rounded cursor-pointer"
-                >
-                  Fill Demo
-                </button>
-              </div>
-              <div className="font-mono text-[11px] space-y-0.5">
-                <div>Email: <span className="text-primary font-bold">citizen.test@nirikshak.local</span></div>
-                <div>Pass: <span className="text-primary font-bold">NirikshakCitizen#2026</span></div>
-                <div>Profile: Aarav Deshmukh (Pune Citizen)</div>
-              </div>
-            </div>
-          )}
 
           <div className="text-center pt-4 text-body-sm text-on-surface-variant">
             Don't have an account yet?{" "}

@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuthContext } from './AuthProvider';
 import type { AppRole } from './auth.types';
 import { AccessDeniedPage } from './AccessDeniedPage';
+import { MfaGate } from './MfaGate';
 
 export function RoleGuard({
   children,
@@ -45,5 +46,6 @@ export function RoleGuard({
     );
   }
 
-  return <>{children}</>;
+  // Official portals require two-step verification (aal2) before any content.
+  return <MfaGate portalName="Government Portal">{children}</MfaGate>;
 }

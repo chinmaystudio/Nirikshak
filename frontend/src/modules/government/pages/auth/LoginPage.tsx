@@ -18,8 +18,6 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !password) {
@@ -54,11 +52,6 @@ export function LoginPage() {
     }
   }
 
-  function fillDemo() {
-    setEmail('government@gmail.com');
-    setPassword('government');
-    setErrorMsg(null);
-  }
 
   return (
     <Card className="p-6">
@@ -78,7 +71,7 @@ export function LoginPage() {
           type="email"
           required
           startIcon="mail"
-          placeholder="government@gmail.com"
+          placeholder="name@department.gov.in"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="username"
@@ -140,28 +133,6 @@ export function LoginPage() {
         </Link>
       </div>
 
-      {isDev && (
-        <div className="mt-5 rounded-control border border-border bg-surface-2 p-3 text-caption text-fg-muted">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="font-semibold text-fg flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px] text-accent">verified_user</span>
-              Master Government Login
-            </span>
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="text-[11px] font-semibold text-primary-strong hover:underline cursor-pointer bg-primary-tint px-2 py-0.5 rounded"
-            >
-              Fill Master Login
-            </button>
-          </div>
-          <div className="font-mono text-[11px] text-fg-subtle space-y-0.5">
-            <div>Email: <span className="text-fg font-bold">government@gmail.com</span></div>
-            <div>Password: <span className="text-fg font-bold">government</span></div>
-            <div>Authority: <span className="text-fg">Master Authority Admin (Approves all registration requests)</span></div>
-          </div>
-        </div>
-      )}
     </Card>
   );
 }

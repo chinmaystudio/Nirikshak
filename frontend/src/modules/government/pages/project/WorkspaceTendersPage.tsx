@@ -13,7 +13,7 @@ import { TextField, Select, TextArea } from '@/components/ui/Fields'
 import { PageHeader, KpiRow, FilterBar, KpiCard } from '@/components/blocks/Page'
 import { formatCr, formatDate } from '@/utils/format'
 import { TENDER_STATUS } from '@/utils/status'
-import type { Tender, TenderLot } from '@/types'
+import type { OfficerOption, Tender, TenderLot } from '@/types'
 
 /**
  * Lifecycle actions added by the tender port (close / evaluate / award).
@@ -360,13 +360,14 @@ function TenderDetail({ tender, onChanged }: { tender: Tender; onChanged: () => 
             </table>
           </div>
           <p className="border-t border-border p-3 text-caption text-fg-subtle">
+            Scores are the committee average (each member scores separately). Combined = {Math.round((tender.technicalWeight ?? 0.7) * 100)}% technical + {Math.round((1 - (tender.technicalWeight ?? 0.7)) * 100)}% financial. An award needs {tender.minEvaluators ?? 2} committee evaluations of the chosen bid.
+          </p>
+          <p className="border-t border-border p-3 text-caption text-fg-subtle">
             Lowest quoted {formatCr(Math.min(...tender.lots.map((l) => l.quotedAmountCr)))} • Highest {formatCr(Math.max(...tender.lots.map((l) => l.quotedAmountCr)))}
           </p>
         </Panel>
       ) : (
-        <Panel title="Bids" icon="move_to_inbox">
-          <p className="text-body-small text-fg-muted">Bid opening has not been recorded yet — {tender.bidsReceived} bid(s) received so far against the closing date {formatDate(tender.submissionDeadline)}.</p>
-        </Panel>
+        <SealedBidsPanel tender={tender} onChanged={onChanged} />
       )}
 
       {tender.awardedTo && (
@@ -380,6 +381,122 @@ function TenderDetail({ tender, onChanged }: { tender: Tender; onChanged: () => 
 
       <p className="text-caption text-fg-subtle">{t('common.mockDataNote')}</p>
     </div>
+  )
+}
+
+/**
+ * Sealed bids (migration 042): before opening, officers see only how many
+ * bids arrived. A government admin / chief engineer sets the evaluation
+ * committee; after the bid due date, the required number of committee
+ * members each approve the opening (two-key opening).
+ */
+function SealedBidsPanel({ tender, onChanged }: { tender: Tender; onChanged: () => Promise<void> | void }) {
+  const { showToast } = useToast()
+  const [officers, setOfficers] = useState<OfficerOption[] | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  const [chair, setChair] = useState<string>('')
+  const [busy, setBusy] = useState<'committee' | 'open' | null>(null)
+  const required = tender.minOpeningMembers ?? 2
+  const dueDatePassed = Boolean(tender.submissionDeadline && new Date(`${tender.submissionDeadline}T23:59:59`).getTime() < Date.now())
+
+  async function loadOfficers() {
+    try {
+      setOfficers(await tendersApi.officers())
+    } catch (err: any) {
+      showToast(err?.message || 'Could not load officers.', 'danger')
+    }
+  }
+
+  async function saveCommittee() {
+    if (!tender.databaseId) return
+    setBusy('committee')
+    try {
+      await tendersApi.setCommittee(tender.databaseId, selected, chair || undefined)
+      showToast('Evaluation committee saved.', 'success')
+      setOfficers(null)
+      await onChanged()
+    } catch (err: any) {
+      showToast(err?.message || 'The committee could not be saved.', 'danger')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function approveOpening() {
+    if (!tender.databaseId) return
+    setBusy('open')
+    try {
+      const result = await tendersApi.approveOpening(tender.databaseId)
+      showToast(result?.message || 'Your approval to open the bids is recorded.', 'success')
+      await onChanged()
+    } catch (err: any) {
+      showToast(err?.message || 'The bid opening could not be recorded.', 'danger')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <Panel title="Sealed bids" icon="lock">
+      <div className="flex flex-col gap-3 text-body-small">
+        <p className="text-fg">
+          <strong>{tender.bidsReceived}</strong> bid(s) received. Bid amounts and contents stay sealed until the evaluation committee opens them after the submission deadline ({formatDate(tender.submissionDeadline)}).
+        </p>
+        <dl className="grid grid-cols-2 gap-2">
+          <div><dt className="text-fg-subtle">Committee members</dt><dd className="text-fg tabular-nums">{tender.committeeSize ?? 0}</dd></div>
+          <div><dt className="text-fg-subtle">Opening approvals</dt><dd className="text-fg tabular-nums">{tender.openingApprovals ?? 0} of {required}</dd></div>
+        </dl>
+
+        {tender.isCommitteeMember ? (
+          <Button
+            variant="primary"
+            size="sm"
+            icon="lock_open"
+            disabled={busy !== null || !dueDatePassed}
+            onClick={() => void approveOpening()}
+          >
+            {busy === 'open' ? 'Recording…' : dueDatePassed ? 'Approve opening of bids' : 'Opening available after the deadline'}
+          </Button>
+        ) : (
+          <p className="text-fg-muted">Only members of this tender's evaluation committee can open the bids.</p>
+        )}
+
+        <details className="rounded-control border border-border p-2.5" onToggle={(e) => { if ((e.target as HTMLDetailsElement).open && !officers) void loadOfficers() }}>
+          <summary className="cursor-pointer font-medium text-fg">Set evaluation committee (government admin / chief engineer)</summary>
+          {!officers ? (
+            <p className="mt-2 text-fg-muted">Loading officers…</p>
+          ) : officers.length === 0 ? (
+            <p className="mt-2 text-fg-muted">No active officers found in your organization.</p>
+          ) : (
+            <div className="mt-2 flex flex-col gap-2">
+              {officers.map((o) => (
+                <label key={o.userId} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(o.userId)}
+                    onChange={(e) => setSelected((cur) => (e.target.checked ? [...cur, o.userId] : cur.filter((x) => x !== o.userId)))}
+                  />
+                  <span className="text-fg">{o.name}</span>
+                  <span className="text-caption text-fg-subtle">{o.role.replace(/_/g, ' ')}</span>
+                </label>
+              ))}
+              <Select
+                label="Chair (optional)"
+                value={chair}
+                onChange={(e) => setChair(e.target.value)}
+                options={[
+                  { value: '', label: 'No chair' },
+                  ...officers.filter((o) => selected.includes(o.userId)).map((o) => ({ value: o.userId, label: o.name })),
+                ]}
+              />
+              <Button variant="outline" size="sm" disabled={busy !== null || selected.length < Math.max(required, tender.minEvaluators ?? 2)} onClick={() => void saveCommittee()}>
+                {busy === 'committee' ? 'Saving…' : `Save committee (${selected.length} selected, at least ${Math.max(required, tender.minEvaluators ?? 2)})`}
+              </Button>
+            </div>
+          )}
+        </details>
+      </div>
+    </Panel>
   )
 }
 

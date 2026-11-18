@@ -233,6 +233,20 @@ export interface Tender {
   mode: 'e-Tender' | 'Manually' | 'Global'
   /** Project workspace linkage — undefined for department-wide tenders. */
   projectId?: string
+  /** Sealed bidding (migration 042): bids are hidden until the committee opens them. */
+  bidsOpened?: boolean
+  openingApprovals?: number
+  minOpeningMembers?: number
+  committeeSize?: number
+  isCommitteeMember?: boolean
+  technicalWeight?: number
+  minEvaluators?: number
+}
+
+export interface OfficerOption {
+  userId: string
+  name: string
+  role: string
 }
 
 export interface BillItem {

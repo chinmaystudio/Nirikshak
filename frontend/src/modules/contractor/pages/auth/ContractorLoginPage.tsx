@@ -10,8 +10,6 @@ export default function ContractorLoginPage() {
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const isDev = !import.meta.env.PROD || import.meta.env.VITE_SHOW_DEMO_CREDENTIALS === 'true';
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !password) {
@@ -45,11 +43,6 @@ export default function ContractorLoginPage() {
     }
   }
 
-  function fillDemo() {
-    setEmail('contractor.test@nirikshak.local');
-    setPassword('NirikshakContractor#2026');
-    setErrorMsg(null);
-  }
 
   return (
     <div
@@ -206,38 +199,6 @@ export default function ContractorLoginPage() {
               Apply for Onboarding
             </a>
           </div>
-
-          {/* Dev Demo Credentials Box — Identical to Government */}
-          {isDev && (
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-              <div className="mb-1.5 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-semibold text-slate-800">
-                  <span className="material-symbols-outlined text-[14px] text-amber-600">
-                    terminal
-                  </span>
-                  Demo Credentials (Dev Only)
-                </span>
-                <button
-                  type="button"
-                  onClick={fillDemo}
-                  className="cursor-pointer rounded border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-[#1e40af] hover:underline"
-                >
-                  Fill Demo
-                </button>
-              </div>
-              <div className="space-y-0.5 font-mono text-[11px] text-slate-500">
-                <div>
-                  Email: <span className="font-medium text-slate-800">contractor.test@nirikshak.local</span>
-                </div>
-                <div>
-                  Password: <span className="font-medium text-slate-800">NirikshakContractor#2026</span>
-                </div>
-                <div>
-                  Role: <span className="font-medium text-slate-800">contractor (Infrastructure Partner)</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Security Note & Portal Switcher — Matching Government Portal */}

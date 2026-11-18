@@ -24,6 +24,7 @@ import type {
   SiteProgressUpdate,
   ProjectActivityEntry,
   Milestone,
+  OfficerOption,
 } from '@/modules/government/types';
 import { normalizeProjectStatus } from '@/core/status/projectStatus';
 
@@ -472,7 +473,13 @@ export const grievancesApi = {
     }
     if (patch.status) {
       const dbStatus = patch.status === 'resolved' ? 'RESOLVED' : patch.status === 'action_taken' ? 'IN_PROGRESS' : 'SUBMITTED';
-      const { error } = await supabase.from('complaints').update({ status: dbStatus }).eq('id', uuid);
+      // Status changes go through update_complaint_status (migration 040),
+      // which checks the officer's rights and records the status history.
+      const { error } = await supabase.rpc('update_complaint_status' as never, {
+        p_complaint_id: uuid,
+        p_status: dbStatus,
+        p_note: (patch as { note?: string }).note ?? null,
+      } as never);
       if (error) throw error;
     }
     const found = await this.get(uuid);
@@ -720,11 +727,26 @@ export const contractorsApi = {
   },
 };
 
+/** JSON call to the backend with the caller's token; throws backend messages. */
+async function backendJson(method: string, path: string, body: unknown, fallback: string): Promise<any> {
+  if (!API_BASE_URL) throw new Error('This service is temporarily unavailable.');
+  const accessToken = await getAccessToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: method === 'GET' ? undefined : JSON.stringify(body ?? {}),
+    signal: AbortSignal.timeout(60000),
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) throw backendError(result, response, fallback);
+  return result?.data ?? result;
+}
+
 /* ---------- Tenders ---------- */
 export const tendersApi = {
   async all(): Promise<Tender[]> {
     try {
-      const [{ data, error }, { data: bidData, error: bidError }, { data: contractData, error: contractError }] = await Promise.all([
+      const [{ data, error }, { data: bidData, error: bidError }, { data: contractData, error: contractError }, { data: countData, error: countError }] = await Promise.all([
         supabase
           .from('tenders')
           .select('*, projects(nirikshak_project_id, district, sector, project_authority)')
@@ -739,6 +761,9 @@ export const tendersApi = {
           // this query stays valid on the current live schema.
           .select('id, tender_id, contract_value, contractor_organization_id, organizations(name)')
           .is('deleted_at', null),
+        // Sealed bidding: bid rows are invisible until opened, so counts and
+        // committee status come from a function that reveals no bid content.
+        supabase.rpc('get_tender_bid_counts' as never),
       ]);
       if (error) throw error;
       if (bidError) throw bidError;
@@ -746,6 +771,9 @@ export const tendersApi = {
       // readable for this role, awarded fields still populate from the
       // SELECTED bid rather than failing the whole tender register.
       if (contractError) console.error('Contracts read for tender awards failed:', contractError);
+      if (countError) console.error('Tender bid counts failed:', countError);
+      const countsByTender = new Map<string, any>();
+      ((countData as any[] | null) || []).forEach((c: any) => countsByTender.set(c.tender_id, c));
       if (data) {
         const bidsByTender = new Map<string, any[]>();
         (bidData || []).forEach((bid: any) => {
@@ -760,8 +788,9 @@ export const tendersApi = {
 
         return data.map((t: any) => {
           const bids = bidsByTender.get(t.id) || [];
-          const bidOpeningAllowed = ['CLOSED', 'UNDER_EVALUATION', 'AWARDED'].includes(t.status)
-            || Boolean(t.bid_due_date && new Date(`${t.bid_due_date}T23:59:59`).getTime() < Date.now());
+          const counts = countsByTender.get(t.id);
+          // Bids are shown only after the committee has opened them.
+          const bidOpeningAllowed = Boolean(t.bids_opened_at);
           // Awarded state (tender port §4.4): the SELECTED bid plus its
           // contract. Amounts are ₹ Cr end to end (bid_amount and
           // contracts.contract_value are both stored in ₹ Cr).
@@ -786,8 +815,15 @@ export const tendersApi = {
             estimatedCostCr: t.estimated_value_inr_crore == null ? 0 : Number(t.estimated_value_inr_crore),
             publishedOn: t.publication_date || '',
             submissionDeadline: t.bid_due_date || '',
-            openingDate: bidOpeningAllowed ? (bidOpeningDate || t.bid_due_date || '') : '',
-            bidsReceived: bids.filter((bid) => bid.status !== 'DRAFT' && bid.status !== 'WITHDRAWN').length,
+            openingDate: t.bids_opened_at ? String(t.bids_opened_at).slice(0, 10) : (bidOpeningDate || ''),
+            bidsReceived: counts?.submitted_bids ?? bids.filter((bid) => bid.status !== 'DRAFT' && bid.status !== 'WITHDRAWN').length,
+            bidsOpened: bidOpeningAllowed,
+            openingApprovals: counts?.opening_approvals ?? 0,
+            minOpeningMembers: counts?.min_opening_members ?? t.min_opening_members ?? 2,
+            committeeSize: counts?.committee_size ?? 0,
+            isCommitteeMember: Boolean(counts?.is_committee_member),
+            technicalWeight: Number(counts?.technical_weight ?? t.technical_weight ?? 0.7),
+            minEvaluators: counts?.min_evaluators ?? t.min_evaluators ?? 2,
             lots: bidOpeningAllowed ? bids.filter((bid) => bid.status !== 'DRAFT' && bid.status !== 'WITHDRAWN').map((bid) => ({
               bidId: bid.id,
               bidder: bid.organizations?.name || 'Registered contractor',
@@ -897,24 +933,51 @@ export const tendersApi = {
     }
   },
 
-  /**
-   * Award a tender to the selected bid via the award_contract RPC
-   * (tender port §4.4). RPC errors are user-meaningful and surfaced verbatim.
-   */
+  /** Award after committee evaluation (award_contract enforces the rules). */
   async award(tenderDbId: string, bidId: string): Promise<any> {
-    const { data, error } = await supabase.rpc('award_contract', {
-      p_tender_id: tenderDbId,
-      p_selected_bid_id: bidId,
-    });
-    if (error) throw new Error(error.message);
-    return data;
+    return backendJson('POST', `/api/tenders/${encodeURIComponent(tenderDbId)}/award`, { bid_id: bidId }, 'The contract could not be awarded.');
+  },
+
+  /** Set the evaluation committee (before bids are opened). */
+  async setCommittee(tenderDbId: string, memberIds: string[], chairId?: string): Promise<void> {
+    await backendJson('PUT', `/api/tenders/${encodeURIComponent(tenderDbId)}/committee`, { member_ids: memberIds, chair_id: chairId }, 'The committee could not be saved.');
+  },
+
+  /** This committee member's approval to open the bids (two-key opening). */
+  async approveOpening(tenderDbId: string): Promise<{ message?: string }> {
+    return backendJson('POST', `/api/tenders/${encodeURIComponent(tenderDbId)}/open`, {}, 'The bid opening could not be recorded.');
+  },
+
+  /** Active officers of the caller's organization, for the committee picker. */
+  async officers(): Promise<OfficerOption[]> {
+    const { data: me } = await supabase.auth.getUser();
+    const { data: mine, error: mineError } = await supabase
+      .from('organization_members')
+      .select('organization_id')
+      .eq('user_id', me.user?.id ?? '')
+      .ilike('status', 'active')
+      .maybeSingle();
+    if (mineError || !mine) return [];
+    const { data, error } = await supabase
+      .from('organization_members')
+      .select('user_id, role')
+      .eq('organization_id', (mine as any).organization_id)
+      .ilike('status', 'active')
+      .in('role', ['government_admin', 'chief_engineer', 'project_officer', 'government_engineer']);
+    if (error) throw new Error(`Could not load officers: ${error.message}`);
+    const ids = (data || []).map((r: any) => r.user_id);
+    const { data: profiles } = ids.length
+      ? await supabase.from('profiles').select('id, full_name').in('id', ids)
+      : { data: [] as any[] };
+    const names = new Map((profiles || []).map((p: any) => [p.id, p.full_name]));
+    return (data || []).map((r: any) => ({ userId: r.user_id, name: names.get(r.user_id) || 'Officer', role: r.role }));
   },
 
   /** Record technical/financial evaluation scores for a bid (tender port §4.4). */
   async evaluateBid(
     tenderDbId: string,
     bidId: string,
-    scores: { technical_score: number; financial_score: number },
+    scores: { technical_score: number; financial_score: number; remarks?: string },
   ): Promise<void> {
     if (!API_BASE_URL) {
       throw new Error('Tender evaluation service is temporarily unavailable.');
@@ -933,6 +996,7 @@ export const tendersApi = {
         body: JSON.stringify({
           technical_score: scores.technical_score,
           financial_score: scores.financial_score,
+          ...(scores.remarks ? { remarks: scores.remarks } : {}),
         }),
         signal: controller.signal,
       },

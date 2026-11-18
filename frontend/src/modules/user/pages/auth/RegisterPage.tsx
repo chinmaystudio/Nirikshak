@@ -70,6 +70,11 @@ export function RegisterPage(): JSX.Element {
       toast(`Registration complete. Welcome to NIRIKSHAK, ${user.name.split(" ")[0]}.`, "success");
       navigate(ROUTES.HOME);
     } catch (err: any) {
+      if (err?.code === "EMAIL_VERIFICATION_REQUIRED") {
+        toast(err.message, "success");
+        navigate(ROUTES.LOGIN);
+        return;
+      }
       console.error("Citizen registration error:", err);
       setError(err.message || "Registration failed. Please check your information.");
     } finally {

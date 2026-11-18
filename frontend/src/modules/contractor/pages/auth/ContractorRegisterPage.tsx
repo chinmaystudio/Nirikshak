@@ -23,8 +23,8 @@ export default function ContractorRegisterPage() {
       setErrorMsg('Passwords do not match.');
       return;
     }
-    if (password.length < 8) {
-      setErrorMsg('Password must be at least 8 characters long.');
+    if (password.length < 12 || !/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+      setErrorMsg('Password must be at least 12 characters and include upper and lower case letters, a digit and a symbol.');
       return;
     }
 
@@ -264,7 +264,7 @@ export default function ContractorRegisterPage() {
                 <input
                   type="password"
                   required
-                  placeholder="Min 8 characters"
+                  placeholder="12+ characters, mixed case, digit, symbol"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg border border-slate-300 bg-white text-slate-900 text-xs focus:border-blue-500 focus:outline-none"

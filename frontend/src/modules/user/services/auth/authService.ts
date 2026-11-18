@@ -101,7 +101,7 @@ export async function loginWithGoogle(redirectTo: string = "/user/home"): Promis
 export async function register(payload: RegisterPayload): Promise<Citizen> {
   // DF-32: never fall back to a hard-coded shared password.
   if (!payload.password) throw new Error('Please set a password for your account.');
-  const { user } = await AuthService.signUp({
+  const { user, requiresEmailVerification } = await AuthService.signUp({
     email: payload.email,
     password: payload.password,
     fullName: payload.name,
@@ -113,6 +113,11 @@ export async function register(payload: RegisterPayload): Promise<Citizen> {
     },
   });
 
+  if (requiresEmailVerification) {
+    const err = new Error('Account created. We have emailed you a confirmation link — open it, then sign in.') as Error & { code?: string };
+    err.code = 'EMAIL_VERIFICATION_REQUIRED';
+    throw err;
+  }
   if (!user?.id) throw new Error('Registration did not return an account. Please try signing in.');
 
   const citizen: Citizen = {

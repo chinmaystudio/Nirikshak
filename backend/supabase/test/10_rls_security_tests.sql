@@ -221,6 +221,8 @@ SELECT tests.expect_affected('gov A writes own project with MFA (aal2)',
 SELECT tests.expect_rows('issuer cannot read bid rows before opening', 'SELECT id FROM public.tender_bids', 0);
 SELECT tests.expect_rows('issuer can see the bid COUNT before opening',
   $q$SELECT 1 FROM public.get_tender_bid_summary('30000000-0000-0000-0000-00000000000a') WHERE submitted_bids = 2$q$, 1);
+SELECT tests.expect_rows('register shows bid counts without bid rows',
+  $q$SELECT 1 FROM public.get_tender_bid_counts() WHERE submitted_bids = 2 AND bids_opened_at IS NULL$q$, 1);
 SELECT tests.expect_rows('bid amount is not in the audit trail',
   $q$SELECT 1 FROM public.audit_logs WHERE entity_type = 'tender_bids' AND (new_value ? 'amount' OR new_value ? 'bid_amount')$q$, 0);
 SELECT tests.expect_error('committee must have enough members',
