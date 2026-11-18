@@ -1,16 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const supabaseUrl = 'https://dmkhkgqyzevhxpxsrgng.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjE3NTIsImV4cCI6MjEwNTkzNzc1Mn0.xloAq7KOhn7wyGNSXKXuAZDLuu4dxEjXVNjby9zOgoU';
 
 const accounts = [
-  { role: 'GOVERNMENT', email: 'government.e2e@nirikshak.local', pass: 'NirikshakGovE2E#2026' },
-  { role: 'CONTRACTOR 1', email: 'contractor1.e2e@nirikshak.local', pass: 'NirikshakC1#2026' },
-  { role: 'CONTRACTOR 2', email: 'contractor2.e2e@nirikshak.local', pass: 'NirikshakC2#2026' },
-  { role: 'CONTRACTOR 3', email: 'contractor3.e2e@nirikshak.local', pass: 'NirikshakC3#2026' },
-  { role: 'CONTRACTOR 4', email: 'contractor4.e2e@nirikshak.local', pass: 'NirikshakC4#2026' },
-  { role: 'CONTRACTOR 5', email: 'contractor5.e2e@nirikshak.local', pass: 'NirikshakC5#2026' },
-  { role: 'CITIZEN', email: 'citizen.e2e@nirikshak.local', pass: 'NirikshakCitizenE2E#2026' },
+  { role: 'GOVERNMENT', email: 'government.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CONTRACTOR 1', email: 'contractor1.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CONTRACTOR 2', email: 'contractor2.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CONTRACTOR 3', email: 'contractor3.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CONTRACTOR 4', email: 'contractor4.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CONTRACTOR 5', email: 'contractor5.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
+  { role: 'CITIZEN', email: 'citizen.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD! },
 ];
 
 async function check() {

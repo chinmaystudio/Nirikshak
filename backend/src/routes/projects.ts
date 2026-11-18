@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { supabaseAdmin, supabasePublic, createAuthenticatedClient } from '../services/supabase.js';
+import { supabaseAdmin, supabasePublic, createUserClient } from '../services/supabase.js';
 import { CreateProjectSchema } from '../validation/schemas.js';
 import { requireAuth, requireGovernmentWrite, AuthenticatedRequest } from '../middleware/auth.js';
 
@@ -63,7 +63,7 @@ projectsRouter.get('/:id', async (req: Request, res: Response) => {
       try {
         const { data: authData } = await supabaseAdmin.auth.getUser(token);
         if (authData?.user) {
-          userClient = await createAuthenticatedClient(token);
+          userClient = createUserClient(token);
           const { data: member } = await supabaseAdmin
             .from('organization_members')
             .select('role, organization_id')

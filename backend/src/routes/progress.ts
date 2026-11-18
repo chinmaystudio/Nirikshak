@@ -1,7 +1,8 @@
 import { Router, Response } from 'express';
 import { supabaseAdmin } from '../services/supabase.js';
 import { SubmitProgressSchema, ReviewProgressSchema } from '../validation/schemas.js';
-import { requireAuth, requireContractor, requireGovernmentWrite, AuthenticatedRequest } from '../middleware/auth.js';
+import { requireAuth, requireContractorWrite, requireGovernmentWrite, AuthenticatedRequest } from '../middleware/auth.js';
+import { isSafeStoragePath } from '../validation/paths.js';
 import { rateLimit } from '../middleware/security.js';
 
 export const progressRouter = Router();
@@ -13,7 +14,7 @@ progressRouter.post(
   '/submit',
   rateLimit({ windowMs: 60 * 1000, max: 30 }),
   requireAuth,
-  requireContractor,
+  requireContractorWrite,
   async (req: AuthenticatedRequest, res: Response) => {
     // DF-21: safeParse + first-issue message (same pattern as auth.ts/tenders.ts)
     const parsed = SubmitProgressSchema.safeParse(req.body);
@@ -24,8 +25,18 @@ progressRouter.post(
       });
     }
 
+    const { evidence, project_id, reported_progress, description, milestone_id } = parsed.data;
+
+    // Evidence must live under the caller's organization folder in storage,
+    // e.g. "<organization uuid>/<project uuid>/photo.jpg" (no traversal).
+    if (evidence && evidence.some((ev) => !isSafeStoragePath(ev.storage_path, req.organizationId))) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_PATH', message: 'Evidence files must be uploaded to your organization\'s storage folder.' },
+      });
+    }
+
     try {
-      const { evidence, project_id, reported_progress, description, milestone_id } = parsed.data;
 
       // Invoke authoritative database RPC using caller's scoped JWT
       const { data: updateData, error: updateErr } = await req.supabase!.rpc('submit_progress_update', {
@@ -54,7 +65,18 @@ progressRouter.post(
           longitude: ev.longitude || null,
           metadata: ev.metadata || {},
         }));
-        await req.supabase!.from('progress_evidence').insert(evidenceRows);
+        const { error: evidenceError } = await req.supabase!.from('progress_evidence').insert(evidenceRows);
+        if (evidenceError) {
+          console.error('Progress evidence insert failed', { code: evidenceError.code, message: evidenceError.message });
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'EVIDENCE_SAVE_FAILED',
+              message: 'The progress update was recorded but its evidence could not be attached. Please re-attach the evidence.',
+              progress_update_id: updateData.id,
+            },
+          });
+        }
       }
 
       res.status(201).json({

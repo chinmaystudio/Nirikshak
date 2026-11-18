@@ -1,5 +1,12 @@
 import { createClient, type User } from '@supabase/supabase-js';
 import 'dotenv/config';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 if (process.env.ALLOW_TEST_USERS !== 'true') throw new Error('Set ALLOW_TEST_USERS=true explicitly.');
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -8,9 +15,9 @@ if (!supabaseUrl || !serviceRoleKey) throw new Error('SUPABASE_URL and SUPABASE_
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 const accounts = [
-  ['government.test@nirikshak.local', 'TEST_GOVERNMENT_PASSWORD', 'NirikshakGov#2026', 'Government Test Administrator', 'NIRIKSHAK Test Government Authority', 'government', 'government_admin'],
-  ['contractor.test@nirikshak.local', 'TEST_CONTRACTOR_PASSWORD', 'NirikshakContractor#2026', 'Contractor Test Administrator', 'NIRIKSHAK Test Contractor', 'contractor', 'contractor_admin'],
-  ['citizen.test@nirikshak.local', 'TEST_CITIZEN_PASSWORD', 'NirikshakCitizen#2026', 'Citizen Test User', null, null, 'citizen'],
+  ['government.test@nirikshak.local', 'TEST_GOVERNMENT_PASSWORD', process.env.NIRIKSHAK_TEST_PASSWORD!, 'Government Test Administrator', 'NIRIKSHAK Test Government Authority', 'government', 'government_admin'],
+  ['contractor.test@nirikshak.local', 'TEST_CONTRACTOR_PASSWORD', process.env.NIRIKSHAK_TEST_PASSWORD!, 'Contractor Test Administrator', 'NIRIKSHAK Test Contractor', 'contractor', 'contractor_admin'],
+  ['citizen.test@nirikshak.local', 'TEST_CITIZEN_PASSWORD', process.env.NIRIKSHAK_TEST_PASSWORD!, 'Citizen Test User', null, null, 'citizen'],
 ] as const;
 
 async function findUser(email: string): Promise<User | null> {

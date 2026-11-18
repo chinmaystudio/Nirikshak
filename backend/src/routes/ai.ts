@@ -2,12 +2,12 @@ import { Router, Response } from 'express';
 import {
   getLLMProvider,
   chatJson,
-  AI_MODEL_CANDIDATES,
-  AI_VISION_MODEL_CANDIDATES,
+  textModelCandidates,
+  visionModelCandidates,
 } from '../ai/provider.js';
 import { supabaseAdmin } from '../services/supabase.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { rateLimit } from '../middleware/security.js';
+import { rateLimit, requireHuman } from '../middleware/security.js';
 
 export const aiRouter = Router();
 
@@ -330,11 +330,15 @@ aiRouter.post(
     } catch (err: any) {
       const isUnavailable = err.message?.includes('AI_ANALYSIS_UNAVAILABLE') || err.message?.includes('OPENROUTER_API_KEY');
       const statusCode = isUnavailable ? 503 : 500;
+      console.error('AI analysis failed', { message: err?.message });
       res.status(statusCode).json({
         success: false,
         error: {
           code: isUnavailable ? 'AI_UNAVAILABLE' : 'AI_ERROR',
-          message: err.message || 'AI risk analysis processing failed',
+          // Provider details stay in the server log, not in the response.
+          message: isUnavailable
+            ? 'AI analysis is not available right now. No insight was generated.'
+            : 'AI risk analysis failed. No insight was generated; please try again later.',
         },
       });
     }
@@ -350,6 +354,7 @@ aiRouter.post(
 aiRouter.post(
   '/vision',
   rateLimit({ windowMs: 60 * 1000, max: 6 }),
+  requireHuman(),
   async (req: any, res: Response) => {
     try {
       const image = req.body?.image;
@@ -382,7 +387,7 @@ Return VALID JSON ONLY:
           { type: 'text', text: hint ? `Citizen note: ${hint}\nIdentify the infrastructure in this photo.` : 'Identify the infrastructure in this photo.' },
           { type: 'image_url', image_url: { url: image } },
         ],
-        AI_VISION_MODEL_CANDIDATES
+        visionModelCandidates()
       );
 
       const j = result.json ?? {};
@@ -433,6 +438,7 @@ Return VALID JSON ONLY:
 aiRouter.post(
   '/ask',
   rateLimit({ windowMs: 60 * 1000, max: 10 }),
+  requireHuman(),
   async (req: any, res: Response) => {
     try {
       const question = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
@@ -489,7 +495,7 @@ aiRouter.post(
           `You are the NIRIKSHAK citizen assistant. Answer the citizen's question using ONLY the supplied public project data. If the data does not contain the answer, say so plainly and suggest what the citizen can check (project page or filing a complaint). Never invent projects, figures, dates, or officials.
 Return VALID JSON ONLY: { "answer": string, "referenced_project_ids": string[] }`,
           `Question: ${question}\n\nPublic project data:\n${JSON.stringify(context, null, 2)}`,
-          AI_MODEL_CANDIDATES
+          textModelCandidates()
         );
         const answer =
           typeof result.json?.answer === 'string' && result.json.answer.trim()
@@ -520,7 +526,7 @@ Return VALID JSON ONLY: { "answer": string, "referenced_project_ids": string[] }
     } catch (err: any) {
       res.status(500).json({
         success: false,
-        error: { code: 'AI_ERROR', message: err.message || 'Assistant failed' },
+        error: { code: 'AI_ERROR', message: 'The assistant could not answer right now. Please try again later.' },
       });
     }
   }

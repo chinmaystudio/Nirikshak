@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
@@ -29,21 +36,21 @@ async function runSecurityTests() {
   const citizenAuthClient = getClient();
   const citizenAuth = await citizenAuthClient.auth.signInWithPassword({
     email: 'citizen.test@nirikshak.local',
-    password: 'NirikshakCitizen#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   const citizenClient = getClient(citizenAuth.data.session?.access_token);
 
   const contractorAuthClient = getClient();
   const contractorAuth = await contractorAuthClient.auth.signInWithPassword({
     email: 'contractor.test@nirikshak.local',
-    password: 'NirikshakContractor#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   const contractorClient = getClient(contractorAuth.data.session?.access_token);
 
   const govAuthClient = getClient();
   const govAuth = await govAuthClient.auth.signInWithPassword({
     email: 'government.test@nirikshak.local',
-    password: 'NirikshakGov#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   const govClient = getClient(govAuth.data.session?.access_token);
 

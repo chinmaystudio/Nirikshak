@@ -66,20 +66,111 @@ export function sanitizeContext(data: any): any {
 }
 
 /**
- * Candidate models, tried in order. The configured model (OPENROUTER_MODEL)
- * goes first; the rest are fallbacks so a single retired/renamed model id
- * can never take the whole AI pipeline down again — that is exactly what
- * happened with 'nvidia/nemotron-3-super-120b-a12b:free', which OpenRouter
- * retired (every analysis returned HTTP 404 while the key was valid).
- * Verified against GET https://openrouter.ai/api/v1/models on 2026-11-18.
+ * Model configuration.
+ *
+ * OPENROUTER_MODELS / OPENROUTER_VISION_MODELS: comma-separated model ids,
+ * tried in order (OPENROUTER_MODEL is still honoured as the first entry).
+ *
+ * Government data must not go to endpoints that log or train on prompts, so:
+ *  - every request asks OpenRouter to route only to providers with a
+ *    zero-data-retention policy that do not collect data (AI_REQUIRE_ZDR,
+ *    default true). If no such endpoint serves a model, that model fails and
+ *    the next one is tried; if none qualify the API returns an error instead
+ *    of sending the data anywhere else.
+ *  - ":free" model ids are refused unless AI_ALLOW_FREE_MODELS=true (free
+ *    endpoints are the ones most likely to retain prompts).
  */
-export const AI_MODEL_CANDIDATES: string[] = [
-  ...(process.env.OPENROUTER_MODEL ? [process.env.OPENROUTER_MODEL] : []),
-  'nvidia/nemotron-3-super-120b-a12b',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-  'nvidia/nemotron-3.5-lightning:free',
-].filter((v, i, a) => a.indexOf(v) === i);
+function parseModelList(value: string | undefined): string[] {
+  return (value || '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+}
+
+export function allowFreeModels(): boolean {
+  return process.env.AI_ALLOW_FREE_MODELS === 'true';
+}
+
+export function requireZeroDataRetention(): boolean {
+  return process.env.AI_REQUIRE_ZDR !== 'false';
+}
+
+export function filterAllowedModels(models: string[]): string[] {
+  const unique = models.filter((v, i, a) => a.indexOf(v) === i);
+  return allowFreeModels() ? unique : unique.filter((m) => !m.endsWith(':free'));
+}
+
+export const DEFAULT_TEXT_MODELS = ['nvidia/nemotron-3-super-120b-a12b'];
+export const DEFAULT_VISION_MODELS = ['nvidia/nemotron-3.5-super-vl'];
+
+export function textModelCandidates(): string[] {
+  const configured = [
+    ...parseModelList(process.env.OPENROUTER_MODEL),
+    ...parseModelList(process.env.OPENROUTER_MODELS),
+  ];
+  return filterAllowedModels(configured.length > 0 ? configured : DEFAULT_TEXT_MODELS);
+}
+
+export function visionModelCandidates(): string[] {
+  const configured = parseModelList(process.env.OPENROUTER_VISION_MODELS);
+  return filterAllowedModels(configured.length > 0 ? configured : DEFAULT_VISION_MODELS);
+}
+
+/** Back-compat export used by routes/tests. */
+export const AI_MODEL_CANDIDATES: string[] = textModelCandidates();
+
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 25_000;
+
+/**
+ * One chat-completions call with timeout and privacy routing. Throws an error
+ * carrying `modelLevel: true` for failures where retrying the same model is
+ * pointless (auth, credit, unknown model, rate limit, no compliant provider).
+ */
+export async function openRouterChat(
+  apiKey: string,
+  model: string,
+  messages: Array<{ role: string; content: unknown }>
+): Promise<{ content: string; totalTokens: number | null }> {
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    response_format: { type: 'json_object' },
+    temperature: 0.2,
+  };
+  if (requireZeroDataRetention()) {
+    body.provider = { data_collection: 'deny', zdr: true };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': process.env.FRONTEND_URL || 'https://nirikshak.pages.dev',
+        'X-Title': 'NIRIKSHAK Infrastructure Audit',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+    });
+  } catch (err: any) {
+    const timedOut = err?.name === 'TimeoutError' || err?.name === 'AbortError';
+    throw Object.assign(new Error(timedOut ? `OpenRouter timed out after ${AI_TIMEOUT_MS}ms` : `OpenRouter unreachable: ${err?.message}`), {
+      modelLevel: timedOut,
+    });
+  }
+
+  if (!response.ok) {
+    const modelLevel = [400, 401, 402, 403, 404, 429].includes(response.status);
+    throw Object.assign(new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`), { modelLevel });
+  }
+  const data: any = await response.json();
+  return {
+    content: data?.choices?.[0]?.message?.content || '{}',
+    totalTokens: data?.usage?.total_tokens ?? null,
+  };
+}
 
 export class OpenRouterProvider implements LLMProvider {
   readonly name = 'OpenRouter (Nemotron)';
@@ -144,39 +235,19 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`;
     // next candidate instead of burning retries.
     let lastError: Error | null = null;
 
-    for (const model of AI_MODEL_CANDIDATES) {
+    const candidates = textModelCandidates();
+    if (candidates.length === 0) {
+      throw new Error('AI_ANALYSIS_UNAVAILABLE: no permitted AI model is configured (set OPENROUTER_MODELS)');
+    }
+
+    for (const model of candidates) {
       const maxAttempts = 2;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
-          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`,
-              'HTTP-Referer': 'https://nirikshak.gov.in',
-              'X-Title': 'NIRIKSHAK Infrastructure Audit',
-            },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: userPrompt },
-              ],
-              response_format: { type: 'json_object' },
-              temperature: 0.2,
-            }),
-          });
-
-          if (!response.ok) {
-            const modelLevel = [401, 402, 404, 429].includes(response.status);
-            throw Object.assign(
-              new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`),
-              { modelLevel }
-            );
-          }
-
-          const data = await response.json();
-          const rawContent = data.choices[0]?.message?.content || '{}';
+          const { content: rawContent, totalTokens } = await openRouterChat(this.apiKey, model, [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ]);
           const parsed = JSON.parse(rawContent);
           const validated = ProjectRiskAnalysisSchema.parse(parsed);
 
@@ -184,12 +255,12 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`;
           this.lastRun = {
             model,
             latencyMs: latency,
-            totalTokens: data.usage?.total_tokens ?? null,
+            totalTokens,
             promptHash,
             status: 'SUCCESS',
           };
           // Rule 64: Log only metadata, never raw sensitive prompts
-          console.info(`[AI_LOG] provider=OpenRouter model=${model} latency=${latency}ms tokens=${data.usage?.total_tokens ?? 0} status=SUCCESS promptHash=${promptHash}`);
+          console.info(`[AI_LOG] provider=OpenRouter model=${model} latency=${latency}ms tokens=${totalTokens ?? 0} status=SUCCESS promptHash=${promptHash}`);
 
           return validated;
         } catch (err: any) {
@@ -202,7 +273,7 @@ Respond with VALID JSON ONLY. No markdown fences, no conversational prose.`;
 
     const latency = Date.now() - startTime;
     this.lastRun = {
-      model: AI_MODEL_CANDIDATES[AI_MODEL_CANDIDATES.length - 1],
+      model: candidates[candidates.length - 1],
       latencyMs: latency,
       totalTokens: null,
       promptHash,
@@ -218,11 +289,7 @@ export function getLLMProvider(): LLMProvider {
 }
 
 /** Vision-capable candidates for the citizen infrastructure scanner. */
-export const AI_VISION_MODEL_CANDIDATES: string[] = [
-  'nvidia/nemotron-3.5-super-vl:free',
-  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
-  'nvidia/nemotron-3-ultra-550b-a55b:free',
-];
+export const AI_VISION_MODEL_CANDIDATES: string[] = visionModelCandidates();
 
 export interface ChatJsonResult {
   json: any;
@@ -249,43 +316,24 @@ export async function chatJson(
   const startTime = Date.now();
   let lastError: Error | null = null;
 
-  for (const model of models) {
+  const permitted = filterAllowedModels(models);
+  if (permitted.length === 0) {
+    throw new Error('AI_ANALYSIS_UNAVAILABLE: no permitted AI model is configured');
+  }
+  for (const model of permitted) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://nirikshak.gov.in',
-            'X-Title': 'NIRIKSHAK Infrastructure Audit',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userContent },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.2,
-          }),
-        });
-        if (!response.ok) {
-          const modelLevel = [401, 402, 404, 429].includes(response.status);
-          throw Object.assign(
-            new Error(`OpenRouter HTTP ${response.status}: ${response.statusText}`),
-            { modelLevel }
-          );
-        }
-        const data = await response.json();
-        const raw = data.choices[0]?.message?.content || '{}';
+        const { content: raw, totalTokens } = await openRouterChat(apiKey, model, [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent },
+        ]);
         const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
         const json = JSON.parse(cleaned);
         return {
           json,
           model,
           latencyMs: Date.now() - startTime,
-          totalTokens: data.usage?.total_tokens ?? null,
+          totalTokens,
         };
       } catch (err: any) {
         lastError = err;

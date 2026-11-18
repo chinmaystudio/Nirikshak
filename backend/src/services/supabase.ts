@@ -19,12 +19,21 @@ export const supabasePublic = createClient(requiredSupabaseUrl, requiredAnonKey,
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-/** Creates a client bound to the authenticated user's JWT so RLS applies. */
-export async function createAuthenticatedClient(accessToken: string) {
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
-  if (error || !data.user) throw new Error('Invalid or expired access token');
+/**
+ * Creates a client bound to the user's JWT so RLS applies. The token must
+ * already have been verified (requireAuth does this with auth.getUser);
+ * PostgREST verifies the signature again on every request.
+ */
+export function createUserClient(accessToken: string) {
   return createClient(requiredSupabaseUrl, requiredAnonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
+}
+
+/** Verifies the token, then returns an RLS-bound client. */
+export async function createAuthenticatedClient(accessToken: string) {
+  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
+  if (error || !data.user) throw new Error('Invalid or expired access token');
+  return createUserClient(accessToken);
 }

@@ -2,6 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +34,7 @@ interface TestUser {
 const GOV_USERS: TestUser[] = [
   {
     email: 'government1.e2e@nirikshak.local',
-    password: 'NirikshakGov1#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
     fullName: 'Er. Rajesh Patil (EE-1)',
     role: 'government_admin',
     metadata: {
@@ -39,7 +46,7 @@ const GOV_USERS: TestUser[] = [
   },
   {
     email: 'government2.e2e@nirikshak.local',
-    password: 'NirikshakGov2#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
     fullName: 'Er. Sunita Deshmukh (EE-2)',
     role: 'chief_engineer',
     metadata: {
@@ -51,7 +58,7 @@ const GOV_USERS: TestUser[] = [
   },
   {
     email: 'government3.e2e@nirikshak.local',
-    password: 'NirikshakGov3#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
     fullName: 'Er. Amit Shinde (EE-3)',
     role: 'project_officer',
     metadata: {
@@ -65,7 +72,7 @@ const GOV_USERS: TestUser[] = [
 
 const CONTRACTOR_A_USER: TestUser = {
   email: 'contractorA.e2e@nirikshak.local',
-  password: 'NirikshakContractorA#2026',
+  password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   fullName: 'Anil Mehta (Apex Admin)',
   role: 'contractor_admin',
   metadata: {
@@ -80,7 +87,7 @@ const CONTRACTOR_A_USER: TestUser = {
 
 const CONTRACTOR_A2_USER: TestUser = {
   email: 'contractorA2.e2e@nirikshak.local',
-  password: 'NirikshakContractorA2#2026',
+  password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   fullName: 'Kiran Joshi (Apex Site Eng)',
   role: 'contractor_engineer',
   metadata: {
@@ -95,7 +102,7 @@ const CONTRACTOR_A2_USER: TestUser = {
 
 const CONTRACTOR_B_USER: TestUser = {
   email: 'contractorB.e2e@nirikshak.local',
-  password: 'NirikshakContractorB#2026',
+  password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   fullName: 'Vikram Joshi (Bharat Admin)',
   role: 'contractor_admin',
   metadata: {

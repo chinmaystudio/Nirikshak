@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
@@ -23,7 +30,7 @@ async function run() {
   const citizenClient = getClient();
   const citizenAuth = await citizenClient.auth.signInWithPassword({
     email: 'citizen.test@nirikshak.local',
-    password: 'NirikshakCitizen#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (citizenAuth.error) throw new Error(`Citizen auth failed: ${citizenAuth.error.message}`);
   console.log('✓ Citizen logged in successfully. User ID:', citizenAuth.data.user.id);
@@ -42,7 +49,7 @@ async function run() {
   const contractorClient = getClient();
   const contractorAuth = await contractorClient.auth.signInWithPassword({
     email: 'contractor.test@nirikshak.local',
-    password: 'NirikshakContractor#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (contractorAuth.error) throw new Error(`Contractor auth failed: ${contractorAuth.error.message}`);
   console.log('✓ Contractor logged in successfully. User ID:', contractorAuth.data.user.id);
@@ -52,7 +59,7 @@ async function run() {
   const govClient = getClient();
   const govAuth = await govClient.auth.signInWithPassword({
     email: 'government.test@nirikshak.local',
-    password: 'NirikshakGov#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (govAuth.error) throw new Error(`Government auth failed: ${govAuth.error.message}`);
   console.log('✓ Government logged in successfully. User ID:', govAuth.data.user.id);

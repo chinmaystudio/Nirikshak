@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dmkhkgqyzevhxpxsrgng.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjE3NTIsImV4cCI6MjEwNTkzNzc1Mn0.xloAq7KOhn7wyGNSXKXuAZDLuu4dxEjXVNjby9zOgoU';
@@ -40,18 +47,18 @@ export async function runFullLifecycle(runNumber: number) {
   const gov = createSessionClient();
   const govAuth = await gov.auth.signInWithPassword({
     email: 'government.e2e@nirikshak.local',
-    password: 'NirikshakGovE2E#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (govAuth.error) throw govAuth.error;
   record('Government Login', Date.now() - t0, 'PASS', `Officer ID: ${govAuth.data.user.id}`);
 
   const contractorClients: any[] = [];
   const contractors = [
-    { email: 'contractor1.e2e@nirikshak.local', pass: 'NirikshakC1#2026', company: 'Apex Infrastructure Pvt Ltd', bidCr: 218, techScore: 88 },
-    { email: 'contractor2.e2e@nirikshak.local', pass: 'NirikshakC2#2026', company: 'Bharat Urban Engineering Ltd', bidCr: 209, techScore: 82 },
-    { email: 'contractor3.e2e@nirikshak.local', pass: 'NirikshakC3#2026', company: 'Crestline Infra Projects Pvt Ltd', bidCr: 214, techScore: 95 },
-    { email: 'contractor4.e2e@nirikshak.local', pass: 'NirikshakC4#2026', company: 'Deccan Civil Engineering Ltd', bidCr: 205, techScore: 70 },
-    { email: 'contractor5.e2e@nirikshak.local', pass: 'NirikshakC5#2026', company: 'Evergreen Smart Infrastructure Pvt Ltd', bidCr: 211, techScore: 91 },
+    { email: 'contractor1.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Apex Infrastructure Pvt Ltd', bidCr: 218, techScore: 88 },
+    { email: 'contractor2.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Bharat Urban Engineering Ltd', bidCr: 209, techScore: 82 },
+    { email: 'contractor3.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Crestline Infra Projects Pvt Ltd', bidCr: 214, techScore: 95 },
+    { email: 'contractor4.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Deccan Civil Engineering Ltd', bidCr: 205, techScore: 70 },
+    { email: 'contractor5.e2e@nirikshak.local', pass: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Evergreen Smart Infrastructure Pvt Ltd', bidCr: 211, techScore: 91 },
   ];
 
   for (let i = 0; i < contractors.length; i++) {
@@ -70,7 +77,7 @@ export async function runFullLifecycle(runNumber: number) {
   const citizen = createSessionClient();
   const citizenAuth = await citizen.auth.signInWithPassword({
     email: 'citizen.e2e@nirikshak.local',
-    password: 'NirikshakCitizenE2E#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (citizenAuth.error) throw citizenAuth.error;
   record('Citizen Login (E2E Citizen Tester)', Date.now() - t0, 'PASS', `Citizen ID: ${citizenAuth.data.user.id}`);

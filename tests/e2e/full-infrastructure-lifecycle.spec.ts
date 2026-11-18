@@ -20,6 +20,13 @@
 
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://dmkhkgqyzevhxpxsrgng.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMxODAxODcsImV4cCI6MjA1ODc1NjE4N30.C3n_N_mF2Tq-N7Kqm_z8r2H1f1_Q1O8Y1Z2_E9A-x_o';
@@ -27,20 +34,20 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI
 const ACCOUNTS = {
   government: {
     email: 'government.e2e@nirikshak.local',
-    password: 'NirikshakGovE2E#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
     role: 'government_admin',
     name: 'Pune Infrastructure Monitoring Authority',
   },
   contractors: [
-    { id: 1, email: 'contractor1.e2e@nirikshak.local', password: 'NirikshakC1#2026', company: 'Apex Infrastructure Pvt Ltd', bidCrore: 218, techScore: 88 },
-    { id: 2, email: 'contractor2.e2e@nirikshak.local', password: 'NirikshakC2#2026', company: 'Bharat Urban Engineering Ltd', bidCrore: 209, techScore: 82 },
-    { id: 3, email: 'contractor3.e2e@nirikshak.local', password: 'NirikshakC3#2026', company: 'Crestline Infra Projects Pvt Ltd', bidCrore: 214, techScore: 95 },
-    { id: 4, email: 'contractor4.e2e@nirikshak.local', password: 'NirikshakC4#2026', company: 'Deccan Civil Engineering Ltd', bidCrore: 205, techScore: 70 },
-    { id: 5, email: 'contractor5.e2e@nirikshak.local', password: 'NirikshakC5#2026', company: 'Evergreen Smart Infrastructure Pvt Ltd', bidCrore: 211, techScore: 91 },
+    { id: 1, email: 'contractor1.e2e@nirikshak.local', password: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Apex Infrastructure Pvt Ltd', bidCrore: 218, techScore: 88 },
+    { id: 2, email: 'contractor2.e2e@nirikshak.local', password: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Bharat Urban Engineering Ltd', bidCrore: 209, techScore: 82 },
+    { id: 3, email: 'contractor3.e2e@nirikshak.local', password: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Crestline Infra Projects Pvt Ltd', bidCrore: 214, techScore: 95 },
+    { id: 4, email: 'contractor4.e2e@nirikshak.local', password: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Deccan Civil Engineering Ltd', bidCrore: 205, techScore: 70 },
+    { id: 5, email: 'contractor5.e2e@nirikshak.local', password: process.env.NIRIKSHAK_TEST_PASSWORD!, company: 'Evergreen Smart Infrastructure Pvt Ltd', bidCrore: 211, techScore: 91 },
   ],
   citizen: {
     email: 'citizen.e2e@nirikshak.local',
-    password: 'NirikshakCitizenE2E#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
     name: 'E2E Citizen Tester',
     role: 'citizen',
   },

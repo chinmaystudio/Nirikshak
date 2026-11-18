@@ -12,6 +12,12 @@ import { tendersRouter } from './routes/tenders.js';
 export const app = express();
 export default app;
 
+// Behind Vercel / Cloudflare / Render the client IP arrives in X-Forwarded-For.
+// Trust exactly one proxy hop (configurable) so rate limits key on the real
+// client, not on the platform's proxy address.
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS ?? 1));
+app.disable('x-powered-by');
+
 // 1. HTTP Security Headers & Correlation ID (Rules 38, 73, 98, 100)
 app.use(securityHeaders);
 
@@ -65,7 +71,10 @@ app.use(
   })
 );
 
-// 3. Request Body Limits (Rule 39: Limit JSON request size to 2MB)
+// 3. Request Body Limits (Rule 39). The citizen photo scanner sends one
+// base64 image (up to ~4.5 MB of text), so that single route gets a larger
+// limit; everything else stays at 2 MB.
+app.use('/api/ai/vision', express.json({ limit: '5mb' }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
@@ -119,7 +128,7 @@ app.use((_req, res) => {
 app.use(safeErrorHandler);
 
 const PORT = Number(process.env.PORT) || 4000;
-const isTest = process.env.NODE_ENV === 'test' || process.argv.some((a) => a.includes('test'));
+const isTest = process.env.NODE_ENV === 'test';
 if (!process.env.VERCEL && !isTest) {
   app.listen(PORT, () => {
     console.log(`NIRIKSHAK Backend API listening on port ${PORT}`);

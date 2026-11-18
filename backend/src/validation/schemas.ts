@@ -28,6 +28,12 @@ export const CreateTenderSchema = z.object({
   estimated_value_inr_crore: z.number().positive(),
   mode: z.enum(['e-Tender', 'Manually', 'Global']).default('e-Tender'),
   description: z.string().trim().max(2000).optional(),
+  // Bid submission deadline (YYYY-MM-DD). Defaults to 30 days after publication.
+  bid_due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // QCBS technical weight (0-1); financial weight is 1 - technical_weight.
+  technical_weight: z.number().min(0).max(1).default(0.7),
+  // Committee evaluations required per bid before an award.
+  min_evaluators: z.number().int().min(1).max(15).default(2),
 });
 
 export const SubmitProgressSchema = z.object({
@@ -38,10 +44,10 @@ export const SubmitProgressSchema = z.object({
   description: z.string().min(5),
   evidence: z.array(z.object({
     evidence_type: z.enum(['photo', 'video', 'report', 'sensor', 'drone']),
-    storage_path: z.string(),
+    storage_path: z.string().min(1).max(512),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })).optional(),
 });
 
@@ -57,16 +63,16 @@ export const CreateComplaintSchema = z.object({
   // project (the column is nullable and the frontend omits it then);
   // requiring it made every project-less complaint fail with a 400.
   project_id: z.string().uuid().nullable().optional(),
-  category: z.string().min(2),
-  title: z.string().min(5),
-  description: z.string().min(10),
+  category: z.string().trim().min(2).max(120),
+  title: z.string().trim().min(5).max(200),
+  description: z.string().trim().min(10).max(5000),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
   // DF-22: no client-supplied user_id. The complaints route derives the
   // author solely from the Bearer token (null for anonymous submissions);
   // trusting a body value would let anyone attribute a complaint to any user.
-  evidence_paths: z.array(z.string()).optional(),
+  evidence_paths: z.array(z.string().min(1).max(512)).max(10).optional(),
 });
 
 // Government bid evaluation (QCBS). combined_score is computed server-side
@@ -74,6 +80,7 @@ export const CreateComplaintSchema = z.object({
 export const EvaluateBidSchema = z.object({
   technical_score: z.number().min(0).max(100),
   financial_score: z.number().min(0).max(100),
+  remarks: z.string().trim().max(4000).optional(),
 });
 
 export const RiskLevelEnum = z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'UNKNOWN']);

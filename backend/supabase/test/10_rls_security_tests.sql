@@ -291,6 +291,30 @@ SELECT tests.expect_rows('status change logged with officer as actor',
   $q$SELECT 1 FROM public.complaint_updates WHERE new_status = 'IN_PROGRESS' AND actor_id = '00000000-0000-0000-0000-00000000a001' AND notes = 'Crew dispatched'$q$, 1);
 
 -- ===========================================================================
+-- 8b. Storage
+-- ===========================================================================
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000c001'), false);
+SELECT tests.expect_ok('assigned contractor uploads progress evidence into its own folder',
+  $q$INSERT INTO storage.objects (bucket_id, name) VALUES ('progress-evidence', '10000000-0000-0000-0000-0000000000c1/20000000-0000-0000-0000-00000000000a/site.jpg')$q$);
+SELECT tests.expect_error('contractor cannot upload into another organization''s folder',
+  $q$INSERT INTO storage.objects (bucket_id, name) VALUES ('progress-evidence', '10000000-0000-0000-0000-0000000000c2/20000000-0000-0000-0000-00000000000a/fake.jpg')$q$, 'row-level security');
+SELECT tests.expect_error('contractor cannot upload evidence for a project it is not assigned to',
+  $q$INSERT INTO storage.objects (bucket_id, name) VALUES ('progress-evidence', '10000000-0000-0000-0000-0000000000c1/20000000-0000-0000-0000-00000000000b/x.jpg')$q$, 'row-level security');
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000c002'), false);
+SELECT tests.expect_rows('other contractor cannot read the evidence', $q$SELECT 1 FROM storage.objects WHERE bucket_id = 'progress-evidence'$q$, 0);
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000a002'), false);
+SELECT tests.expect_rows('project owner officer reads the evidence', $q$SELECT 1 FROM storage.objects WHERE bucket_id = 'progress-evidence'$q$, 1);
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000b001'), false);
+SELECT tests.expect_rows('other government org cannot read the evidence', $q$SELECT 1 FROM storage.objects WHERE bucket_id = 'progress-evidence'$q$, 0);
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000d001', 'aal1'), false);
+SELECT tests.expect_ok('citizen uploads complaint evidence into own folder',
+  $q$INSERT INTO storage.objects (bucket_id, name) VALUES ('complaint-evidence', '00000000-0000-0000-0000-00000000d001/pothole.jpg')$q$);
+SELECT tests.expect_error('citizen cannot upload into another user''s folder',
+  $q$INSERT INTO storage.objects (bucket_id, name) VALUES ('complaint-evidence', '00000000-0000-0000-0000-00000000d002/x.jpg')$q$, 'row-level security');
+SELECT set_config('request.jwt.claims', tests.claims('00000000-0000-0000-0000-00000000d002', 'aal1'), false);
+SELECT tests.expect_rows('citizen cannot read another citizen''s evidence', $q$SELECT 1 FROM storage.objects WHERE bucket_id = 'complaint-evidence'$q$, 0);
+
+-- ===========================================================================
 -- 9. Integrity
 -- ===========================================================================
 RESET ROLE;

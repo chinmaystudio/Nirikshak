@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
+// Development/staging helper. Creates or signs in test accounts, so it must
+// never run against the production project. Passwords come from the
+// environment (NIRIKSHAK_TEST_PASSWORD); none are stored in the repository.
+if (process.env.NIRIKSHAK_ALLOW_TEST_ACCOUNTS !== 'true' || !process.env.NIRIKSHAK_TEST_PASSWORD) {
+  throw new Error('Refusing to run: set NIRIKSHAK_ALLOW_TEST_ACCOUNTS=true and NIRIKSHAK_TEST_PASSWORD, and point SUPABASE_URL at a non-production project.');
+}
+
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://dmkhkgqyzevhxpxsrgng.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRta2hrZ3F5emV2aHhweHNyZ25nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNjE3NTIsImV4cCI6MjEwNTkzNzc1Mn0.xloAq7KOhn7wyGNSXKXuAZDLuu4dxEjXVNjby9zOgoU';
@@ -42,7 +49,7 @@ async function runIteration(iteration: number): Promise<RunResult> {
   const citizenClient = getClient();
   const citizenAuth = await citizenClient.auth.signInWithPassword({
     email: 'citizen.test@nirikshak.local',
-    password: 'NirikshakCitizen#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (citizenAuth.error) throw new Error(`Citizen auth failed: ${citizenAuth.error.message}`);
   logStep('Citizen Authentication', Date.now() - t0, 'PASSED', `User: ${citizenAuth.data.user.id.slice(0, 8)}...`);
@@ -61,7 +68,7 @@ async function runIteration(iteration: number): Promise<RunResult> {
   const contractorClient = getClient();
   const contractorAuth = await contractorClient.auth.signInWithPassword({
     email: 'contractor.test@nirikshak.local',
-    password: 'NirikshakContractor#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (contractorAuth.error) throw new Error(`Contractor auth failed: ${contractorAuth.error.message}`);
   logStep('Contractor Authentication', Date.now() - t0, 'PASSED', `User: ${contractorAuth.data.user.id.slice(0, 8)}...`);
@@ -80,7 +87,7 @@ async function runIteration(iteration: number): Promise<RunResult> {
   const govClient = getClient();
   const govAuth = await govClient.auth.signInWithPassword({
     email: 'government.test@nirikshak.local',
-    password: 'NirikshakGov#2026',
+    password: process.env.NIRIKSHAK_TEST_PASSWORD!,
   });
   if (govAuth.error) throw new Error(`Government auth failed: ${govAuth.error.message}`);
   logStep('Government Authentication', Date.now() - t0, 'PASSED', `Officer: ${govAuth.data.user.id.slice(0, 8)}...`);

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
-import { supabaseAdmin, createAuthenticatedClient } from '../services/supabase.js';
+import { supabaseAdmin, createUserClient } from '../services/supabase.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
@@ -9,6 +9,31 @@ export interface AuthenticatedRequest extends Request {
   organizationId?: string | null;
   organization?: { id: string; name: string; type: string } | null;
   supabase?: SupabaseClient;
+  /** Authenticator assurance level from the verified JWT: 'aal1' (password) or 'aal2' (MFA verified). */
+  aal?: string;
+}
+
+export const GOVERNMENT_ROLES = ['government_admin', 'project_officer', 'government_engineer', 'chief_engineer', 'auditor'];
+export const GOVERNMENT_WRITE_ROLES = ['government_admin', 'project_officer', 'government_engineer', 'chief_engineer'];
+export const CONTRACTOR_ROLES = ['contractor_admin', 'contractor_manager', 'contractor_engineer', 'contractor_site_engineer'];
+
+/**
+ * Reads the `aal` claim of a JWT that has ALREADY been verified by
+ * auth.getUser(). Never use this on an unverified token.
+ */
+export function readAalClaim(verifiedToken: string): string {
+  try {
+    const payload = verifiedToken.split('.')[1];
+    if (!payload) return 'aal1';
+    const json = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    return typeof json.aal === 'string' ? json.aal : 'aal1';
+  } catch {
+    return 'aal1';
+  }
+}
+
+export function mfaRequired(): boolean {
+  return process.env.REQUIRE_MFA !== 'false';
 }
 
 /**
@@ -46,6 +71,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
 
     req.user = authData.user;
     req.token = token;
+    req.aal = readAalClaim(token);
 
     // Resolve authoritative role from organization_members table (Rule 4)
     const { data: memberRows, error: memberError } = await supabaseAdmin
@@ -73,7 +99,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
     }
 
     // Scoped client running under user JWT (subject to RLS, Rule 36)
-    req.supabase = await createAuthenticatedClient(token);
+    req.supabase = createUserClient(token);
 
     next();
   } catch (err: any) {
@@ -116,14 +142,24 @@ export function requireRole(allowedRoles: string[]) {
  * Enforces government role.
  */
 export function requireGovernment(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  const govRoles = [
-    'government_admin',
-    'project_officer',
-    'government_engineer',
-    'chief_engineer',
-    'auditor',
-  ];
-  return requireRole(govRoles)(req, res, next);
+  return requireRole(GOVERNMENT_ROLES)(req, res, next);
+}
+
+/**
+ * Government and contractor users must have completed MFA (aal2) before any
+ * write. The database enforces the same rule (migration 043); this check
+ * gives a clear error before a request reaches it.
+ */
+export function requireMfa(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  const privileged = GOVERNMENT_ROLES.includes(req.role || '') || CONTRACTOR_ROLES.includes(req.role || '');
+  if (privileged && mfaRequired() && req.aal !== 'aal2') {
+    res.status(403).json({
+      success: false,
+      error: { code: 'MFA_REQUIRED', message: 'Verify your authenticator code to perform this action.' },
+    });
+    return;
+  }
+  next();
 }
 
 /**
@@ -133,26 +169,19 @@ export function requireGovernment(req: AuthenticatedRequest, res: Response, next
  * review progress, or close/evaluate tenders through the API.
  */
 export function requireGovernmentWrite(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  const govWriteRoles = [
-    'government_admin',
-    'project_officer',
-    'government_engineer',
-    'chief_engineer',
-  ];
-  return requireRole(govWriteRoles)(req, res, next);
+  return requireRole(GOVERNMENT_WRITE_ROLES)(req, (res as Response), () => requireMfa(req, res, next));
 }
 
 /**
  * Enforces contractor role.
  */
 export function requireContractor(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  const contractorRoles = [
-    'contractor_admin',
-    'contractor_manager',
-    'contractor_engineer',
-    'contractor_site_engineer',
-  ];
-  return requireRole(contractorRoles)(req, res, next);
+  return requireRole(CONTRACTOR_ROLES)(req, res, next);
+}
+
+/** Contractor write routes: contractor role + MFA. */
+export function requireContractorWrite(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+  return requireRole(CONTRACTOR_ROLES)(req, res, () => requireMfa(req, res, next));
 }
 
 /**
@@ -185,7 +214,9 @@ export async function requireGovernmentProjectAccess(
     return;
   }
 
-  if (project.government_organization_id && project.government_organization_id !== req.organizationId) {
+  // Every project has an owner (migration 041). A missing owner is never
+  // treated as "open to every government organization".
+  if (!project.government_organization_id || project.government_organization_id !== req.organizationId) {
     res.status(403).json({
       success: false,
       error: { code: 'FORBIDDEN', message: 'Project belongs to a different government authority' },
