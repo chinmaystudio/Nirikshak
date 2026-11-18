@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../services/supabase.js';
 import { z } from 'zod';
 import { requireAuth, requireGovernment, requireGovernmentWrite, AuthenticatedRequest } from '../middleware/auth.js';
 import { CreateTenderSchema, EvaluateBidSchema } from '../validation/schemas.js';
+import { isMissingFunction } from '../services/dbFeatures.js';
 
 export const tendersRouter = Router();
 
@@ -184,6 +185,12 @@ tendersRouter.post('/:tenderId/close', requireAuth, requireGovernmentWrite, asyn
 
 function dbErrorResponse(res: Response, error: { code?: string; message?: string }, fallback: string) {
   const message = error?.message || fallback;
+  if (isMissingFunction(error)) {
+    return res.status(503).json({
+      success: false,
+      error: { code: 'MIGRATION_REQUIRED', message: 'This feature needs database migration 042 to be applied.' },
+    });
+  }
   if (/MFA_REQUIRED/.test(message)) {
     return res.status(403).json({ success: false, error: { code: 'MFA_REQUIRED', message: 'Verify your authenticator code to perform this action.' } });
   }
@@ -273,9 +280,66 @@ tendersRouter.post('/:tenderId/bids/:bidId/evaluate', requireAuth, requireGovern
     p_financial_score: parsed.data.financial_score,
     p_remarks: parsed.data.remarks ?? null,
   });
+  if (error && isMissingFunction(error)) {
+    // Database without migration 042: keep the previous single-evaluator
+    // behaviour so evaluation keeps working until the migration is applied.
+    return legacyEvaluate(req, res, parsed.data.technical_score, parsed.data.financial_score);
+  }
   if (error) return dbErrorResponse(res, error, 'The bid could not be evaluated.');
   return res.json({ success: true, data });
 });
+
+/** Pre-042 evaluation (single officer, 70:30). Removed once 042 is everywhere. */
+async function legacyEvaluate(req: AuthenticatedRequest, res: Response, technical: number, financial: number) {
+  if (!req.organizationId) {
+    return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'An active Government organization is required.' } });
+  }
+  const tenderId = await resolveTenderId(req, req.params.tenderId);
+  if (!tenderId) return res.status(404).json({ success: false, error: { code: 'TENDER_NOT_FOUND', message: 'Tender not found.' } });
+  const { data: tender } = await supabaseAdmin
+    .from('tenders')
+    .select('id, tender_number, status, issuing_organization_id, project_id')
+    .eq('id', tenderId)
+    .maybeSingle();
+  if (!tender || tender.issuing_organization_id !== req.organizationId) {
+    return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'This tender belongs to a different Government authority.' } });
+  }
+  const { data: bid } = await supabaseAdmin
+    .from('tender_bids')
+    .select('id, status')
+    .eq('id', req.params.bidId)
+    .eq('tender_id', tender.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (!bid) return res.status(404).json({ success: false, error: { code: 'BID_NOT_FOUND', message: 'The selected bid could not be found.' } });
+  if (!['SUBMITTED', 'UNDER_EVALUATION'].includes(bid.status)) {
+    return res.status(409).json({ success: false, error: { code: 'BID_NOT_EVALUABLE', message: `A bid in status '${bid.status}' cannot be evaluated.` } });
+  }
+  const combined = Math.round((0.7 * technical + 0.3 * financial) * 100) / 100;
+  const now = new Date().toISOString();
+  const { data: updated, error } = await supabaseAdmin
+    .from('tender_bids')
+    .update({ technical_score: technical, financial_score: financial, combined_score: combined, reviewed_by: req.user!.id, reviewed_at: now, status: 'UNDER_EVALUATION' })
+    .eq('id', bid.id)
+    .select()
+    .single();
+  if (error || !updated) {
+    console.error('Legacy bid evaluation failed', { code: error?.code, message: error?.message });
+    return res.status(500).json({ success: false, error: { code: 'EVALUATION_FAILED', message: 'The bid could not be evaluated.' } });
+  }
+  if (['PUBLISHED', 'CLOSED'].includes(tender.status)) {
+    await supabaseAdmin.from('tenders').update({ status: 'UNDER_EVALUATION', updated_at: now }).eq('id', tender.id);
+  }
+  await supabaseAdmin.from('audit_logs').insert({
+    actor_id: req.user!.id,
+    actor_organization_id: req.organizationId,
+    action: 'BID_EVALUATED',
+    entity_type: 'tender_bids',
+    entity_id: bid.id,
+    new_value: { tender_id: tender.id, technical_score: technical, financial_score: financial, combined_score: combined },
+  });
+  return res.json({ success: true, data: updated });
+}
 
 // POST /api/tenders/:tenderId/award - award to a bid after committee evaluation
 tendersRouter.post('/:tenderId/award', requireAuth, requireGovernmentWrite, async (req: AuthenticatedRequest, res: Response) => {

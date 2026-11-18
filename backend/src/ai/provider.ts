@@ -108,12 +108,14 @@ export function textModelCandidates(): string[] {
     ...parseModelList(process.env.OPENROUTER_MODEL),
     ...parseModelList(process.env.OPENROUTER_MODELS),
   ];
-  return filterAllowedModels(configured.length > 0 ? configured : DEFAULT_TEXT_MODELS);
+  const allowed = filterAllowedModels(configured);
+  return allowed.length > 0 ? allowed : filterAllowedModels(DEFAULT_TEXT_MODELS);
 }
 
 export function visionModelCandidates(): string[] {
   const configured = parseModelList(process.env.OPENROUTER_VISION_MODELS);
-  return filterAllowedModels(configured.length > 0 ? configured : DEFAULT_VISION_MODELS);
+  const allowed = filterAllowedModels(configured);
+  return allowed.length > 0 ? allowed : filterAllowedModels(DEFAULT_VISION_MODELS);
 }
 
 /** Back-compat export used by routes/tests. */

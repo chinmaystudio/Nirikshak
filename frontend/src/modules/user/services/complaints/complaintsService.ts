@@ -3,6 +3,7 @@ import { buildObjectKey, dataUrlToBlob, uploadToBucket } from '@/core/storage/up
 import type { Complaint, EvidenceItem, NewComplaintPayload, ComplaintFeedback } from "@/types/complaint";
 import { ApiError, fetchWithTimeout } from "@/services/api/client";
 import { supabase } from "@/core/supabase/client";
+import { isMissingFunction } from "@/core/supabase/compat";
 import { environment } from "@/config/environment";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -270,7 +271,30 @@ async function citizenAction(id: string, action: 'ESCALATE' | 'REOPEN' | 'CONFIR
     p_action: action,
     p_note: note ?? null,
   } as never);
+  if (error && isMissingFunction(error)) return legacyCitizenAction(uuid, id, action, note);
   if (error) throw new ApiError({ message: `Could not update the complaint: ${error.message}` });
+  return getComplaintById(id);
+}
+
+/** Pre-040 databases: previous direct-write behaviour. */
+async function legacyCitizenAction(uuid: string, id: string, action: string, note?: string): Promise<Complaint> {
+  const { status: previous } = await resolveComplaintRow(id);
+  const target = action === 'ESCALATE' ? 'ESCALATED' : action === 'REOPEN' ? 'SUBMITTED' : action === 'CONFIRM_RESOLVED' ? 'RESOLVED' : previous;
+  if (target !== previous) {
+    const patch: { status: string; updated_at: string; resolved_at?: string } = { status: target, updated_at: new Date().toISOString() };
+    if (target === 'RESOLVED') patch.resolved_at = new Date().toISOString();
+    const { error } = await supabase.from('complaints').update(patch).eq('id', uuid);
+    if (error) throw new ApiError({ message: `Could not update the complaint: ${error.message}` });
+  }
+  const { data: userData } = await supabase.auth.getUser();
+  const { error: logError } = await supabase.from('complaint_updates').insert({
+    complaint_id: uuid,
+    previous_status: previous,
+    new_status: target,
+    notes: note ?? null,
+    actor_id: userData?.user?.id ?? null,
+  });
+  if (logError) throw new ApiError({ message: `Could not record the update: ${logError.message}` });
   return getComplaintById(id);
 }
 

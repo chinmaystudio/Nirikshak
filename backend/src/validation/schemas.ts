@@ -31,9 +31,9 @@ export const CreateTenderSchema = z.object({
   // Bid submission deadline (YYYY-MM-DD). Defaults to 30 days after publication.
   bid_due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   // QCBS technical weight (0-1); financial weight is 1 - technical_weight.
-  technical_weight: z.number().min(0).max(1).default(0.7),
+  technical_weight: z.number().min(0).max(1).optional(),
   // Committee evaluations required per bid before an award.
-  min_evaluators: z.number().int().min(1).max(15).default(2),
+  min_evaluators: z.number().int().min(1).max(15).optional(),
 });
 
 export const SubmitProgressSchema = z.object({

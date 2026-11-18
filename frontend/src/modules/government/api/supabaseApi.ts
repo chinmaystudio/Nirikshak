@@ -1,4 +1,5 @@
 import { supabase } from '@/core/supabase/client';
+import { isMissingFunction } from '@/core/supabase/compat';
 import type {
   Project,
   Paginated,
@@ -480,7 +481,13 @@ export const grievancesApi = {
         p_status: dbStatus,
         p_note: (patch as { note?: string }).note ?? null,
       } as never);
-      if (error) throw error;
+      if (error && isMissingFunction(error)) {
+        // Database without migration 040: direct update (previous behaviour).
+        const { error: legacyError } = await supabase.from('complaints').update({ status: dbStatus }).eq('id', uuid);
+        if (legacyError) throw legacyError;
+      } else if (error) {
+        throw error;
+      }
     }
     const found = await this.get(uuid);
     if (!found) {
@@ -771,7 +778,10 @@ export const tendersApi = {
       // readable for this role, awarded fields still populate from the
       // SELECTED bid rather than failing the whole tender register.
       if (contractError) console.error('Contracts read for tender awards failed:', contractError);
-      if (countError) console.error('Tender bid counts failed:', countError);
+      // Before migration 042 the counts function does not exist: keep the
+      // previous behaviour (bids visible once the tender is closed/past due).
+      const sealedBidding = !countError || !isMissingFunction(countError);
+      if (countError && sealedBidding) console.error('Tender bid counts failed:', countError);
       const countsByTender = new Map<string, any>();
       ((countData as any[] | null) || []).forEach((c: any) => countsByTender.set(c.tender_id, c));
       if (data) {
@@ -790,7 +800,10 @@ export const tendersApi = {
           const bids = bidsByTender.get(t.id) || [];
           const counts = countsByTender.get(t.id);
           // Bids are shown only after the committee has opened them.
-          const bidOpeningAllowed = Boolean(t.bids_opened_at);
+          const bidOpeningAllowed = sealedBidding
+            ? Boolean(t.bids_opened_at)
+            : ['CLOSED', 'UNDER_EVALUATION', 'AWARDED'].includes(t.status)
+              || Boolean(t.bid_due_date && new Date(`${t.bid_due_date}T23:59:59`).getTime() < Date.now());
           // Awarded state (tender port §4.4): the SELECTED bid plus its
           // contract. Amounts are ₹ Cr end to end (bid_amount and
           // contracts.contract_value are both stored in ₹ Cr).

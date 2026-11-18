@@ -22,6 +22,7 @@ const { app } = await import('../src/index.js');
 const { sanitizeContext, filterAllowedModels, openRouterChat, textModelCandidates } = await import('../src/ai/provider.js');
 const { isSafeStoragePath } = await import('../src/validation/paths.js');
 const { readAalClaim, requireMfa } = await import('../src/middleware/auth.js');
+const { mfaRequired, resetMfaCache, isMissingFunction } = await import('../src/services/dbFeatures.js');
 const { rateLimit } = await import('../src/middleware/security.js');
 const { isGovernmentEmail } = await import('../src/routes/auth.js');
 
@@ -139,7 +140,8 @@ describe('MFA', () => {
     assert.equal(readAalClaim('garbage'), 'aal1');
   });
 
-  test('government and contractor writes need aal2; citizens do not', () => {
+  test('government and contractor writes need aal2; citizens do not', async () => {
+    process.env.REQUIRE_MFA = 'true';
     for (const [role, aal, expectNext] of [
       ['government_admin', 'aal1', false],
       ['government_admin', 'aal2', true],
@@ -148,13 +150,44 @@ describe('MFA', () => {
     ] as const) {
       const res = mockRes();
       let called = false;
-      requireMfa({ role, aal } as any, res, () => { called = true; });
+      await requireMfa({ role, aal } as any, res, () => { called = true; });
       assert.equal(called, expectNext, `${role}/${aal}`);
       if (!expectNext) {
         assert.equal(res.statusCode, 403);
         assert.equal(res.body.error.code, 'MFA_REQUIRED');
       }
     }
+    delete process.env.REQUIRE_MFA;
+  });
+
+  test('REQUIRE_MFA=false disables the gate (development only)', async () => {
+    process.env.REQUIRE_MFA = 'false';
+    let called = false;
+    await requireMfa({ role: 'government_admin', aal: 'aal1' } as any, mockRes(), () => { called = true; });
+    assert.ok(called);
+    delete process.env.REQUIRE_MFA;
+  });
+
+  test('unset REQUIRE_MFA follows the database; unreachable database means not yet enforced', async () => {
+    delete process.env.REQUIRE_MFA;
+    resetMfaCache();
+    assert.equal(await mfaRequired(), false);
+  });
+});
+
+describe('migration compatibility', () => {
+  test('recognises a missing database function', () => {
+    assert.ok(isMissingFunction({ code: 'PGRST202', message: 'Could not find the function public.x' }));
+    assert.ok(!isMissingFunction({ code: '42501', message: 'permission denied' }));
+    assert.ok(!isMissingFunction(null));
+  });
+
+  test('a configured free model falls back to the paid defaults instead of disabling AI', () => {
+    delete process.env.AI_ALLOW_FREE_MODELS;
+    process.env.OPENROUTER_MODEL = 'nvidia/some-model:free';
+    const models = textModelCandidates();
+    assert.ok(models.length > 0 && models.every((m) => !m.endsWith(':free')));
+    delete process.env.OPENROUTER_MODEL;
   });
 });
 
@@ -252,7 +285,7 @@ describe('HTTP surface', () => {
     const res = await fetch(`${base}/api/complaints`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category: 'Road', title: 'Pothole here', description: 'Large pothole near school', evidence_paths: ['x.jpg'] }),
+      body: JSON.stringify({ category: 'Road', title: 'Pothole here', description: 'Large pothole near school', evidence_paths: ['00000000-0000-0000-0000-00000000d001/x.jpg'] }),
     });
     assert.equal(res.status, 401);
     assert.equal((await res.json()).error.code, 'SIGN_IN_REQUIRED');

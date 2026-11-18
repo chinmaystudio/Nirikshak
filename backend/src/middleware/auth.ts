@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
 import { supabaseAdmin, createUserClient } from '../services/supabase.js';
+import { mfaRequired } from '../services/dbFeatures.js';
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
@@ -32,9 +33,7 @@ export function readAalClaim(verifiedToken: string): string {
   }
 }
 
-export function mfaRequired(): boolean {
-  return process.env.REQUIRE_MFA !== 'false';
-}
+export { mfaRequired } from '../services/dbFeatures.js';
 
 /**
  * Validates Bearer token against Supabase Auth and derives authoritative role and organization.
@@ -150,9 +149,9 @@ export function requireGovernment(req: AuthenticatedRequest, res: Response, next
  * write. The database enforces the same rule (migration 043); this check
  * gives a clear error before a request reaches it.
  */
-export function requireMfa(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+export async function requireMfa(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   const privileged = GOVERNMENT_ROLES.includes(req.role || '') || CONTRACTOR_ROLES.includes(req.role || '');
-  if (privileged && mfaRequired() && req.aal !== 'aal2') {
+  if (privileged && req.aal !== 'aal2' && (await mfaRequired())) {
     res.status(403).json({
       success: false,
       error: { code: 'MFA_REQUIRED', message: 'Verify your authenticator code to perform this action.' },
@@ -169,7 +168,9 @@ export function requireMfa(req: AuthenticatedRequest, res: Response, next: NextF
  * review progress, or close/evaluate tenders through the API.
  */
 export function requireGovernmentWrite(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  return requireRole(GOVERNMENT_WRITE_ROLES)(req, (res as Response), () => requireMfa(req, res, next));
+  return requireRole(GOVERNMENT_WRITE_ROLES)(req, res, () => {
+    requireMfa(req, res, next).catch(next);
+  });
 }
 
 /**
@@ -181,7 +182,9 @@ export function requireContractor(req: AuthenticatedRequest, res: Response, next
 
 /** Contractor write routes: contractor role + MFA. */
 export function requireContractorWrite(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  return requireRole(CONTRACTOR_ROLES)(req, res, () => requireMfa(req, res, next));
+  return requireRole(CONTRACTOR_ROLES)(req, res, () => {
+    requireMfa(req, res, next).catch(next);
+  });
 }
 
 /**

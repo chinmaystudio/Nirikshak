@@ -15,6 +15,8 @@ The old Render deployment (`nirikshak-backend-pgqm.onrender.com`) is no longer p
 
 ## 2. Go-live checklist (one-time, in this order)
 
+The application code works against the database both before and after migrations 040–045. Before them, it keeps the previous behaviour (single-officer evaluation, no sealed bids, MFA not enforced by the API, direct complaint updates). Each protection switches on automatically once its migration is applied. Apply the migrations promptly: until then the security fixes in the database are not active.
+
 1. **Check the live database first.** In the Supabase SQL editor, run `backend/supabase/test/audit_live_policies.sql` and keep the output for the record.
 2. **Back up.** Enable Point-in-Time Recovery (paid plan) or take a manual backup (Database → Backups).
 3. **Apply migrations `040` to `045`** in file-name order in the SQL editor. Each file is idempotent. (`032_z_schema_drift_baseline.sql` and the guarded statements in `025`–`027` only matter for a fresh database. On production they do nothing, so they don't need applying.)

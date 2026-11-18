@@ -25,7 +25,11 @@ progressRouter.post(
       });
     }
 
-    const { evidence, project_id, reported_progress, description, milestone_id } = parsed.data;
+    const { evidence: rawEvidence, project_id, reported_progress, description, milestone_id } = parsed.data;
+    // Clients from before the storage upload change send bare file names with
+    // no stored file behind them; those are dropped (not recorded as evidence).
+    const legacyNames = (rawEvidence || []).filter((ev) => !ev.storage_path.includes('/'));
+    const evidence = (rawEvidence || []).filter((ev) => ev.storage_path.includes('/'));
 
     // Evidence must live under the caller's organization folder in storage,
     // e.g. "<organization uuid>/<project uuid>/photo.jpg" (no traversal).
@@ -83,6 +87,9 @@ progressRouter.post(
         success: true,
         data: updateData,
         message: 'Progress update submitted successfully. Awaiting government verification.',
+        ...(legacyNames.length > 0
+          ? { warning: 'Attached files were not uploaded. Reload the portal and submit evidence again.' }
+          : {}),
       });
     } catch (err: any) {
       console.error('Unexpected progress submission error', err);
