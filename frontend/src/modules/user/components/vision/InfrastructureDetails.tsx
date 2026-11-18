@@ -6,10 +6,10 @@ import { shortDate } from "@/utils/formatDate";
 import { findProject } from "@/services/projects/projectsService";
 import type { VisionAnalysis } from "@/types/infrastructure";
 
-export function AiBadge(): JSX.Element {
+export function AiBadge({ model }: { model?: string | null }): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-fixed text-primary text-label-sm font-bold border border-primary-container/20">
-      <Icon name="auto_awesome" className="text-[13px]" /> DEMO — SIMULATED ANALYSIS
+      <Icon name="auto_awesome" className="text-[13px]" /> {model ? `AI · ${model}` : "AI ANALYSIS"}
     </span>
   );
 }
@@ -23,7 +23,7 @@ export function VerifiedBadge(): JSX.Element {
 }
 
 export function VisionAnalysisPanel({ step }: { step: number }): JSX.Element {
-  const steps = ["Reading image", "Identifying infrastructure", "Checking public project database", "Finding responsible authority"];
+  const steps = ["Preparing photo", "Analyzing photo with AI", "Matching public project records"];
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm p-5 space-y-4">
       <div className="flex items-center gap-3">
@@ -69,19 +69,17 @@ function DetailCell({ label, value }: { label: string; value: string }): JSX.Ele
 }
 
 export function InfrastructureDetails({ result }: { result: VisionAnalysis }): JSX.Element {
-  const attention = result.condition.label !== "Good";
+  const attention = result.condition.observations.length > 0;
   return (
     <section className="space-y-3">
       <h3 className="text-headline-sm font-bold text-primary">
-        Infrastructure Details <span className="text-label-sm font-normal text-outline">(AI estimates)</span>
+        Infrastructure Details <span className="text-label-sm font-normal text-outline">(from AI photo analysis)</span>
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <DetailCell label="Type" value={result.infrastructureType} />
-        <DetailCell label="Location" value="Ward 12, Pune" />
+        <DetailCell label="Type" value={result.infrastructureType || "—"} />
+        <DetailCell label="Identified As" value={result.infrastructureLabel} />
         <DetailCell label="Visual Condition" value={result.condition.label} />
-        <DetailCell label="Estimated Infrastructure Age" value={result.details.ageEstimate} />
-        <DetailCell label="Observed Use" value={result.details.usage} />
-        <DetailCell label="Materials Observed" value={result.details.materials} />
+        <DetailCell label="Model Confidence" value={result.confidence != null ? `${result.confidence}%` : "—"} />
       </div>
       <section className={`${attention ? "bg-amber-50 border-amber-300 text-amber-900" : "bg-green-50 border-green-300 text-green-800"} border rounded-lg p-4 space-y-2`}>
         <div className="flex items-center gap-2 font-bold text-label-md">
@@ -176,29 +174,16 @@ export interface AuthorityBlockProps {
 }
 
 export function AuthorityBlock({ result }: AuthorityBlockProps): JSX.Element {
-  const a = result.authority;
+  if (!result.authority.hint) return <></>;
   return (
     <section className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 p-5 space-y-2.5">
       <h3 className="text-headline-sm font-bold text-primary flex items-center gap-2">
-        <Icon name="account_balance" className="text-[20px] text-primary" /> Maintained By
+        <Icon name="account_balance" className="text-[20px] text-primary" /> Likely Responsible Authority
       </h3>
-      <dl className="space-y-1.5 text-body-sm">
-        <div className="flex justify-between gap-3">
-          <dt className="text-on-surface-variant flex-shrink-0">Maintained By</dt>
-          <dd className="text-primary font-semibold text-right">{a.organization}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-on-surface-variant flex-shrink-0">Responsible Department</dt>
-          <dd className="text-primary font-semibold text-right">{a.department}</dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt className="text-on-surface-variant flex-shrink-0">Contact</dt>
-          <dd className="text-primary font-semibold text-right">{a.contact}</dd>
-        </div>
-      </dl>
+      <p className="text-body-md text-on-surface">{result.authority.hint}</p>
       <p className="text-label-sm text-outline flex items-start gap-1">
-        <Icon name="verified_user" className="text-[14px] flex-shrink-0 text-green-700" /> Authority information shown from registered government
-        records.
+        <Icon name="info" className="text-[14px] flex-shrink-0" /> Suggested by the AI from the photo — confirm on the linked project record or with
+        the department before acting on it.
       </p>
     </section>
   );

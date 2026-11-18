@@ -4,13 +4,13 @@ import { Card, SectionTitle, Tabs, StatusBadge, SearchInput, Select, Field, Moda
 import { Link } from '../../lib/router';
 import { HBars } from '../../components/charts';
 import { useStore } from '../../lib/store';
-import type { Project, Worker, ResourceRow } from '../../lib/data';
+import type { Project, Worker, ResourceRow } from '../../lib/types';
 import { cls } from '../../lib/utils';
 
 const ROLES = ['Site Supervisor', 'Mason', 'Bar Bender', 'Carpenter (Shuttering)', 'Electrician', 'Steel Fixer', 'Paver Operator', 'Pipe Fitter', 'Welder', 'Excavator Operator', 'Construction Labour', 'Helper', 'Safety Officer', 'Equipment Operator'];
 
 export default function Resources({ project }: { project: Project }) {
-  const { workers, resources, addWorker, updateWorker, removeWorker, addResource, toast } = useStore();
+  const { workers, resources, addWorker, updateWorker, removeWorker, addResource, updateResource, removeResource, toast } = useStore();
   const [tab, setTab] = useState('workers');
   const [q, setQ] = useState('');
   const [catF, setCatF] = useState('All Categories');
@@ -19,6 +19,8 @@ export default function Resources({ project }: { project: Project }) {
   const [addOpen, setAddOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<Worker | null>(null);
   const [resAddOpen, setResAddOpen] = useState(false);
+  const [resEdit, setResEdit] = useState<ResourceRow | null>(null);
+  const [resRemoveTarget, setResRemoveTarget] = useState<ResourceRow | null>(null);
   const [utilTab, setUtilTab] = useState('Summary');
 
   const list = workers[project.id] ?? [];
@@ -38,13 +40,16 @@ export default function Resources({ project }: { project: Project }) {
 
   const summary = useMemo(() => {
     const active = list.filter((w) => w.status === 'Active');
+    const withAttendance = active.filter((w) => w.attendance != null);
     return {
       total: list.length,
       skilled: list.filter((w) => w.category === 'Skilled').length,
       unskilled: list.filter((w) => w.category === 'Unskilled').length,
       supervisors: list.filter((w) => w.category === 'Supervisor').length,
       active: active.length,
-      attendance: active.length ? Math.round(active.reduce((s, w) => s + w.attendance, 0) / active.length) : 0,
+      // Average only over workers whose attendance is actually recorded —
+      // a worker with no attendance figure is not silently counted as 0%.
+      attendance: withAttendance.length ? Math.round(withAttendance.reduce((s, w) => s + (w.attendance ?? 0), 0) / withAttendance.length) : null,
     };
   }, [list]);
 
@@ -71,6 +76,9 @@ export default function Resources({ project }: { project: Project }) {
 
   return (
     <div className="space-y-5">
+      <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs font-semibold text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+        Project record — workers and resources are saved to this project's database record (project_workers / project_resources) and are visible to the department. Changes take effect only when the save succeeds.
+      </div>
       <Card className="overflow-hidden">
         <Tabs
           tabs={[
@@ -91,7 +99,7 @@ export default function Resources({ project }: { project: Project }) {
                 { label: 'Unskilled', value: String(summary.unskilled) },
                 { label: 'Supervisors', value: String(summary.supervisors) },
                 { label: 'Active Workers', value: String(summary.active) },
-                { label: 'Avg Attendance', value: `${summary.attendance}%` },
+                { label: 'Avg Attendance', value: summary.attendance != null ? `${summary.attendance}%` : '—' },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg border border-slate-200 p-3.5 dark:border-slate-700">
                   <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">{s.label}</p>
@@ -129,7 +137,6 @@ export default function Resources({ project }: { project: Project }) {
                     <tr key={w.id}>
                       <td>
                         <p className="font-bold text-slate-800 dark:text-slate-100">{w.name}</p>
-                        <p className="text-[10px] text-slate-500 font-medium">{w.phone}</p>
                       </td>
                       <td className="text-xs font-semibold">{w.role}</td>
                       <td>
@@ -137,14 +144,18 @@ export default function Resources({ project }: { project: Project }) {
                           {w.category}
                         </span>
                       </td>
-                      <td className="text-xs font-semibold">{w.area}</td>
+                      <td className="text-xs font-semibold">{w.area || '—'}</td>
                       <td>
-                        <div className="flex items-center gap-2 w-24">
-                          <ProgressBar value={w.attendance} height="h-2" className="w-16" color={w.attendance >= 90 ? 'bg-green-600' : w.attendance >= 75 ? 'bg-amber-500' : 'bg-slate-300'} />
-                          <span className="text-xs font-bold tabular-nums">{w.attendance}%</span>
-                        </div>
+                        {w.attendance != null ? (
+                          <div className="flex items-center gap-2 w-24">
+                            <ProgressBar value={w.attendance} height="h-2" className="w-16" color={w.attendance >= 90 ? 'bg-green-600' : w.attendance >= 75 ? 'bg-amber-500' : 'bg-slate-300'} />
+                            <span className="text-xs font-bold tabular-nums">{w.attendance}%</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Not recorded</span>
+                        )}
                       </td>
-                      <td className="text-xs font-bold tabular-nums">{w.hours}h</td>
+                      <td className="text-xs font-bold tabular-nums">{w.hours != null ? `${w.hours}h` : '—'}</td>
                       <td><StatusBadge status={w.status} /></td>
                       <td>
                         <div className="flex gap-1">
@@ -192,6 +203,7 @@ export default function Resources({ project }: { project: Project }) {
                     <th>Used</th>
                     <th>Available</th>
                     <th>Status</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -211,6 +223,16 @@ export default function Resources({ project }: { project: Project }) {
                         <td className="text-xs font-semibold tabular-nums">{r.used}</td>
                         <td className="text-xs font-bold tabular-nums">{available} {r.unit}</td>
                         <td><StatusBadge status={r.status} /></td>
+                        <td>
+                          <div className="flex gap-1">
+                            <button className="btn btn-ghost btn-sm" onClick={() => setResEdit(r)} aria-label={`Edit ${r.name}`}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button className="btn btn-ghost btn-sm text-red-600" onClick={() => setResRemoveTarget(r)} aria-label={`Remove ${r.name}`}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -254,41 +276,80 @@ export default function Resources({ project }: { project: Project }) {
           setAddOpen(false);
           setEdit(null);
         }}
-        onSubmit={(w) => {
-          if (edit) {
-            updateWorker(project.id, { ...w, id: edit.id });
-            toast('success', 'Worker updated', `${w.name} details saved.`);
-          } else {
-            addWorker(project.id, w);
-            toast('success', 'Worker added', `${w.name} added to ${project.name}.`);
+        onSubmit={async (w) => {
+          try {
+            if (edit) {
+              await updateWorker(project.id, { ...w, id: edit.id });
+              toast('success', 'Worker updated', `${w.name}'s record was saved to the project record.`);
+            } else {
+              await addWorker(project.id, w);
+              toast('success', 'Worker added', `${w.name} added to ${project.name} in the project record.`);
+            }
+            setAddOpen(false);
+            setEdit(null);
+          } catch (err) {
+            toast('error', 'Worker not saved', err instanceof Error ? err.message : 'The worker could not be saved.');
           }
-          setAddOpen(false);
-          setEdit(null);
         }}
       />
 
-      {/* Add resource modal */}
+      {/* Add/Edit resource modal */}
       <ResourceModal
-        open={resAddOpen}
-        onClose={() => setResAddOpen(false)}
-        onSubmit={(r) => {
-          addResource(project.id, r);
-          toast('success', 'Resource added', `${r.name} added to site register.`);
+        open={resAddOpen || resEdit !== null}
+        resource={resEdit}
+        onClose={() => {
           setResAddOpen(false);
+          setResEdit(null);
+        }}
+        onSubmit={async (r) => {
+          try {
+            if (resEdit) {
+              await updateResource(project.id, { ...r, id: resEdit.id });
+              toast('success', 'Resource updated', `${r.name}'s record was saved to the project record.`);
+            } else {
+              await addResource(project.id, r);
+              toast('success', 'Resource added', `${r.name} added to the ${project.name} record.`);
+            }
+            setResAddOpen(false);
+            setResEdit(null);
+          } catch (err) {
+            toast('error', 'Resource not saved', err instanceof Error ? err.message : 'The resource could not be saved.');
+          }
         }}
       />
 
       <ConfirmModal
         open={removeTarget !== null}
         onClose={() => setRemoveTarget(null)}
-        onConfirm={() => {
-          if (removeTarget) {
-            removeWorker(project.id, removeTarget.id);
-            toast('info', 'Worker removed', `${removeTarget.name} removed from site allocation.`);
+        onConfirm={async () => {
+          if (!removeTarget) return;
+          try {
+            await removeWorker(project.id, removeTarget.id);
+            toast('success', 'Worker removed', `${removeTarget.name} removed from the ${project.name} record.`);
+          } catch (err) {
+            toast('error', 'Worker not removed', err instanceof Error ? err.message : 'The worker could not be removed.');
           }
         }}
         title="Remove worker from site?"
-        message={`${removeTarget?.name} (${removeTarget?.role}) will be removed from the ${project.name} site allocation. Attendance records are retained for labour compliance.`}
+        message={`${removeTarget?.name} (${removeTarget?.role}) will be permanently removed from the ${project.name} project record.`}
+        confirmLabel="Remove"
+        danger
+      />
+
+      <ConfirmModal
+        open={resRemoveTarget !== null}
+        onClose={() => setResRemoveTarget(null)}
+        onConfirm={async () => {
+          if (!resRemoveTarget) return;
+          try {
+            await removeResource(project.id, resRemoveTarget.id);
+            toast('success', 'Resource removed', `${resRemoveTarget.name} removed from the ${project.name} record.`);
+          } catch (err) {
+            toast('error', 'Resource not removed', err instanceof Error ? err.message : 'The resource could not be removed.');
+          }
+        }}
+        title="Remove resource from site?"
+        message={`${resRemoveTarget?.name} will be permanently removed from the ${project.name} project record.`}
         confirmLabel="Remove"
         danger
       />
@@ -310,8 +371,9 @@ function WorkerModal({
   const [name, setName] = useState('');
   const [role, setRole] = useState(ROLES[1]);
   const [category, setCategory] = useState<Worker['category']>('Skilled');
-  const [area, setArea] = useState('Zone 1');
-  const [phone, setPhone] = useState('');
+  const [area, setArea] = useState('');
+  const [attendance, setAttendance] = useState('');
+  const [hours, setHours] = useState('');
   const [status, setStatus] = useState<Worker['status']>('Active');
 
   // reset when opened
@@ -322,13 +384,14 @@ function WorkerModal({
       setName(worker?.name ?? '');
       setRole(worker?.role ?? ROLES[1]);
       setCategory(worker?.category ?? 'Skilled');
-      setArea(worker?.area ?? 'Zone 1');
-      setPhone(worker?.phone ?? '');
+      setArea(worker?.area ?? '');
+      setAttendance(worker?.attendance != null ? String(worker.attendance) : '');
+      setHours(worker?.hours != null ? String(worker.hours) : '');
       setStatus(worker?.status ?? 'Active');
     }
   }
 
-  const valid = name.trim().length > 2 && phone.trim().length >= 10;
+  const valid = name.trim().length > 2;
 
   return (
     <Modal
@@ -341,7 +404,20 @@ function WorkerModal({
           <button
             className="btn btn-primary"
             disabled={!valid}
-            onClick={() => onSubmit({ name, role, category, area, phone, status, attendance: worker?.attendance ?? 95, hours: worker?.hours ?? 48 })}
+            onClick={() =>
+              onSubmit({
+                name,
+                role,
+                category,
+                area,
+                status,
+                // Attendance / hours are recorded only when actually
+                // entered — a blank field stays "not recorded" (null)
+                // rather than being filled with an assumed figure.
+                attendance: attendance.trim() === '' ? null : Math.min(100, Math.max(0, Number(attendance) || 0)),
+                hours: hours.trim() === '' ? null : Math.max(0, Number(hours) || 0),
+              })
+            }
           >
             {worker ? 'Save Changes' : 'Add Worker'}
           </button>
@@ -352,9 +428,6 @@ function WorkerModal({
         <Field label="Full Name" required>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mahesh Salunkhe" />
         </Field>
-        <Field label="Phone" required hint="Used for site muster and emergency contact">
-          <input className="input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98XXX XXXXX" />
-        </Field>
         <Field label="Role">
           <Select value={role} onChange={setRole} options={ROLES.map((r) => ({ value: r, label: r }))} />
         </Field>
@@ -362,7 +435,13 @@ function WorkerModal({
           <Select value={category} onChange={(v) => setCategory(v as Worker['category'])} options={['Skilled', 'Unskilled', 'Supervisor'].map((v) => ({ value: v, label: v }))} />
         </Field>
         <Field label="Assigned Area">
-          <input className="input" value={area} onChange={(e) => setArea(e.target.value)} />
+          <input className="input" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. Zone 1" />
+        </Field>
+        <Field label="Attendance (%)" hint="Leave blank if not recorded yet">
+          <input className="input" type="number" min="0" max="100" value={attendance} onChange={(e) => setAttendance(e.target.value)} placeholder="Not recorded" />
+        </Field>
+        <Field label="Hours / Week" hint="Leave blank if not recorded yet">
+          <input className="input" type="number" min="0" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Not recorded" />
         </Field>
         <Field label="Status">
           <Select value={status} onChange={(v) => setStatus(v as Worker['status'])} options={['Active', 'On Leave', 'Transferred'].map((v) => ({ value: v, label: v }))} />
@@ -372,10 +451,22 @@ function WorkerModal({
   );
 }
 
-function ResourceModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (r: Omit<ResourceRow, 'id'>) => void }) {
+function ResourceModal({
+  open,
+  resource,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  resource: ResourceRow | null;
+  onClose: () => void;
+  onSubmit: (r: Omit<ResourceRow, 'id'>) => void;
+}) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState<ResourceRow['category']>('Machinery');
   const [qty, setQty] = useState('1');
+  const [allocated, setAllocated] = useState('0');
+  const [used, setUsed] = useState('0');
   const [unit, setUnit] = useState('nos.');
   const [status, setStatus] = useState<ResourceRow['status']>('Available');
 
@@ -383,11 +474,13 @@ function ResourceModal({ open, onClose, onSubmit }: { open: boolean; onClose: ()
   if (open !== lastOpen) {
     setLastOpen(open);
     if (open) {
-      setName('');
-      setCategory('Machinery');
-      setQty('1');
-      setUnit('nos.');
-      setStatus('Available');
+      setName(resource?.name ?? '');
+      setCategory(resource?.category ?? 'Machinery');
+      setQty(resource ? String(resource.qty) : '1');
+      setAllocated(resource ? String(resource.allocated) : '0');
+      setUsed(resource ? String(resource.used) : '0');
+      setUnit(resource?.unit ?? 'nos.');
+      setStatus(resource?.status ?? 'Available');
     }
   }
 
@@ -396,12 +489,29 @@ function ResourceModal({ open, onClose, onSubmit }: { open: boolean; onClose: ()
     <Modal
       open={open}
       onClose={onClose}
-      title="Add Resource to Site"
+      title={resource ? `Edit Resource — ${resource.name}` : 'Add Resource to Site'}
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" disabled={name.trim().length < 3 || q <= 0} onClick={() => onSubmit({ name, category, qty: q, allocated: q, used: 0, unit, status })}>
-            Add Resource
+          <button
+            className="btn btn-primary"
+            disabled={name.trim().length < 3 || q <= 0}
+            onClick={() =>
+              onSubmit({
+                name,
+                category,
+                qty: q,
+                // On first entry the full quantity is allocated to the
+                // project and nothing is consumed yet; when editing, the
+                // recorded allocated/used figures are kept as entered.
+                allocated: resource ? Math.max(0, Number(allocated) || 0) : q,
+                used: resource ? Math.max(0, Number(used) || 0) : 0,
+                unit,
+                status,
+              })
+            }
+          >
+            {resource ? 'Save Changes' : 'Add Resource'}
           </button>
         </>
       }
@@ -417,10 +527,20 @@ function ResourceModal({ open, onClose, onSubmit }: { open: boolean; onClose: ()
           <input className="input" type="number" min="0" value={qty} onChange={(e) => setQty(e.target.value)} />
         </Field>
         <Field label="Unit">
-          <Select value={unit} onChange={setUnit} options={['nos.', 'MT', 'm³', 'bags', 'KL', 'm', 'sets'].map((v) => ({ value: v, label: v }))} />
+          <Select value={unit} onChange={setUnit} options={['nos.', 'MT', 'm³', 'bags', 'KL', 'm', 'sets', 'units'].map((v) => ({ value: v, label: v }))} />
         </Field>
+        {resource && (
+          <>
+            <Field label="Allocated">
+              <input className="input" type="number" min="0" value={allocated} onChange={(e) => setAllocated(e.target.value)} />
+            </Field>
+            <Field label="Used">
+              <input className="input" type="number" min="0" value={used} onChange={(e) => setUsed(e.target.value)} />
+            </Field>
+          </>
+        )}
         <Field label="Status">
-          <Select value={status} onChange={(v) => setStatus(v as ResourceRow['status'])} options={['Available', 'In Use', 'Idle'].map((v) => ({ value: v, label: v }))} />
+          <Select value={status} onChange={(v) => setStatus(v as ResourceRow['status'])} options={['Available', 'In Use', 'Low Stock', 'Idle'].map((v) => ({ value: v, label: v }))} />
         </Field>
       </div>
     </Modal>

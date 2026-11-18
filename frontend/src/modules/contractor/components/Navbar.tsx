@@ -2,7 +2,6 @@ import { LayoutDashboard, Folders, Gauge, Calendar, Sparkles, Bell, Gavel } from
 import { isActive, Link, usePath } from '../lib/router';
 import { cls } from '../lib/utils';
 import { useStore } from '../lib/store';
-import { CONTRACTOR } from '../lib/data';
 import { Avatar } from './ui';
 import Logo from './Logo';
 import { useAuth } from '@/core/auth/useAuth';
@@ -15,7 +14,7 @@ const NAV = [
   { label: 'Calendar', to: '/calendar', icon: Calendar },
   { label: 'Performance', to: '/performance', icon: Gauge },
   { label: 'Notifications', to: '/notifications', icon: Bell },
-  { label: 'AI Assist', to: '/ai-assist', icon: Sparkles },
+  { label: 'Bid Assistant', to: '/ai-assist', icon: Sparkles },
 ];
 
 export default function Navbar() {

@@ -4,7 +4,7 @@ import { PageHeader, Card, EmptyState, Pills } from '../components/ui';
 import { useStore } from '../lib/store';
 import { Link } from '../lib/router';
 import { cls, timeAgo } from '../lib/utils';
-import type { NotifCategory } from '../lib/data';
+import type { NotifCategory } from '../lib/types';
 
 const CATS: (NotifCategory | 'All')[] = ['All', 'Project', 'Tender', 'Finance', 'Inspection', 'Government', 'Compliance', 'AI Alerts'];
 

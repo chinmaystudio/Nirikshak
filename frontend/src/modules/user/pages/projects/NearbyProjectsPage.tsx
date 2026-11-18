@@ -10,6 +10,7 @@ import { ProjectCard, ProjectMiniRow } from "@/components/projects/ProjectCard";
 import { ProjectMap, MapLegend } from "@/components/projects/ProjectMap";
 import { useNavigate } from "@/app/router";
 import { useProjects } from "@/hooks/useProjects";
+import { matchesWard } from "@/services/projects/projectsService";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/useToast";
 import { projectsToCsv } from "@/utils/csv";
@@ -49,7 +50,8 @@ export function NearbyProjectsPage(): JSX.Element {
     departments,
     contractor: query.contractor,
     distanceKm: query.distanceKm,
-    scope: query.scope
+    scope: query.scope,
+    ward: user?.ward ?? null
   });
   const sorted = [...filtered].sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
   const selected = sorted.find((p) => p.id === selectedId) ?? null;
@@ -158,7 +160,7 @@ export function NearbyProjectsPage(): JSX.Element {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Total Projects" value={projects.length} sub="Across registered agencies" icon="construction" />
-        <StatCard label="In Your Ward" value={projects.filter((p) => p.ward.includes("Ward 12")).length} sub={user?.ward ?? "Ward 12 — Kothrud West"} icon="near_me" />
+        <StatCard label="In Your Ward" value={user?.ward ? projects.filter((p) => matchesWard(p, user.ward)).length : "—"} sub={user?.ward ?? "Ward not set on your profile"} icon="near_me" />
         <StatCard label="On Track" value={projects.filter((p) => p.status === "on-track").length} sub="Meeting schedule" icon="task_alt" />
         <StatCard
           label="Delayed"
@@ -240,7 +242,7 @@ export function NearbyProjectsPage(): JSX.Element {
               <ProjectMap
                 projects={sorted}
                 selectedId={selectedId}
-                userLabel={user?.ward.split("—")[0].trim() ?? "Ward 12"}
+                userLabel={user?.ward?.split("—")[0].trim() ?? "You"}
                 onSelect={(id) => {
                   setSelectedId(id);
                   if (window.innerWidth < 1280) {

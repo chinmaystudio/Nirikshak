@@ -1,42 +1,44 @@
-import { latency, offlineGuard } from "@/services/api/client";
 import { issueCategoryMeta } from "@/constants/issueCategories";
-import type { ReportAIResult } from "@/types/report";
+import type { ReportReview } from "@/types/report";
 import type { IssueCategory } from "@/types/community";
 
-export interface ReportAnalysisInput {
+export interface ReportReviewInput {
   categoryId: IssueCategory;
   title: string;
+  description: string;
   priority: string;
   projectId: string | null;
 }
 
-const CATEGORY_PROJECT_HINTS: Partial<Record<IssueCategory, string>> = {
-  pothole: "sinhgad-road",
-  "road-damage": "sinhgad-road",
-  "construction-quality": "katraj-kondhwa-road",
-  "project-delay": "katraj-kondhwa-road",
-  "work-stopped": "katraj-kondhwa-road",
-  drainage: "kothrud-drainage",
-  "water-leakage": "bhosari-water",
-  "safety-hazard": "pune-metro-3",
-  environmental: "pune-metro-3"
-};
+/** Severity is the citizen's own selected priority, carried through as-is. */
+export function severityFromPriority(priority: string): ReportReview["severity"] {
+  if (priority === "critical") return "critical";
+  if (priority === "high") return "high";
+  if (priority === "medium") return "medium";
+  return "low";
+}
 
-export async function analyzeReport(input: ReportAnalysisInput): Promise<ReportAIResult> {
-  offlineGuard();
-  await latency(1600, 2400);
+/**
+ * Build the honest review shown before submission (U3 fix).
+ *
+ * This is a pure, synchronous projection of the citizen's own entries:
+ * their title and description, the category they selected, the severity
+ * derived from the priority they selected, and the project link only if
+ * they actually selected a project in the report form. There is no AI
+ * analysis, no confidence score, no duplicate check, and no
+ * category-to-project guessing (the former hardcoded slug table pointed
+ * at demo slugs that do not exist in the live database).
+ */
+export function buildReportReview(input: ReportReviewInput): ReportReview {
   const cat = issueCategoryMeta(input.categoryId);
-  const projectId = input.projectId ?? CATEGORY_PROJECT_HINTS[input.categoryId] ?? null;
-  const detected = input.title.trim() !== "" ? input.title.trim() : `${cat.label} (from report text)`;
   return {
-    detected,
-    severity: input.priority === "high" || input.priority === "critical" ? "high" : input.priority === "medium" ? "medium" : "low",
+    title: input.title.trim(),
+    description: input.description.trim(),
     category: cat.label,
-    // DF-16: this is an on-device heuristic (demo) — it measures neither a
-    // confidence score nor duplicate reports, so both stay null.
-    confidence: null,
+    categoryId: input.categoryId,
+    priority: input.priority,
+    severity: severityFromPriority(input.priority),
     department: cat.department,
-    projectId,
-    duplicates: null
+    projectId: input.projectId ? input.projectId : null
   };
 }

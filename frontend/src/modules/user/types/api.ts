@@ -33,17 +33,27 @@ export interface ChatMessageAction {
   action?: "report-location" | "report-map";
 }
 
+export type AssistantSource = "ai" | "project_data";
+
 export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
   actions?: ChatMessageAction[];
   chips?: string[];
+  /** Where an assistant answer came from (backend /api/ai/ask). */
+  source?: AssistantSource | null;
+  model?: string | null;
+  /** True when this bubble is an honest failure notice, not an answer. */
+  error?: boolean;
 }
 
 export interface AssistantReply {
   text: string;
   actions?: ChatMessageAction[];
   chips?: string[];
+  source?: AssistantSource | null;
+  model?: string | null;
+  projects?: unknown[];
 }
 
 export interface ToastItem {

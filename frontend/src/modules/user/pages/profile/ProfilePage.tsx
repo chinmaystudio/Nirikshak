@@ -17,7 +17,6 @@ export function ProfilePage(): JSX.Element {
   const user = auth.user;
   const complaintsState = useComplaints();
   const vision = useAppState((s) => s.vision);
-  const confirmed = useAppState((s) => s.confirmed);
 
   if (!user) return <></>;
 
@@ -88,7 +87,7 @@ export function ProfilePage(): JSX.Element {
         <StatCard label="Complaints Filed" value={complaintsState.complaints.length} sub="All time" icon="receipt_long" />
         <StatCard label="Active" value={complaintsState.activeCount} sub="In SLA pipeline" icon="pending_actions" />
         <StatCard label="Resolved" value={resolved} sub="Redressal verified" icon="task_alt" circleClass="bg-green-100 text-green-800" />
-        <StatCard label="Vision Checks" value={vision.length} sub={`${confirmed.length} community confirmations`} icon="photo_camera" />
+        <StatCard label="Vision Checks" value={vision.length} sub="AI photo analyses on this device" icon="photo_camera" />
       </div>
 
       <section className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm divide-y divide-outline-variant/30">

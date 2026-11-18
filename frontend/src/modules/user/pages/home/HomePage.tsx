@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Icon } from "@/components/common/Icon";
 import { Button } from "@/components/common/Button";
 import { StatCard } from "@/components/common/StatCard";
@@ -9,15 +8,12 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ComplaintStatusBadge } from "@/components/common/StatusBadge";
 import { SlaPill } from "@/components/complaints/SLAIndicator";
 import { CommunityIssueCard } from "@/components/community/CommunityIssueCard";
-import { ConfirmDialog } from "@/components/common/Modal";
 import { useNavigate } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
 import { useAsync } from "@/hooks/useAsync";
 import { useProjects } from "@/hooks/useProjects";
 import { useComplaints } from "@/hooks/useComplaints";
-import { useCommunityActions } from "@/hooks/useCommunity";
 import { getAlerts, criticalUnreadAlerts } from "@/services/alerts/alertsService";
-import { toast } from "@/hooks/useToast";
 import { getWardStatistics } from "@/services/projects/projectsService";
 import { greeting } from "@/utils/formatDate";
 import { formatCr, formatNumber } from "@/utils/formatCurrency";
@@ -31,11 +27,9 @@ export function HomePage(): JSX.Element {
   const user = auth.user;
   const { nearby, loading: projectsLoading, error, projects, reload } = useProjects();
   const complaintsState = useComplaints();
-  const { confirm } = useCommunityActions();
   const alertsState = useAsync(() => getAlerts({}), []);
-  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
-
-  const ward = getWardStatistics();
+  const wardState = useAsync(() => getWardStatistics(), [user?.city ?? ""]);
+  const ward = wardState.data ?? null;
   const critical = criticalUnreadAlerts();
   const alerts = alertsState.data ?? [];
   const near = nearby.slice(0, 3);
@@ -131,7 +125,7 @@ export function HomePage(): JSX.Element {
 
       <SectionHead
         title="Nearby Active Projects"
-        sub={`Latest published status of public works closest to you in ${ward.name}`}
+        sub={`Latest published status of public works closest to you${user?.city ? ` in ${user.city}` : ""}`}
         link={ROUTES.PROJECTS}
         linkLabel="View all on map"
       />
@@ -225,99 +219,88 @@ export function HomePage(): JSX.Element {
 
       <SectionHead
         title="Community Issues Near You"
-        sub="Verified problems reported by fellow citizens in your wards"
+        sub="Problems reported by fellow citizens, from the public complaints register"
         link={ROUTES.COMMUNITY}
         linkLabel="Open community"
       />
       {recentIssues.loading ? (
         <LoadingSkeleton kind="list" />
+      ) : recentIssues.error ? (
+        <ErrorState message={recentIssues.error} onRetry={recentIssues.reload} />
       ) : (
         <div className="space-y-4">
           {(recentIssues.data ?? []).map((issue: CommunityIssueView) => (
-            <CommunityIssueCard key={issue.id} issue={issue} onConfirm={(id) => setConfirmTarget(id)} />
+            <CommunityIssueCard key={issue.id} issue={issue} />
           ))}
         </div>
       )}
 
-      <section className="bg-surface-container-lowest p-5 md:p-6 rounded-xl border border-outline-variant/60 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-headline-sm font-bold text-primary">Ward Accountability Snapshot</h2>
-            <p className="text-body-sm text-on-surface-variant">
-              {ward.name} • FY 2026-27 public dashboard
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.PROJECTS)}>
-            Full transparency ledger →
-          </Button>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard label="Projects" value={ward.projects} sub="Sanctioned works" icon="construction" />
-          <StatCard label="On Track" value={ward.onTrack} sub="As per schedule" icon="task_alt" />
-          <StatCard label="Delayed" value={ward.delayed} sub={`${ward.critical} under critical review`} icon="running_with_errors" subTone="text-error" circleClass="bg-error-container/40 text-error" />
-          <StatCard label="Project Value" value={formatCr(ward.totalValueCr)} sub={`${formatCr(ward.spentFYCr)} spent this FY`} icon="payments" />
-          <StatCard label="Resolution Rate" value={`${ward.resolutionRate}%`} sub={`${ward.resolved} of ${ward.complaints} complaints`} icon="fact_check" circleClass="bg-green-100 text-green-800" />
-          <StatCard label="Avg Redressal" value={`${ward.avgDays} days`} sub="Departmental average" icon="speed" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-t border-outline-variant/30 pt-4">
-          <div className="space-y-2">
-            <h3 className="text-label-md font-bold text-primary">Project Status Distribution ({totalProjects} tracked on portal)</h3>
-            <div className="w-full h-3.5 rounded-full overflow-hidden flex bg-surface-container-high">
-              {ward.statusSplit.map((s) => (
-                <div key={s.label} className={s.className} style={{ width: `${Math.round((s.value / ward.projects) * 100)}%` }} title={`${s.label}: ${s.value}`} />
-              ))}
+      {ward ? (
+        <section className="bg-surface-container-lowest p-5 md:p-6 rounded-xl border border-outline-variant/60 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-headline-sm font-bold text-primary">{ward.name} — Accountability Snapshot</h2>
+              <p className="text-body-sm text-on-surface-variant">
+                Computed live from published project and complaint records for {ward.name}
+              </p>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-label-sm text-on-surface-variant">
-              {ward.statusSplit.map((s) => (
-                <span key={s.label} className="flex items-center gap-1.5">
-                  <span className={`w-2.5 h-2.5 rounded-full ${s.className}`} /> {s.label} ({s.value})
-                </span>
-              ))}
-            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate(ROUTES.PROJECTS)}>
+              Full transparency ledger →
+            </Button>
           </div>
-          <div className="space-y-2">
-            <h3 className="text-label-md font-bold text-primary">Contractor Performance (Public Scorecard)</h3>
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-body-sm border-collapse">
-                <thead>
-                  <tr className="bg-surface-container text-primary text-label-sm">
-                    <th className="p-2 rounded-l">Contractor</th>
-                    <th className="p-2">Works</th>
-                    <th className="p-2">On-Time</th>
-                    <th className="p-2">Quality</th>
-                    <th className="p-2 rounded-r">Safety</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/30">
-                  {ward.contractors.slice(0, 4).map((c) => (
-                    <tr key={c.name}>
-                      <td className="p-2 font-semibold text-primary whitespace-nowrap">{c.name}</td>
-                      <td className="p-2">{c.projects}</td>
-                      <td className="p-2">{c.onTime}</td>
-                      <td className="p-2">{c.quality}</td>
-                      <td className="p-2">{c.safety}</td>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <StatCard label="Projects" value={ward.projects} sub="Sanctioned works" icon="construction" />
+            <StatCard label="On Track" value={ward.onTrack} sub="As per schedule" icon="task_alt" />
+            <StatCard label="Delayed" value={ward.delayed} sub={`${ward.critical} under critical review`} icon="running_with_errors" subTone="text-error" circleClass="bg-error-container/40 text-error" />
+            <StatCard label="Project Value" value={formatCr(ward.totalValueCr)} sub={`${formatCr(ward.spentFYCr)} spent so far`} icon="payments" />
+            <StatCard label="Resolution Rate" value={`${ward.resolutionRate}%`} sub={`${ward.resolved} of ${ward.complaints} complaints`} icon="fact_check" circleClass="bg-green-100 text-green-800" />
+            <StatCard label="Avg Redressal" value={ward.avgDays != null ? `${ward.avgDays} days` : "—"} sub="Not published in public records" icon="speed" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 border-t border-outline-variant/30 pt-4">
+            <div className="space-y-2">
+              <h3 className="text-label-md font-bold text-primary">Project Status Distribution ({ward.projects} projects in {ward.name})</h3>
+              <div className="w-full h-3.5 rounded-full overflow-hidden flex bg-surface-container-high">
+                {ward.statusSplit.map((s) => (
+                  <div key={s.label} className={s.className} style={{ width: `${ward.projects > 0 ? Math.round((s.value / ward.projects) * 100) : 0}%` }} title={`${s.label}: ${s.value}`} />
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-label-sm text-on-surface-variant">
+                {ward.statusSplit.map((s) => (
+                  <span key={s.label} className="flex items-center gap-1.5">
+                    <span className={`w-2.5 h-2.5 rounded-full ${s.className}`} /> {s.label} ({s.value})
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-label-md font-bold text-primary">Contractors Active in {ward.name}</h3>
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left text-body-sm border-collapse">
+                  <thead>
+                    <tr className="bg-surface-container text-primary text-label-sm">
+                      <th className="p-2 rounded-l">Contractor</th>
+                      <th className="p-2">Works</th>
+                      <th className="p-2 rounded-r">Avg Progress</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/30">
+                    {ward.contractors.slice(0, 4).map((c) => (
+                      <tr key={c.name}>
+                        <td className="p-2 font-semibold text-primary whitespace-nowrap">{c.name}</td>
+                        <td className="p-2">{c.projects}</td>
+                        <td className="p-2">{c.avgProgress}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="text-label-sm text-outline">{formatNumber(12490)} grievances redressed across the network • Avg 6.4 days</div>
-      </section>
-
-      <ConfirmDialog
-        open={confirmTarget !== null}
-        title="Confirm this issue?"
-        text="Your confirmation strengthens the community evidence pack shared with the department."
-        okLabel="Confirm Issue"
-        onCancel={() => setConfirmTarget(null)}
-        onConfirm={() => {
-          if (confirmTarget) void confirm(confirmTarget).then(() => toast("Thank you — your confirmation strengthens this issue's case.", "success"));
-          setConfirmTarget(null);
-          void recentIssues.reload();
-        }}
-      />
+          <div className="text-label-sm text-outline">
+            {formatNumber(ward.resolved)} of {formatNumber(ward.complaints)} public complaints resolved in {ward.name} • {formatNumber(totalProjects)} projects tracked on the portal
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

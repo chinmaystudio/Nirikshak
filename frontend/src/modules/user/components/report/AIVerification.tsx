@@ -1,111 +1,80 @@
 import { Icon } from "@/components/common/Icon";
-import { Button } from "@/components/common/Button";
 import { projectRoute } from "@/constants/routes";
-import { findProject } from "@/services/projects/projectsService";
-import type { ReportAIResult } from "@/types/report";
+import type { ReportReview } from "@/types/report";
 
-const STEPS = [
-  "Reading report text and evidence metadata",
-  "Classifying issue type and severity",
-  "Matching against the project registry",
-  "Checking duplicate reports nearby"
-];
-
-interface AIVerificationProps {
-  stepIndex: number;
-  running: boolean;
-  result: ReportAIResult | null;
-  onRun: () => void;
+interface ReportReviewProps {
+  review: ReportReview;
+  /** Name of the project the citizen selected, resolved by the caller from the real project list. */
+  projectName: string | null;
 }
 
-export function AIVerification({ stepIndex, running, result, onRun }: AIVerificationProps): JSX.Element {
+/**
+ * Step 4 of the report flow: an honest review of the citizen's own
+ * entries (U3 fix). This replaces the former simulated verification
+ * step — there is no AI analysis, no fake sequencing, no confidence
+ * score, no duplicate check, and no guessed project link.
+ */
+export function ReportReview({ review, projectName }: ReportReviewProps): JSX.Element {
+  const sevTone =
+    review.severity === "critical" || review.severity === "high"
+      ? "text-red-700"
+      : review.severity === "medium"
+        ? "text-amber-700"
+        : "text-green-700";
   return (
-    <div className="space-y-4" data-ai-verify>
+    <div className="space-y-4" data-report-review>
       <div className="flex items-start gap-3 bg-surface-container-low p-4 rounded-lg border border-outline-variant/40">
         <span className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0">
-          <Icon name="psychology" className="text-[22px]" />
+          <Icon name="fact_check" className="text-[22px]" />
         </span>
         <div>
-          <div className="text-label-md font-bold text-primary">
-            AI-Assisted Classification{" "}
-            <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold uppercase tracking-wide">Demo</span>
-          </div>
+          <div className="text-label-md font-bold text-primary">Review your report</div>
           <p className="text-body-sm text-on-surface-variant">
-            This demo helper suggests a category, severity and department from your report text. It does not run a live
-            verification — the final decision always rests with department officials.
+            Check the details below — they are exactly what you entered. If anything looks wrong, go back and edit it
+            before continuing. The final decision on your report always rests with department officials.
           </p>
         </div>
       </div>
-      <div className="space-y-2">
-        {STEPS.map((step, i) => {
-          const done = result !== null || i < stepIndex;
-          const active = result === null && i === stepIndex && running;
-          return (
-            <div key={step} className={`flex items-center gap-2 text-body-sm ${done ? "text-green-700" : active ? "text-primary font-semibold" : "text-outline"}`}>
-              {done ? (
-                <Icon name="check_circle" className="text-[18px] text-green-600" />
-              ) : active ? (
-                <span className="w-[18px] h-[18px] rounded-full border-2 border-secondary border-t-transparent animate-spin inline-block" />
-              ) : (
-                <Icon name="radio_button_unchecked" className="text-[18px]" />
-              )}
-              {step}
-            </div>
-          );
-        })}
-      </div>
-      {result ? <AIResultCard result={result} /> : null}
-      <Button icon={result ? "refresh" : "auto_awesome"} className="w-full" onClick={onRun} loading={running}>
-        {result ? "Re-run Analysis" : "Run AI Analysis"}
-      </Button>
-    </div>
-  );
-}
 
-function AIResultCard({ result }: { result: ReportAIResult }): JSX.Element {
-  const sevTone = result.severity === "high" ? "text-red-300" : result.severity === "medium" ? "text-amber-300" : "text-green-300";
-  const projectName = result.projectId ? findProject(result.projectId)?.name : undefined;
-  return (
-    <div className="bg-primary-container text-on-primary rounded-xl p-5 space-y-3.5">
-      <div className="flex items-center gap-2">
-        <span className="w-9 h-9 rounded-full bg-secondary text-on-secondary flex items-center justify-center">
-          <Icon name="auto_awesome" className="text-[20px]" />
-        </span>
-        <div>
-          <div className="text-headline-sm font-bold text-surface-container-lowest">AI ANALYSIS COMPLETE</div>
-          <div className="text-label-sm text-surface-variant">Demo — on-device heuristic • advisory only, not a measured analysis</div>
+      <dl className="divide-y divide-outline-variant/30 border border-outline-variant/40 rounded-lg overflow-hidden text-body-sm">
+        <ReviewRow label="Title" value={review.title || "—"} />
+        <ReviewRow label="Description" value={review.description || "—"} />
+        <ReviewRow label="Category" value={review.category} />
+        <div className="px-4 py-2.5 flex gap-4">
+          <dt className="w-40 flex-shrink-0 text-on-surface-variant">Severity</dt>
+          <dd className="flex-1 break-words">
+            <span className={`font-semibold capitalize ${sevTone}`}>{review.severity}</span>
+            <span className="text-on-surface-variant"> — from your selected priority ({review.priority})</span>
+          </dd>
         </div>
-      </div>
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-body-sm">
-        <ResultCell label="Issue detected" value={result.detected} />
-        <ResultCell label="Likely category" value={result.category} />
-        <ResultCell label="Severity" value={result.severity} tone={sevTone} />
-        <ResultCell label="Confidence" value={result.confidence != null ? `${result.confidence}%` : "Indicative (demo)"} />
-        <ResultCell label="Recommended department" value={result.department} />
-        <ResultCell label="Duplicate reports nearby" value={result.duplicates == null ? "Not checked (demo)" : result.duplicates > 0 ? `${result.duplicates} similar report(s)` : "None found"} />
+        <ReviewRow label="Department" value={review.department} />
+        <div className="px-4 py-2.5 flex gap-4">
+          <dt className="w-40 flex-shrink-0 text-on-surface-variant">Linked project</dt>
+          <dd className="text-primary font-medium flex-1 break-words">
+            {review.projectId && projectName ? (
+              <a href={projectRoute(review.projectId)} className="underline font-semibold">
+                {projectName}
+              </a>
+            ) : (
+              "No project linked"
+            )}
+          </dd>
+        </div>
       </dl>
-      {result.projectId && projectName ? (
-        <div className="bg-surface-container-lowest/10 border border-surface-container-high/30 rounded-lg p-3 text-body-sm">
-          <span className="text-secondary-fixed font-bold">Potential related project: </span>
-          <a href={projectRoute(result.projectId)} className="underline font-semibold text-surface-container-lowest">
-            {projectName}
-          </a>{" "}
-          — linking this report to the project file.
-        </div>
-      ) : null}
-      <p className="text-[11px] leading-relaxed text-surface-variant border-t border-surface-container-high/20 pt-2.5">
-        <Icon name="info" className="text-[14px] align-[-3px]" /> AI output assists routing and verification. It is not an official determination; a
-        department officer makes the final decision under the citizen grievance framework.
+
+      <p className="text-[11px] leading-relaxed text-on-surface-variant">
+        <Icon name="info" className="text-[14px] align-[-3px]" /> A department officer reviews your report after
+        submission and makes the final determination under the citizen grievance framework.
       </p>
     </div>
   );
 }
 
-function ResultCell({ label, value, tone }: { label: string; value: string; tone?: string }): JSX.Element {
+function ReviewRow({ label, value }: { label: string; value: string }): JSX.Element {
   return (
-    <div className="bg-surface-container-lowest/10 rounded-lg px-3 py-2 border border-surface-container-high/20">
-      <dt className="text-[11px] uppercase tracking-wider text-surface-variant font-bold">{label}</dt>
-      <dd className={`font-semibold text-surface-container-lowest ${tone ?? ""}`}>{value}</dd>
+    <div className="px-4 py-2.5 flex gap-4">
+      <dt className="w-40 flex-shrink-0 text-on-surface-variant">{label}</dt>
+      <dd className="text-primary font-medium flex-1 break-words">{value}</dd>
     </div>
   );
 }

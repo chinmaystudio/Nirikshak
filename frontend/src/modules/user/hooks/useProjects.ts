@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { Project, ProjectCategory, ProjectStatus } from "@/types/project";
 import { useAsync } from "./useAsync";
-import { getProjects, nearbyProjects } from "@/services/projects/projectsService";
+import { getProjects, nearbyProjects, matchesWard } from "@/services/projects/projectsService";
 
 export interface ProjectQuery {
   q: string;
@@ -11,6 +11,8 @@ export interface ProjectQuery {
   contractor: string;
   distanceKm: number | null;
   scope: "ward" | "pune" | "all";
+  /** The signed-in user's own ward label (from their profile), if set. */
+  ward?: string | null;
 }
 
 export function useProjects() {
@@ -30,7 +32,7 @@ export function useProjects() {
         if (query.departments.length > 0 && !query.departments.includes(p.department)) return false;
         if (query.contractor !== "all" && !(p.contractor?.name || '').includes(query.contractor)) return false;
         if (query.distanceKm != null && !(p.distanceKm != null && p.distanceKm <= query.distanceKm)) return false;
-        if (query.scope === "ward" && !(p.ward || '').includes("Ward 12")) return false;
+        if (query.scope === "ward" && !matchesWard(p, query.ward)) return false;
         if (query.scope === "pune" && p.city !== "Pune") return false;
         return true;
       });

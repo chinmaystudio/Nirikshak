@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, FileSignature, Upload, MessagesSquare, Sparkles } from 'lucide-react';
+import { ArrowLeft, FileSignature, Upload, MessagesSquare } from 'lucide-react';
 import { Link, navigate } from '../../lib/router';
 import { useStore } from '../../lib/store';
-import { getProject } from '../../lib/data';
 import ProjectSidebar, { PROJECT_SECTIONS } from '../../components/ProjectSidebar';
 import { Card, StatusBadge, RiskBadge, ProgressBar, Modal, Field, Select, DocumentUploader, Avatar } from '../../components/ui';
 import type { UploadDoc } from '../../components/ui';
@@ -23,7 +22,10 @@ import { useAuth } from '@/core/auth/useAuth';
 export default function ProjectLayout({ projectId, section }: { projectId: string; section: string }) {
   const { projects, documents, addDocument, toast } = useStore();
   const { session } = useAuth();
-  const project = projects.find((p) => p.id === projectId || p.code === projectId) || getProject(projectId) || projects[0];
+  // ONLY the contractor's real assigned projects (contractor_assigned_projects_view
+  // via the store). No demo register and no substitution of another project:
+  // an unknown id is an honest not-found state below.
+  const project = projects.find((p) => p.id === projectId || p.code === projectId);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [docType, setDocType] = useState('QA Report');
   const [docs, setDocs] = useState<UploadDoc[]>([]);
@@ -33,7 +35,7 @@ export default function ProjectLayout({ projectId, section }: { projectId: strin
       <div className="p-6 max-w-3xl mx-auto pt-10">
         <Card className="p-8 text-center">
           <p className="font-display font-bold text-xl text-slate-800 dark:text-slate-100">Project not found</p>
-          <p className="text-sm text-slate-500 mt-2">The project you are looking for does not exist in your register.</p>
+          <p className="text-sm text-slate-500 mt-2">This project is not in your assigned projects. It may have been reassigned, or the link is incorrect — no other project has been substituted.</p>
           <Link to="/projects" className="btn btn-primary mt-5 inline-flex">Back to My Projects</Link>
         </Card>
       </div>
@@ -43,15 +45,23 @@ export default function ProjectLayout({ projectId, section }: { projectId: strin
   const path = `/projects/${project.id}/${section}`;
   const base = `/projects/${project.id}`;
 
-  const upload = () => {
+  const upload = async () => {
     if (docs.length === 0) {
       toast('warn', 'No file selected', 'Choose at least one document to upload.');
       return;
     }
-    docs.forEach((d) => addDocument(project.id, { name: d.name, type: docType, size: d.size }));
-    toast('success', `${docs.length} document${docs.length > 1 ? 's' : ''} uploaded`, `Added to ${project.name} record.`);
-    setDocs([]);
-    setUploadOpen(false);
+    // addDocument writes the project_documents metadata row and throws on any
+    // failure — the success toast is shown only for rows the database accepted.
+    try {
+      for (const d of docs) {
+        await addDocument(project.id, { name: d.name, type: docType, size: d.size });
+      }
+      toast('success', `${docs.length} document${docs.length > 1 ? 's' : ''} recorded`, `Document metadata saved to the ${project.name} record.`);
+      setDocs([]);
+      setUploadOpen(false);
+    } catch (err) {
+      toast('warn', 'Document not saved', err instanceof Error ? err.message : 'The document metadata could not be saved.');
+    }
   };
 
   const page = (() => {
@@ -93,8 +103,8 @@ export default function ProjectLayout({ projectId, section }: { projectId: strin
                 <ProgressBar value={project.progress} marker={project.planned} height="h-2.5" className="flex-1" />
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">{project.progress}% Complete</span>
                 {project.status !== 'Completed' && (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 dark:text-blue-400 whitespace-nowrap cursor-pointer" onClick={() => navigate(`${base}/ai-completion`)} title="AI predicted completion">
-                    <Sparkles className="w-3 h-3" /> AI: {fmtDate(project.forecast.predicted)}
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap" title="Share of the planned duration (start → deadline) that has elapsed — a calendar figure, not a forecast">
+                    Schedule elapsed: {project.planned}%
                   </span>
                 )}
               </div>
@@ -171,6 +181,9 @@ export default function ProjectLayout({ projectId, section }: { projectId: strin
             />
           </Field>
           <DocumentUploader label="Files" docs={docs} onChange={setDocs} />
+          <p className="text-[11px] text-slate-500 font-medium dark:text-slate-400">
+            This records each document's name and type on the project record (project_documents). The file itself is not stored by this portal — keep the original in your own document system.
+          </p>
         </div>
       </Modal>
     </div>

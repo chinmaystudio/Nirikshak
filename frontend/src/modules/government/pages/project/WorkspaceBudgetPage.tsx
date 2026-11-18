@@ -3,6 +3,8 @@ import { useI18n } from '@/context/I18nContext'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
 import { useToast } from '@/context/ToastContext'
 import { financeApi } from '@/api'
+import type { ContractorInvoiceItem } from '@/api'
+import { useApiData } from '@/hooks/useApiData'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -11,14 +13,32 @@ import { Progress } from '@/components/ui/Progress'
 import { Button } from '@/components/ui/Button'
 import { Drawer, Modal } from '@/components/modals/Modal'
 import { TextField, Select, TextArea } from '@/components/ui/Fields'
-import { PageHeader, KpiRow, FilterBar, ConfirmDialog, DetailField, KpiCard } from '@/components/blocks/Page'
+import { PageHeader, KpiRow, FilterBar, DetailField, KpiCard } from '@/components/blocks/Page'
 import { SegmentBar, BarChart } from '@/components/charts/Charts'
-import { formatCr, formatDate } from '@/utils/format'
-import { APPROVAL_STATUS, BILL_FLAG, BILL_STATUS } from '@/utils/status'
-import { BUDGET_HEADS, MONTHLY_SPEND, billRiskFor } from '@/data/workspace'
-import type { BudgetHead } from '@/data/workspace'
-import type { BillItem } from '@/types'
+import { formatCr, formatDate, formatIndianNumber } from '@/utils/format'
+import { APPROVAL_STATUS, BILL_STATUS } from '@/utils/status'
+import type { BillItem, BudgetHead } from '@/types'
 import { FUNDING_SOURCES } from '@/constants'
+
+/** Presentation for the raw contractor_invoices statuses (migration 037). */
+const CONTRACTOR_INVOICE_STATUS: Record<string, { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
+  SUBMITTED: { label: 'Submitted', tone: 'info' },
+  UNDER_VERIFICATION: { label: 'Under Verification', tone: 'warning' },
+  APPROVED: { label: 'Approved', tone: 'success' },
+  REJECTED: { label: 'Rejected', tone: 'danger' },
+  PAID: { label: 'Paid', tone: 'success' },
+}
+
+/** Download rows as a real CSV file generated from the loaded data. */
+function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
 
 /** Project workspace — Budget & Finance: full financial control center with
  * allocation control, expenditure analytics, fund-release tracking and the
@@ -27,18 +47,26 @@ export function WorkspaceBudgetPage() {
   const { t } = useI18n()
   const { showToast } = useToast()
   const { project, approvals, bills } = useProjectWorkspace()
-  const [billState, setBillState] = useState<BillItem[]>(bills)
-  const [headState, setHeadState] = useState<BudgetHead[]>(project ? (BUDGET_HEADS[project.id] ?? []) : [])
+  const billState = bills
+  const [headsRefresh, setHeadsRefresh] = useState(0)
+  const projectDbId = project?.dbId ?? ''
+  // Budget heads and the monthly series come from the project's real
+  // financial_updates rows (financeApi) — never from a fixture register.
+  const { data: loadedHeads } = useApiData(() => financeApi.budgetHeads(projectDbId), [projectDbId, headsRefresh])
+  const { data: loadedSpend } = useApiData(() => financeApi.monthlySpend(projectDbId), [projectDbId, headsRefresh])
+  // Contractor-raised invoices (contractor_invoices) sit alongside the
+  // financial-update bills below — a separate register with its own
+  // recorded statuses, loaded read-only.
+  const { data: loadedContractorInvoices } = useApiData(() => financeApi.contractorInvoices(projectDbId), [projectDbId])
+  const contractorInvoices: ContractorInvoiceItem[] = loadedContractorInvoices ?? []
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
-  const [riskFilter, setRiskFilter] = useState('')
   const [billDrawer, setBillDrawer] = useState<BillItem | null>(null)
   const [headDrawer, setHeadDrawer] = useState<BudgetHead | null>(null)
   const [addHeadOpen, setAddHeadOpen] = useState(false)
   const [allocating, setAllocating] = useState(false)
   const [newHead, setNewHead] = useState({ head: '', amountCr: '', source: '' })
-  const [confirm, setConfirm] = useState<{ title: string; message: string; run: () => void } | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
 
   const fin = project?.financials
@@ -47,48 +75,28 @@ export function WorkspaceBudgetPage() {
   const overrunCr = revised != null && fin ? revised - fin.sanctionedAmountCr : 0
   const remaining = fin ? fin.sanctionedAmountCr - fin.amountUtilizedCr : 0
   const releaseApprovals = approvals.filter((a) => a.type.includes('Fund Release'))
-  const spend = project ? (MONTHLY_SPEND[project.id] ?? []) : []
-  const heads = useMemo(() => headState, [headState])
+  const spend = loadedSpend ?? []
+  const heads = loadedHeads ?? []
 
   const filteredHeads = heads.filter(
     (h) => !search || h.head.toLowerCase().includes(search.toLowerCase()),
   )
+
+  const billTypes = useMemo(() => [...new Set(billState.map((b) => b.type))], [billState])
 
   const filteredBills = useMemo(
     () =>
       billState.filter((b) => {
         if (statusFilter && b.status !== statusFilter) return false
         if (typeFilter && b.type !== typeFilter) return false
-        if (riskFilter === 'flagged' && !b.flag) return false
-        if (riskFilter === 'clear' && b.flag) return false
         return !search || `${b.id} ${b.billNo} ${b.contractor} ${b.mbEntry}`.toLowerCase().includes(search.toLowerCase())
       }),
-    [billState, statusFilter, typeFilter, riskFilter, search],
+    [billState, statusFilter, typeFilter, search],
   )
 
-  const flagged = billState.filter((b) => b.flag)
   const pendingAmount = billState.filter((b) => ['submitted', 'verified'].includes(b.status)).reduce((s, b) => s + b.amountCr, 0)
   const paidAmount = billState.filter((b) => b.status === 'paid').reduce((s, b) => s + b.amountCr, 0)
-
-  /** Demo state transitions — never persisted; every action is announced. */
-  const transitionBill = (id: string, action: 'verify' | 'approve' | 'pay' | 'return', note?: string) => {
-    setBillState((list) =>
-      list.map((b) => {
-        if (b.id !== id) return b
-        if (action === 'verify') return { ...b, status: 'verified', verifiedBy: 'Er. S. D. Kulkarni (session)' }
-        if (action === 'approve') return { ...b, status: 'approved', approvedBy: 'SE, Pune Circle (session)' }
-        if (action === 'pay') return { ...b, status: 'paid', paidOn: new Date().toISOString().slice(0, 10) }
-        return { ...b, status: 'returned', flagNote: note ?? b.flagNote }
-      }),
-    )
-    const messages = {
-      verify: `Bill ${id} marked verified — forwarded for approval.`,
-      approve: `Bill ${id} approved for payment.`,
-      pay: `Payment recorded against bill ${id} (demo).`,
-      return: `Bill ${id} returned to contractor for correction.`,
-    } as const
-    showToast(messages[action], action === 'return' ? 'warning' : 'success')
-  }
+  const totalRecorded = billState.reduce((s, b) => s + b.amountCr, 0)
 
   if (!project || !fin) return null
 
@@ -147,29 +155,23 @@ export function WorkspaceBudgetPage() {
               ))}
             </ul>
           </Panel>
-          <Panel title="Monthly Expenditure — Planned vs Actual" icon="bar_chart">
+          <Panel title="Monthly Expenditure — Cumulative Spent" icon="bar_chart">
             {spend.length > 0 ? (
               <>
                 <BarChart
-                  ariaLabel="Actual monthly expenditure"
-                  data={spend.map((m) => ({ label: m.month, value: m.actualCr, tone: 'success' as const }))}
+                  ariaLabel="Cumulative amount spent by month"
+                  data={spend.map((m) => ({ label: m.month, value: m.cumulativeCr, tone: 'success' as const }))}
                   valueFormatter={(v) => formatCr(v)}
                   showValues={false}
                 />
-                <div className="mt-3 border-t border-border pt-3">
-                  <BarChart
-                    ariaLabel="Planned monthly expenditure"
-                    data={spend.map((m) => ({ label: m.month, value: m.plannedCr }))}
-                    valueFormatter={(v) => formatCr(v)}
-                    showValues={false}
-                  />
-                </div>
                 <p className="mt-3 text-caption text-fg-subtle">
-                  Top: actual bookings • Bottom: planned curve. Cumulative actual {formatCr(spend.reduce((s, m) => s + m.actualCr, 0))} vs planned {formatCr(spend.reduce((s, m) => s + m.plannedCr, 0))}.
+                  Latest cumulative amount spent recorded in this project's financial updates, per month of
+                  observation. Latest: {formatCr(spend[spend.length - 1].cumulativeCr)} ({spend[spend.length - 1].month}).
+                  No planned curve is shown — the finance register records actuals only.
                 </p>
               </>
             ) : (
-              <p className="text-body-small text-fg-muted">Monthly expenditure booking starts after the first RA bill is paid.</p>
+              <p className="text-body-small text-fg-muted">No financial updates have been recorded for this project yet, so there is no expenditure series to chart.</p>
             )}
           </Panel>
         </div>
@@ -293,7 +295,7 @@ export function WorkspaceBudgetPage() {
           <KpiCard label="Total Bills" value={billState.length} icon="receipt_long" />
           <KpiCard label="Pending Verification" value={billState.filter((b) => b.status === 'submitted').length} icon="hourglass_top" iconTone="warning" />
           <KpiCard label="Approved / Paid" value={billState.filter((b) => ['approved', 'paid'].includes(b.status)).length} icon="task_alt" iconTone="success" />
-          <KpiCard label="Flagged Bills" value={flagged.length} icon="flag" iconTone={flagged.length ? 'danger' : 'neutral'} />
+          <KpiCard label="Total Recorded Amount" value={formatCr(totalRecorded)} icon="account_balance_wallet" iconTone="neutral" />
         </KpiRow>
         <KpiRow>
           <KpiCard label="Paid Amount" value={formatCr(paidAmount)} icon="payments" iconTone="success" />
@@ -317,28 +319,17 @@ export function WorkspaceBudgetPage() {
               label: 'Bill type',
               value: typeFilter,
               onChange: setTypeFilter,
-              options: [{ value: '', label: t('common.all') }, ...(['RA Bill', 'Final Bill', 'Material Bill', 'Labour Bill'] as const).map((x) => ({ value: x, label: x }))],
-            },
-            {
-              label: t('common.risk'),
-              value: riskFilter,
-              onChange: setRiskFilter,
-              options: [
-                { value: '', label: t('common.all') },
-                { value: 'flagged', label: 'Flagged only' },
-                { value: 'clear', label: 'Clear only' },
-              ],
+              options: [{ value: '', label: t('common.all') }, ...billTypes.map((x) => ({ value: x, label: x }))],
             },
           ]}
           onClear={() => {
             setSearch('')
             setStatusFilter('')
             setTypeFilter('')
-            setRiskFilter('')
           }}
         />
 
-        <Panel title="Payment & Bill Management" icon="receipt_long" subtitle="Bills submitted against this project only. Actions update the register for this session (demo)." bodyClassName="p-0">
+        <Panel title="Payment & Bill Management" icon="receipt_long" subtitle="Financial-update records for this project, as recorded in the finance register." bodyClassName="p-0">
           <DataTable
             minWidth={1040}
             rows={filteredBills}
@@ -352,7 +343,6 @@ export function WorkspaceBudgetPage() {
               { key: 'type', header: 'Type', render: (b) => <Badge tone="neutral">{b.type}</Badge> },
               { key: 'amount', header: t('common.amount'), cellClassName: 'tabular-nums', sortable: true, sortValue: (b) => b.amountCr, render: (b) => formatCr(b.amountCr) },
               { key: 'status', header: 'Status', render: (b) => <StatusBadge descriptor={BILL_STATUS[b.status]} size="sm" /> },
-              { key: 'risk', header: t('common.risk'), render: (b) => (b.flag ? <StatusBadge descriptor={BILL_FLAG[b.flag]} size="sm" /> : <Badge tone="success" icon="check_circle">Clear</Badge>) },
               { key: 'submitted', header: 'Submitted', cellClassName: 'tabular-nums', sortable: true, sortValue: (b) => b.submittedOn, render: (b) => formatDate(b.submittedOn) },
             ]}
             rowActions={(b) => (
@@ -369,42 +359,33 @@ export function WorkspaceBudgetPage() {
           />
         </Panel>
 
-        {/* Duplicate / abnormal bill detection */}
-        <section id="duplicates" className="scroll-mt-24">
-          <Panel title="Duplicate & Abnormal Bill Detection" icon="content_copy" subtitle="AI-assisted flags — every flag is reviewed by the authorized officer." bodyClassName="p-0">
-            {flagged.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {flagged.map((b) => {
-                  const risk = billRiskFor(b)
-                  return (
-                    <li key={b.id} className="p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="nk-mono-id text-fg">{b.billNo}</p>
-                        <StatusBadge descriptor={BILL_FLAG[b.flag!]} size="sm" />
-                      </div>
-                      <p className="mt-1 text-caption text-fg-muted">{b.flagNote}</p>
-                      <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-caption text-fg-subtle">
-                        <span>Duplicate probability: <strong className="text-fg">{risk.duplicateProbabilityPct}%</strong></span>
-                        <span>Amount anomaly: <strong className="text-fg">+{risk.amountAnomalyPct}%</strong></span>
-                        <span>Risk score: <strong className="text-fg">{risk.riskScore}/100</strong></span>
-                        {risk.previousSimilarBill && <span>Similar: <strong className="text-fg">{risk.previousSimilarBill}</strong></span>}
-                      </p>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : (
-              <p className="p-4 text-body-small text-fg-muted">No duplicate or abnormal bills flagged on this project.</p>
-            )}
-            <p className="border-t border-border p-3 text-caption text-warning-strong">
-              <span className="material-symbols-outlined mr-1 align-middle text-[16px]" aria-hidden="true">smart_toy</span>
-              AI Bill Risk Check assists verification — the officer's decision on every bill remains final.
-            </p>
-          </Panel>
-        </section>
-      </section>
+        <Panel title="Contractor Invoices" icon="receipt" subtitle="Invoices raised by the contractor in contractor_invoices, with the status recorded on each invoice. Drafts are not listed — they have not been submitted yet." bodyClassName="p-0">
+          <DataTable
+            minWidth={960}
+            rows={contractorInvoices}
+            rowKey={(inv) => inv.id}
+            paginated
+            pageSize={8}
+            initialSort={{ key: 'invoiceDate', dir: 'desc' }}
+            columns={[
+              { key: 'invoiceNumber', header: 'Invoice No.', isRowHeader: true, sortable: true, sortValue: (inv) => inv.invoiceNumber, render: (inv) => <span className="nk-mono-id text-fg">{inv.invoiceNumber}</span> },
+              { key: 'contractor', header: 'Contractor', render: (inv) => inv.contractor },
+              { key: 'milestone', header: 'Bill / Milestone', render: (inv) => inv.milestoneLabel ?? '—' },
+              { key: 'amount', header: t('common.amount'), cellClassName: 'tabular-nums', sortable: true, sortValue: (inv) => inv.amountInr, render: (inv) => `₹ ${formatIndianNumber(inv.amountInr)}` },
+              { key: 'status', header: 'Status', render: (inv) => { const s = CONTRACTOR_INVOICE_STATUS[inv.status] ?? { label: inv.status, tone: 'neutral' as const }; return <Badge tone={s.tone}>{s.label}</Badge> } },
+              { key: 'invoiceDate', header: 'Invoice Date', cellClassName: 'tabular-nums', sortable: true, sortValue: (inv) => inv.invoiceDate, render: (inv) => formatDate(inv.invoiceDate) },
+              { key: 'notes', header: 'Notes', render: (inv) => inv.notes ?? '—' },
+            ]}
+            emptyState={
+              <div className="p-8 text-center">
+                <p className="text-body-small text-fg-muted">No contractor invoices have been submitted for this project yet.</p>
+                <p className="mt-2 text-caption text-fg-subtle">Submitted invoices appear here with their recorded verification / payment status.</p>
+              </div>
+            }
+          />
+        </Panel>
 
-      <Card className="p-3 text-caption text-fg-subtle">{t('common.mockDataNote')}</Card>
+      </section>
 
       {/* Bill detail drawer */}
       <Drawer
@@ -414,7 +395,7 @@ export function WorkspaceBudgetPage() {
         titleIcon="receipt_long"
         width="max-w-xl"
       >
-        {billDrawer && <BillDrawerContent bill={billDrawer} onAction={transitionBill} />}
+        {billDrawer && <BillDrawerContent bill={billDrawer} />}
       </Drawer>
 
       {/* Budget head drawer */}
@@ -474,11 +455,11 @@ export function WorkspaceBudgetPage() {
                 } finally {
                   setAllocating(false)
                 }
-                setHeadState((list) => [
-                  ...list,
-                  { id: `BH-${Date.now()}`, head: newHead.head.trim(), originalCr: amount, utilizedCr: 0 },
-                ])
-                showToast(`Budget head "${newHead.head.trim()}" (${formatCr(amount)}) allocated successfully and routed for administrative approval.`, 'success')
+                // Reload the heads from financial_updates so the table
+                // shows exactly what was persisted — nothing is appended
+                // locally on the strength of the toast.
+                setHeadsRefresh((k) => k + 1)
+                showToast(`Budget head "${newHead.head.trim()}" (${formatCr(amount)}) recorded in the project's financial updates.`, 'success')
                 setNewHead({ head: '', amountCr: '', source: '' })
                 setAddHeadOpen(false)
               }}
@@ -503,7 +484,7 @@ export function WorkspaceBudgetPage() {
         </div>
       </Modal>
 
-      {/* Export menu (mock) */}
+      {/* Export menu — CSVs generated from the data loaded on this page */}
       <Modal
         open={exportOpen}
         onClose={() => setExportOpen(false)}
@@ -515,54 +496,61 @@ export function WorkspaceBudgetPage() {
         }
       >
         <div className="flex flex-col gap-2">
-          {['Financial Utilization Report (PDF)', 'Budget head register (XLSX)', 'Bill payment register (XLSX)'].map((label) => (
-            <Button
-              key={label}
-              variant="outline"
-              icon="download"
-              onClick={() => {
-                showToast(`${label} generated for ${project.id} (demo file).`, 'info')
-                setExportOpen(false)
-              }}
-            >
-              {label}
-            </Button>
-          ))}
+          <Button
+            variant="outline"
+            icon="download"
+            onClick={() => {
+              downloadCsv(`budget-heads-${project.id}.csv`, [
+                ['Budget head', 'Original (₹ Cr)', 'Revised (₹ Cr)', 'Utilized (₹ Cr)'],
+                ...heads.map((h) => [h.head, h.originalCr, h.revisedCr ?? '', h.utilizedCr]),
+              ])
+              setExportOpen(false)
+            }}
+          >
+            Budget head register (CSV)
+          </Button>
+          <Button
+            variant="outline"
+            icon="download"
+            onClick={() => {
+              downloadCsv(`bills-${project.id}.csv`, [
+                ['Reference', 'Bill No.', 'Type', 'Contractor', 'Amount (₹ Cr)', 'Status', 'Submitted'],
+                ...billState.map((b) => [b.id, b.billNo, b.type, b.contractor, b.amountCr, b.status, b.submittedOn]),
+              ])
+              setExportOpen(false)
+            }}
+          >
+            Bill payment register (CSV)
+          </Button>
+          <Button
+            variant="outline"
+            icon="download"
+            onClick={() => {
+              downloadCsv(`monthly-spend-${project.id}.csv`, [
+                ['Month', 'Cumulative spent (₹ Cr)'],
+                ...spend.map((m) => [m.month, m.cumulativeCr]),
+              ])
+              setExportOpen(false)
+            }}
+          >
+            Monthly expenditure series (CSV)
+          </Button>
         </div>
       </Modal>
-
-      <ConfirmDialog
-        open={confirm !== null}
-        onClose={() => setConfirm(null)}
-        title={confirm?.title ?? ''}
-        message={confirm?.message ?? ''}
-        onConfirm={() => confirm?.run()}
-      />
     </div>
   )
 }
 
-/** Bill drawer: information, breakdown, AI risk check, history and workflow actions. */
-function BillDrawerContent({
-  bill,
-  onAction,
-}: {
-  bill: BillItem
-  onAction: (id: string, action: 'verify' | 'approve' | 'pay' | 'return', note?: string) => void
-}) {
-  const { t } = useI18n()
-  const { showToast } = useToast()
-  const risk = billRiskFor(bill)
-  const gross = bill.amountCr
-  const gst = Math.round(gross * 0.09 * 100) / 100
-  const retention = Math.round(gross * 0.05 * 100) / 100
-  const net = Math.round((gross - retention) * 100) / 100
-
+/**
+ * Bill drawer: the record exactly as stored. Bills on this page are
+ * financial_updates rows — the register stores no GST/retention split, no
+ * verification workflow and no risk score, so none is shown or simulated.
+ */
+function BillDrawerContent({ bill }: { bill: BillItem }) {
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge descriptor={BILL_STATUS[bill.status]} />
-        {bill.flag ? <StatusBadge descriptor={BILL_FLAG[bill.flag]} size="sm" /> : <Badge tone="success" icon="check_circle">Risk clear</Badge>}
       </div>
 
       <Panel title="Bill Information" icon="info">
@@ -576,41 +564,15 @@ function BillDrawerContent({
         </dl>
       </Panel>
 
-      <Panel title="Amount Breakdown" icon="calculate">
+      <Panel title="Recorded Amount" icon="calculate">
         <dl className="grid grid-cols-2 gap-3 text-body-small">
-          <DetailField label="Gross claim" value={<span className="tabular-nums">{formatCr(gross)}</span>} />
-          <DetailField label="GST (9%×2, shown net)" value={<span className="tabular-nums">{formatCr(gst)} component</span>} />
-          <DetailField label="Retention (5%)" value={<span className="tabular-nums text-warning-strong">− {formatCr(retention)}</span>} />
-          <DetailField label="Net payable" value={<span className="tabular-nums font-semibold">{formatCr(net)}</span>} />
-          <DetailField label="Previous payments" value={<span className="tabular-nums">{formatCr(Math.max(0, gross * 2.4))} (RA cycle)</span>} />
-          <DetailField label="Supporting documents" value="MB extract, test certs — 4 files" />
+          <DetailField label="Amount on record" value={<span className="tabular-nums font-semibold">{formatCr(bill.amountCr)}</span>} />
+          <DetailField label="Verified by" value={bill.verifiedBy ?? '—'} />
+          <DetailField label="Approved by" value={bill.approvedBy ?? '—'} />
         </dl>
-      </Panel>
-
-      <Panel title="AI Bill Risk Check" icon="smart_toy">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="text-center">
-            <p className="text-display tabular-nums text-fg">{risk.duplicateProbabilityPct}%</p>
-            <p className="text-caption text-fg-subtle">Duplicate probability</p>
-          </div>
-          <div className="text-center">
-            <p className="text-display tabular-nums text-fg">+{risk.amountAnomalyPct}%</p>
-            <p className="text-caption text-fg-subtle">Amount anomaly</p>
-          </div>
-          <div className="text-center">
-            <p className={risk.riskScore > 60 ? 'text-display tabular-nums text-danger-strong' : 'text-display tabular-nums text-success-strong'}>{risk.riskScore}</p>
-            <p className="text-caption text-fg-subtle">Risk score /100</p>
-          </div>
-        </div>
-        {risk.previousSimilarBill && (
-          <p className="mt-3 text-caption text-fg-muted">Most similar previous bill: <span className="nk-mono-id text-fg">{risk.previousSimilarBill}</span></p>
-        )}
-        <p className="mt-2 rounded-control bg-surface-2 p-2 text-caption text-fg-muted">
-          <strong className="text-fg">Why this score?</strong> {risk.explanation}
-        </p>
-        <p className="mt-2 text-caption text-warning-strong">
-          <span className="material-symbols-outlined mr-1 align-middle text-[14px]" aria-hidden="true">smart_toy</span>
-          AI-assisted check — the verifying officer's decision remains final.
+        <p className="mt-3 text-caption text-fg-subtle">
+          This is the amount stored on the financial-update record. Tax, retention and net-payable splits are
+          not stored in the finance register and are therefore not shown.
         </p>
       </Panel>
 
@@ -634,49 +596,6 @@ function BillDrawerContent({
           {bill.status === 'submitted' && <li className="text-body-small text-fg-muted">No verification action recorded yet.</li>}
         </ol>
       </Panel>
-
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-surface p-3">
-        <div className="flex flex-wrap gap-2">
-          {bill.status === 'submitted' && (
-            <Button variant="primary" size="sm" icon="fact_check" onClick={() => onAction(bill.id, 'verify')}>
-              {t('common.verify')}
-            </Button>
-          )}
-          {bill.status === 'verified' && (
-            <Button variant="primary" size="sm" icon="task_alt" onClick={() => onAction(bill.id, 'approve')}>
-              {t('common.approve')}
-            </Button>
-          )}
-          {bill.status === 'approved' && (
-            <Button variant="primary" size="sm" icon="payments" onClick={() => onAction(bill.id, 'pay')}>
-              Mark Paid
-            </Button>
-          )}
-          {['submitted', 'verified'].includes(bill.status) && (
-            <Button
-              variant="outline"
-              size="sm"
-              icon="u_turn_left"
-              onClick={() =>
-                onAction(bill.id, 'return', 'Returned by verifying officer — measure corrections requested (session action).')
-              }
-            >
-              {t('common.return')}
-            </Button>
-          )}
-          {bill.status !== 'paid' && bill.status !== 'returned' && (
-            <Button
-              variant="danger"
-              size="sm"
-              icon="block"
-              onClick={() => showToast(`Bill ${bill.id} rejection requires recording a reason — use Return for correction or raise an audit flag.`, 'warning')}
-            >
-              {t('common.reject')}
-            </Button>
-          )}
-        </div>
-        <p className="mt-2 text-caption text-fg-subtle">Actions apply to this demo session only and are announced in the audit log.</p>
-      </div>
     </div>
   )
 }

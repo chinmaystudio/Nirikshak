@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PageHeader, Card, SectionTitle } from '../components/ui';
-import { CALENDAR_EVENTS } from '../lib/data';
 import { Link, navigate } from '../lib/router';
-import { cls, fmtDate, NOW } from '../lib/utils';
-import type { EventType } from '../lib/data';
+import { cls, fmtDate } from '../lib/utils';
+import type { CalendarEvent, EventType } from '../lib/types';
+import { useStore } from '../lib/store';
+import { ContractorTenderService } from '../services/tender.service';
 
 const FILTERS: { key: string; label: string; types: EventType[] }[] = [
   { key: 'All', label: 'All', types: ['Project', 'Inspection', 'Payment', 'Tender', 'Government', 'Compliance'] },
@@ -27,14 +28,57 @@ const TYPE_DOT: Record<EventType, string> = {
 const WD = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+const dateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 export default function CalendarPage() {
+  const { projects } = useStore();
+  const today = useMemo(() => new Date(), []);
   const [filter, setFilter] = useState('All');
-  const [month, setMonth] = useState(8); // Sep (0-indexed)
-  const [year, setYear] = useState(2026);
-  const [selected, setSelected] = useState('2026-09-11');
+  const [month, setMonth] = useState(today.getMonth());
+  const [year, setYear] = useState(today.getFullYear());
+  const [selected, setSelected] = useState(dateStr(today));
+  const [tenderEvents, setTenderEvents] = useState<CalendarEvent[]>([]);
+
+  // Tender bid deadlines come from the live tenders table.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const rows = await ContractorTenderService.getOpenTenders();
+        if (!active) return;
+        setTenderEvents(
+          rows
+            .filter((t) => t.bid_due_date)
+            .map((t) => ({
+              date: String(t.bid_due_date).slice(0, 10),
+              title: `Bid deadline — ${t.title}`,
+              type: 'Tender' as const,
+              link: `/tenders/${t.id}`,
+            })),
+        );
+      } catch { /* tender events stay empty; the calendar still shows project data */ }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // All other events are derived from the contractor's real assigned
+  // projects: milestone dates, contract deadlines and scheduled inspections.
+  const allEvents = useMemo<CalendarEvent[]>(() => {
+    const evs: CalendarEvent[] = [...tenderEvents];
+    for (const p of projects) {
+      for (const m of p.milestones) {
+        if (m.date) evs.push({ date: m.date.slice(0, 10), title: `Milestone — ${m.name} (${p.name})`, type: 'Project', link: `/projects/${p.id}/details` });
+      }
+      if (p.deadline) evs.push({ date: p.deadline.slice(0, 10), title: `Contract deadline — ${p.name}`, type: 'Project', link: `/projects/${p.id}/details` });
+      for (const u of p.upcoming) {
+        if (u.date) evs.push({ date: u.date.slice(0, 10), title: `Inspection — ${u.stage} (${p.name})`, type: 'Inspection', time: u.time, link: `/projects/${p.id}/inspection` });
+      }
+    }
+    return evs;
+  }, [projects, tenderEvents]);
 
   const types = FILTERS.find((f) => f.key === filter)?.types ?? FILTERS[0].types;
-  const events = useMemo(() => CALENDAR_EVENTS.filter((e) => types.includes(e.type)), [filter]);
+  const events = useMemo(() => allEvents.filter((e) => types.includes(e.type)), [allEvents, filter]);
 
   const cells = useMemo(() => {
     const first = new Date(year, month, 1);
@@ -43,14 +87,13 @@ export default function CalendarPage() {
     const arr: { date: string | null; day: number | null }[] = [];
     for (let i = 0; i < startOffset; i++) arr.push({ date: null, day: null });
     for (let d = 1; d <= daysInMonth; d++) {
-      const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      arr.push({ date: ds, day: d });
+      arr.push({ date: dateStr(new Date(year, month, d)), day: d });
     }
     while (arr.length % 7 !== 0) arr.push({ date: null, day: null });
     return arr;
   }, [month, year]);
 
-  const todayStr = `${NOW.getFullYear()}-${String(NOW.getMonth() + 1).padStart(2, '0')}-${String(NOW.getDate()).padStart(2, '0')}`;
+  const todayStr = dateStr(today);
   const selectedEvents = events.filter((e) => e.date === selected);
   const upcoming = [...events].filter((e) => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 7);
 
@@ -69,7 +112,7 @@ export default function CalendarPage() {
 
   return (
     <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-5">
-      <PageHeader title="Calendar" subtitle="Milestones, inspections, payments, tender deadlines and government meetings" />
+      <PageHeader title="Calendar" subtitle="Built from your real project milestones, contract deadlines, scheduled inspections and open tender bid deadlines" />
 
       <div className="flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (
@@ -82,6 +125,15 @@ export default function CalendarPage() {
           </button>
         ))}
       </div>
+
+      {allEvents.length === 0 && (
+        <Card className="p-8 text-center">
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-100">No dated events yet</p>
+          <p className="text-xs text-slate-500 mt-1.5 dark:text-slate-400">
+            Events appear here when your assigned projects have milestone dates or deadlines, the department schedules an inspection, or a tender is open for bidding.
+          </p>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
         <Card>
@@ -129,7 +181,7 @@ export default function CalendarPage() {
                           {evs.slice(0, 2).map((e) => (
                             <span key={e.title} className="flex items-center gap-1 min-w-0">
                               <span className={cls('w-1.5 h-1.5 rounded-full shrink-0', TYPE_DOT[e.type])} />
-                              <span className="text-[9px] font-semibold text-slate-600 truncate dark:text-slate-400">{e.title.replace(/\s*\(p\d\)/, '').replace(/—.*$/, '')}</span>
+                              <span className="text-[9px] font-semibold text-slate-600 truncate dark:text-slate-400">{e.title}</span>
                             </span>
                           ))}
                           {evs.length > 2 && <span className="text-[9px] font-bold text-slate-400">+{evs.length - 2} more</span>}
@@ -179,21 +231,25 @@ export default function CalendarPage() {
 
           <Card className="p-5">
             <SectionTitle icon={Calendar} title="Upcoming" />
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {upcoming.map((e) => (
-                <Link key={e.title} to={e.link ?? '/calendar'} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:opacity-80">
-                  <div className="w-10 shrink-0 text-center">
-                    <p className="text-[10px] font-bold uppercase text-slate-400">{MONTHS[Number(e.date.slice(5, 7)) - 1].slice(0, 3)}</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{Number(e.date.slice(8, 10))}</p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-800 truncate dark:text-slate-200">{e.title}</p>
-                    <p className="text-[10px] text-slate-500 font-semibold">{e.type}{e.time ? ` • ${e.time}` : ''}</p>
-                  </div>
-                  <span className={cls('w-2 h-2 rounded-full shrink-0', TYPE_DOT[e.type])} />
-                </Link>
-              ))}
-            </div>
+            {upcoming.length === 0 ? (
+              <p className="text-sm text-slate-500 font-medium py-4 text-center dark:text-slate-400">No upcoming events.</p>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {upcoming.map((e) => (
+                  <Link key={e.title} to={e.link ?? '/calendar'} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:opacity-80">
+                    <div className="w-10 shrink-0 text-center">
+                      <p className="text-[10px] font-bold uppercase text-slate-400">{MONTHS[Number(e.date.slice(5, 7)) - 1].slice(0, 3)}</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{Number(e.date.slice(8, 10))}</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 truncate dark:text-slate-200">{e.title}</p>
+                      <p className="text-[10px] text-slate-500 font-semibold">{e.type}{e.time ? ` • ${e.time}` : ''}</p>
+                    </div>
+                    <span className={cls('w-2 h-2 rounded-full shrink-0', TYPE_DOT[e.type])} />
+                  </Link>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>

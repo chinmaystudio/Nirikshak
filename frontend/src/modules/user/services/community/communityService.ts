@@ -1,97 +1,153 @@
-import type { CommunityIssue, CommunityIssueView, CommunityStats, CommunityComment } from "@/types/community";
-import { ApiError, latency, offlineGuard } from "@/services/api/client";
-import { communityIssues } from "@/data/community";
-import { appStore } from "@/app/providers/store";
+import type { CommunityIssue, CommunityIssueStatus, CommunityStats } from "@/types/community";
+import { ApiError, offlineGuard } from "@/services/api/client";
+import { supabase } from "@/core/supabase/client";
 
-export type CommunityFeed = "nearby" | "trending" | "recent" | "supported" | "resolved";
+export type CommunityFeed = "all" | "recent" | "open" | "resolved";
 
-function withUserState(issue: CommunityIssue): CommunityIssueView {
-  const s = appStore.getState();
-  const userConfirmed = s.confirmed.includes(issue.id);
-  const userUpvoted = s.upvoted.includes(issue.id);
-  const extra = s.comments[issue.id] ?? [];
-  const confirmations = issue.confirmations + (userConfirmed ? 1 : 0);
-  return {
-    ...issue,
-    confirmations,
-    upvotes: issue.upvotes + (userUpvoted ? 1 : 0),
-    confirmPct: Math.min(99, Math.round((confirmations / issue.affected) * 100)),
-    userConfirmed,
-    userUpvoted,
-    comments: [...issue.comments, ...extra]
-  };
+/**
+ * Community issues are REAL public complaints: rows from
+ * `public_complaints_view` (the redacted public projection of `complaints`)
+ * joined with project names/codes from `public_projects_view`.
+ *
+ * There is no community-interactions table, so there are no confirmations,
+ * upvotes or comments here — the UI no longer offers them rather than
+ * faking counts in localStorage.
+ */
+
+const STATUS_MAP: Record<string, CommunityIssueStatus> = {
+  SUBMITTED: "open",
+  UNDER_REVIEW: "open",
+  ASSIGNED: "action-taken",
+  INVESTIGATION: "action-taken",
+  IN_PROGRESS: "action-taken",
+  ACTION_TAKEN: "action-taken",
+  ESCALATED: "open",
+  RESOLVED: "resolved",
+  CLOSED: "resolved",
+  REJECTED: "resolved"
+};
+
+interface PublicComplaintRow {
+  id: string;
+  reference_number: string | null;
+  project_id: string | null;
+  category: string | null;
+  title: string | null;
+  severity: string | null;
+  status: string | null;
+  created_at: string | null;
 }
 
-export async function getCommunityFeed(feed: CommunityFeed): Promise<CommunityIssueView[]> {
-  offlineGuard();
-  await latency(300, 600);
-  let out = communityIssues.map(withUserState);
-  switch (feed) {
-    case "trending":
-      out = [...out].sort((a, b) => b.upvotes - a.upvotes);
-      break;
-    case "recent":
-      out = [...out].sort((a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime());
-      break;
-    case "supported":
-      out = [...out].sort((a, b) => b.affected - a.affected);
-      break;
-    case "resolved":
-      out = out.filter((i) => i.status === "resolved");
-      break;
-    default:
-      out = out.filter((i) => i.ward.includes("Ward 12") || i.ward.includes("Ward 9") || i.ward.includes("Ward 14"));
+let cache: CommunityIssue[] | null = null;
+
+async function loadIssues(): Promise<CommunityIssue[]> {
+  if (cache) return cache;
+
+  // The generated DB types predate this view (same `as any` pattern as the
+  // landing ReportsSection); the row shape is pinned by PublicComplaintRow.
+  const { data: complaintRows, error: complaintsError } = await supabase
+    .from("public_complaints_view" as any)
+    .select("id, reference_number, project_id, category, title, severity, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (complaintsError) {
+    throw new ApiError({ message: `Could not load community issues: ${complaintsError.message}` });
   }
-  return out;
-}
 
-export async function getCommunityIssue(id: string): Promise<CommunityIssueView> {
-  offlineGuard();
-  await latency(250, 500);
-  const found = communityIssues.find((i) => i.id === id);
-  if (!found) {
-    throw new ApiError({ message: "Community issue not found. It may have been merged or closed.", notFound: true });
+  const rows = (complaintRows ?? []) as unknown as PublicComplaintRow[];
+  const projectIds = Array.from(new Set(rows.map((r) => r.project_id).filter(Boolean))) as string[];
+
+  const projectByUuid = new Map<string, { code: string | null; name: string | null }>();
+  if (projectIds.length > 0) {
+    const { data: projectRows, error: projectsError } = await supabase
+      .from("public_projects_view")
+      .select("id, nirikshak_project_id, project_name")
+      .in("id", projectIds);
+    if (projectsError) {
+      throw new ApiError({ message: `Could not load linked projects: ${projectsError.message}` });
+    }
+    for (const p of (projectRows ?? []) as any[]) {
+      projectByUuid.set(String(p.id), {
+        code: p.nirikshak_project_id ? String(p.nirikshak_project_id) : null,
+        name: p.project_name ? String(p.project_name) : null
+      });
+    }
   }
-  return withUserState(found);
-}
 
-export async function confirmIssue(id: string): Promise<void> {
-  await latency(200, 400);
-  const confirmed = appStore.getState().confirmed;
-  if (!confirmed.includes(id)) {
-    appStore.setState({ confirmed: [...confirmed, id] });
-  }
-}
-
-export async function upvoteIssue(id: string): Promise<void> {
-  await latency(200, 400);
-  const upvoted = appStore.getState().upvoted;
-  if (!upvoted.includes(id)) {
-    appStore.setState({ upvoted: [...upvoted, id] });
-  }
-}
-
-export async function addComment(id: string, text: string): Promise<void> {
-  await latency(300, 500);
-  const s = appStore.getState();
-  const user = s.user;
-  const comment: CommunityComment = {
-    author: user?.name ?? "You",
-    you: true,
-    ward: (user?.ward ?? "Ward 12").split("—")[0].trim(),
-    at: new Date().toISOString(),
-    text
-  };
-  appStore.setState({
-    comments: { ...s.comments, [id]: [...(s.comments[id] ?? []), comment] }
+  cache = rows.map((r) => {
+    const status = STATUS_MAP[String(r.status ?? "").toUpperCase()] ?? "open";
+    const project = r.project_id ? projectByUuid.get(r.project_id) : undefined;
+    const reportedAt = r.created_at ?? new Date(0).toISOString();
+    return {
+      id: r.reference_number || r.id,
+      uuid: r.id,
+      title: r.title || "—",
+      category: r.category || "Other",
+      severity: String(r.severity ?? "").toLowerCase(),
+      projectId: project?.code ?? null,
+      projectName: project?.name ?? null,
+      status,
+      reportedAt,
+      timeline: [
+        {
+          id: "tl-reported",
+          title: "Issue Reported",
+          description: "Complaint registered on NIRIKSHAK and published to the community board.",
+          date: reportedAt,
+          status: "completed" as const
+        },
+        {
+          id: "tl-status",
+          title:
+            status === "resolved"
+              ? "Resolved"
+              : status === "action-taken"
+                ? "Department Action Under Way"
+                : "Awaiting Department Action",
+          description:
+            status === "resolved"
+              ? "The complaint is marked resolved in the public register."
+              : "Current status as published in the public complaints register.",
+          date: null,
+          status: status === "resolved" ? ("completed" as const) : ("current" as const)
+        }
+      ]
+    };
   });
+  return cache;
 }
 
-export function getCommunityStats(): CommunityStats {
+export async function getCommunityFeed(feed: CommunityFeed): Promise<CommunityIssue[]> {
+  offlineGuard();
+  const all = await loadIssues();
+  switch (feed) {
+    case "open":
+      return all.filter((i) => i.status !== "resolved");
+    case "resolved":
+      return all.filter((i) => i.status === "resolved");
+    case "recent":
+    case "all":
+    default:
+      return [...all];
+  }
+}
+
+export async function getCommunityIssue(id: string): Promise<CommunityIssue> {
+  offlineGuard();
+  const all = await loadIssues();
+  const found = all.find((i) => i.id === id || i.uuid === id);
+  if (!found) {
+    throw new ApiError({ message: "Community issue not found in the public register.", notFound: true });
+  }
+  return found;
+}
+
+export async function getCommunityStats(): Promise<CommunityStats> {
+  const all = await loadIssues();
   return {
-    open: communityIssues.filter((i) => i.status !== "resolved").length,
-    resolved: communityIssues.filter((i) => i.status === "resolved").length,
-    confirmations: communityIssues.reduce((acc, i) => acc + i.confirmations, 0),
-    citizensAffected: communityIssues.reduce((acc, i) => acc + i.affected, 0)
+    total: all.length,
+    open: all.filter((i) => i.status !== "resolved").length,
+    resolved: all.filter((i) => i.status === "resolved").length,
+    linkedProjects: new Set(all.map((i) => i.projectId).filter(Boolean)).size
   };
 }

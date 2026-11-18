@@ -16,7 +16,7 @@ interface VisionResultViewProps {
 }
 
 export function VisionResultView({ result, continueToReport, onReport, onInfoSubmit, onAnalyzeAnother }: VisionResultViewProps): JSX.Element {
-  const problematic = result.condition.label !== "Good";
+  const problematic = result.condition.observations.length > 0;
   return (
     <div className="space-y-5" data-vision-result={result.id}>
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/60 shadow-sm overflow-hidden">
@@ -36,15 +36,15 @@ export function VisionResultView({ result, continueToReport, onReport, onInfoSub
           <div className="md:col-span-7 p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-bold uppercase tracking-widest text-outline">Infrastructure Identified</span>
-              <AiBadge />
+              <AiBadge model={result.model} />
             </div>
             <h2 className="text-[24px] leading-tight font-bold text-primary uppercase">{result.infrastructureLabel}</h2>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="flex justify-between text-label-sm mb-1">
-                  <span className="text-on-surface-variant">Match strength</span>
+                  <span className="text-on-surface-variant">Model confidence</span>
                   <span className="font-bold text-primary tabular-nums">
-                    {result.confidence != null ? `${result.confidence}%` : 'Indicative — demo estimate, not measured'}
+                    {result.confidence != null ? `${result.confidence}%` : "—"}
                   </span>
                 </div>
                 {result.confidence != null ? <ProgressBar pct={result.confidence} toneClass="bg-info" /> : null}
@@ -60,7 +60,7 @@ export function VisionResultView({ result, continueToReport, onReport, onInfoSub
 
       <section className="space-y-2">
         <h3 className="text-headline-sm font-bold text-primary flex items-center gap-2">
-          <AiBadge /> <span className="ml-1">What is this?</span>
+          <AiBadge model={result.model} /> <span className="ml-1">What is this?</span>
         </h3>
         <p className="text-body-md text-on-surface leading-relaxed">{result.description}</p>
       </section>
@@ -143,7 +143,7 @@ export function VisionHistoryList({
   return (
     <div className="space-y-3">
       {history.map((r) => {
-        const attention = r.condition.label !== "Good";
+        const attention = r.condition.observations.length > 0;
         return (
           <button
             key={r.id}
@@ -167,8 +167,7 @@ export function VisionHistoryList({
               <div className="text-label-sm mt-0.5">
                 {r.relatedProject ? (
                   <span className="text-green-700 font-semibold flex items-center gap-1">
-                    <Icon name="link" className="text-[13px]" /> Matched Project:{" "}
-                    {`#${r.relatedProject.projectId.slice(0, 3).toUpperCase()}`}
+                    <Icon name="link" className="text-[13px]" /> Matched Project: {r.relatedProject.projectId}
                   </span>
                 ) : (
                   <span className="text-outline">No project matched</span>
@@ -183,7 +182,7 @@ export function VisionHistoryList({
               >
                 {r.condition.label}
               </span>
-              <div className="text-label-sm text-outline mt-1">{r.confidence != null ? `${r.confidence}%` : 'Indicative (demo)'}</div>
+              <div className="text-label-sm text-outline mt-1">{r.confidence != null ? `${r.confidence}%` : "—"}</div>
             </div>
           </button>
         );

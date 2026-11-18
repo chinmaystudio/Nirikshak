@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from '../lib/router';
 import { cls } from '../lib/utils';
 import { ProgressBar } from './ui';
-import type { Project } from '../lib/data';
+import type { Project } from '../lib/types';
 import {
   LayoutList, Users, Wallet, Sparkles, Receipt, BarChart3, ShieldCheck, FileUp,
   Activity, CalendarClock, MessagesSquare,
@@ -12,13 +12,13 @@ export const PROJECT_SECTIONS = [
   { key: 'details', label: 'Project Details', icon: LayoutList },
   { key: 'resources', label: 'Resource Management', icon: Users },
   { key: 'finance', label: 'Finance & Payments', icon: Wallet },
-  { key: 'ai-guide', label: 'AI Guide', icon: Sparkles },
+  { key: 'ai-guide', label: 'Project Guide', icon: Sparkles },
   { key: 'bills', label: 'Bills & Invoices', icon: Receipt },
   { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'inspection', label: 'Inspection & Compliance', icon: ShieldCheck },
   { key: 'update', label: 'Report Update', icon: FileUp },
-  { key: 'ai-analysis', label: 'AI Project Analysis', icon: Activity },
-  { key: 'ai-completion', label: 'AI Completion Prediction', icon: CalendarClock },
+  { key: 'ai-analysis', label: 'Project Health', icon: Activity },
+  { key: 'ai-completion', label: 'Schedule Outlook', icon: CalendarClock },
   { key: 'communication', label: 'Government Communication', icon: MessagesSquare },
 ];
 

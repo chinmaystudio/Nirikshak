@@ -7,8 +7,10 @@ import { Card, StatusBadge, Field, DocumentUploader, ConfirmModal, SectionTitle 
 import { Link } from '../lib/router';
 import type { UploadDoc } from '../components/ui';
 import { useStore } from '../lib/store';
-import { getTender, CONTRACTOR, BID_STEPS } from '../lib/data';
-import type { Tender } from '../lib/data';
+import type { Tender } from '../lib/types';
+import { getCachedTender } from '../services/tender.service';
+
+const BID_STEPS = ['Company Details', 'Eligibility', 'Technical Proposal', 'Financial Proposal', 'Documents', 'Review', 'Submit'];
 import { eligibilityStatus, useContractorProfile } from '../lib/eligibility';
 import { cr, money, fmtDate, cls } from '../lib/utils';
 import { ContractorTenderService } from '../services/tender.service';
@@ -30,7 +32,9 @@ interface BidData {
 }
 
 const EMPTY: BidData = {
-  contact: CONTRACTOR.name,
+  // Filled from the signed-in contractor's real organization record below —
+  // never from a bundled profile.
+  contact: '',
   signatory: '',
   designation: 'Authorized Signatory',
   turnoverFY: '',
@@ -48,12 +52,20 @@ const EMPTY: BidData = {
 const REQUIRED_DOCS = ['Experience Certificate', 'Equipment Ownership Proof', 'EMD Bank Guarantee', 'Turnover Certificate'];
 
 export default function BidSubmission({ tenderId }: { tenderId: string }) {
-  const { bids, saveBidDraft, submitBid, toast } = useStore();
-  // Paint from the sessionStorage cache (cache-only getTender), then the
+  const { bids, saveBidDraft, submitBid, toast, contractorOrganization } = useStore();
+  // Paint from the sessionStorage cache (cache-only getCachedTender), then the
   // live service record overrides it — no bundled mock fallback.
-  const [tender, setTender] = useState<Tender | undefined>(() => getTender(tenderId));
+  const [tender, setTender] = useState<Tender | undefined>(() => getCachedTender(tenderId));
   const [tenderNotFound, setTenderNotFound] = useState(false);
   const contractorProfile = useContractorProfile();
+
+  // Pre-fill the legal company name from the real organization record as
+  // soon as it is known (the field stays editable for the exact legal name).
+  useEffect(() => {
+    if (contractorOrganization?.name) {
+      setData((d) => (d.contact ? d : { ...d, contact: contractorOrganization.name }));
+    }
+  }, [contractorOrganization?.name]);
   const existing = tender ? bids[tender.id] : undefined;
   const [step, setStep] = useState(existing && existing.status === 'Draft' ? Math.min(existing.step, 6) : 0);
   const [data, setData] = useState<BidData>(EMPTY);
@@ -71,13 +83,13 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
         if (!active) return;
         if (row) {
           setTender(ContractorTenderService.toTender(row));
-        } else if (!getTender(tenderId)) {
+        } else if (!getCachedTender(tenderId)) {
           setTenderNotFound(true);
         }
       } catch (error) {
         if (!active) return;
         console.error(`Unable to load tender ${tenderId}:`, error);
-        if (!getTender(tenderId)) setTenderNotFound(true);
+        if (!getCachedTender(tenderId)) setTenderNotFound(true);
       }
     })();
     return () => { active = false; };
@@ -290,7 +302,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
             <Link to={`/tenders/${tender.id}/bid/ai-assist`}>
               <button className="btn btn-secondary">
                 <Sparkles className="w-4 h-4 text-blue-700 dark:text-blue-400" />
-                AI Bid Assist
+                Bid Assistant
               </button>
             </Link>
             <button className="btn btn-secondary" onClick={() => saveDraft()}>
@@ -344,14 +356,14 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
               <Field label="Legal Company Name" required>
                 <input className="input" value={data.contact} onChange={(e) => set('contact', e.target.value)} onBlur={() => markTouched('contact')} />
               </Field>
-              <Field label="Contractor ID">
-                <input className="input bg-slate-100 dark:bg-slate-800/70" value={CONTRACTOR.id} readOnly />
+              <Field label="Registration Number (from organization record)">
+                <input className="input bg-slate-100 dark:bg-slate-800/70" value={contractorOrganization?.registrationNumber ?? '—'} readOnly />
               </Field>
-              <Field label="Class / Registration">
-                <input className="input bg-slate-100 dark:bg-slate-800/70" value={CONTRACTOR.class} readOnly />
+              <Field label="Contractor Class">
+                <input className="input bg-slate-100 dark:bg-slate-800/70" value="—" readOnly />
               </Field>
-              <Field label="GSTIN">
-                <input className="input bg-slate-100 dark:bg-slate-800/70" value={CONTRACTOR.gstin} readOnly />
+              <Field label="GSTIN (from organization record)">
+                <input className="input bg-slate-100 dark:bg-slate-800/70" value={contractorOrganization?.gstin ?? '—'} readOnly />
               </Field>
               <Field label="Authorized Signatory Name" required error={err('signatory', 'Enter the signatory name')}>
                 <input className="input" placeholder="e.g. R. K. Sharma, Director" value={data.signatory} onChange={(e) => set('signatory', e.target.value)} onBlur={() => markTouched('signatory')} />
@@ -360,7 +372,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
                 <input className="input" value={data.designation} onChange={(e) => set('designation', e.target.value)} onBlur={() => markTouched('designation')} />
               </Field>
               <Field label="Average Annual Turnover FY 2023-26 (₹ Cr)" required error={err('turnoverFY', 'Enter turnover as per audited statements')} hint={`Requirement: ≥ ₹${Math.round(tender.value / 2)} Cr for this tender`}>
-                <input className="input" type="number" placeholder={String(CONTRACTOR.turnover)} value={data.turnoverFY} onChange={(e) => set('turnoverFY', e.target.value)} onBlur={() => markTouched('turnoverFY')} />
+                <input className="input" type="number" placeholder="As per audited statements" value={data.turnoverFY} onChange={(e) => set('turnoverFY', e.target.value)} onBlur={() => markTouched('turnoverFY')} />
               </Field>
             </div>
           </div>
@@ -370,7 +382,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
           <div className="max-w-2xl space-y-4">
             <SectionTitle icon={ShieldCheck} title="02 — Eligibility Declarations" />
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Indicative pre-check against {CONTRACTOR.name}: <StatusBadge status={eligibilityStatus(tender, contractorProfile)} />. Confirm the declarations below.
+              Indicative pre-check against {contractorOrganization?.name ?? contractorProfile?.organizationName ?? 'your organization record'}: <StatusBadge status={eligibilityStatus(tender, contractorProfile)} />. Confirm the declarations below.
             </p>
             {[
               'We meet the turnover and class requirements specified in the tender.',
@@ -480,7 +492,7 @@ export default function BidSubmission({ tenderId }: { tenderId: string }) {
             </div>
             <DocumentUploader label="Upload Bid Documents" docs={data.docs} onChange={(d) => set('docs', d)} />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Name files clearly, e.g. “Experience_Certificate_PWD.pdf”. The AI checks file names against the required list.
+              Name files clearly, e.g. “Experience_Certificate_PWD.pdf”. The Bid Assistant checks file names against the required list.
             </p>
           </div>
         )}

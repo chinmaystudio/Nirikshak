@@ -2,7 +2,7 @@ import { ShieldCheck, CalendarClock, CheckCircle2, CircleAlert, History, Refresh
 import { Card, SectionTitle, StatusBadge, EmptyState, ConfirmModal } from '../../components/ui';
 import { ProgressRing } from '../../components/charts';
 import { useStore } from '../../lib/store';
-import type { Project } from '../../lib/data';
+import type { Project } from '../../lib/types';
 import { useState } from 'react';
 import { fmtDate } from '../../lib/utils';
 
@@ -82,6 +82,12 @@ export default function Inspection({ project }: { project: Project }) {
       </Card>
 
       {/* Compliance */}
+      {project.compliance.length === 0 ? (
+        <Card className="p-5">
+          <SectionTitle icon={ShieldCheck} title="Compliance" />
+          <EmptyState icon={FileCheck2} title="No compliance record" msg="No compliance checklist or score is recorded for this project, so none is shown — a score is never estimated locally." />
+        </Card>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-5 flex flex-col items-center text-center">
           <SectionTitle icon={ShieldCheck} title="Overall Compliance" />
@@ -122,24 +128,26 @@ export default function Inspection({ project }: { project: Project }) {
           </div>
         </Card>
       </div>
+      )}
 
-      {/* Checklist modal */}
+      {/* Checklist modal — no checklist service exists; the modal says so
+          instead of claiming a document was generated and shared. */}
       <ConfirmModal
         open={prepFor !== null}
         onClose={() => setPrepFor(null)}
-        onConfirm={() => toast('success', 'Checklist generated', `A preparation checklist for “${prepFor}” has been shared with your site team.`)}
-        title="Generate inspection checklist?"
-        message={`A preparation checklist for “${prepFor}” will be generated from the tender specifications and past inspection remarks, and shared with your site team.`}
-        confirmLabel="Generate"
+        onConfirm={() => toast('info', 'Not available', 'Checklist generation is not connected to any service yet — nothing was generated or shared.')}
+        title="Inspection checklist"
+        message={`A preparation checklist for “${prepFor}” cannot be generated yet: no checklist service is connected to this portal. Prepare from the tender specifications and past inspection remarks shown above.`}
+        confirmLabel="OK"
       />
 
       <ConfirmModal
         open={renewOpen}
         onClose={() => setRenewOpen(false)}
-        onConfirm={() => toast('success', 'Renewal initiated', 'The renewal application has been drafted and assigned to your compliance officer.')}
-        title="Initiate corrective action?"
-        message="The compliance task will be assigned with a due date before the next inspection. You can track the status here."
-        confirmLabel="Assign Task"
+        onConfirm={() => toast('info', 'Not available', 'Task assignment is not connected to any service yet — nothing was drafted or assigned.')}
+        title="Corrective action"
+        message="Assigning a compliance task is not connected to any service yet, so nothing will be drafted or assigned. Handle the renewal through your compliance officer directly."
+        confirmLabel="OK"
       />
     </div>
   );

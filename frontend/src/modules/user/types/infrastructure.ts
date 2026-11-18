@@ -20,25 +20,22 @@ export interface GovernmentAlert {
 }
 
 export interface VisionCondition {
+  /** Derived from the AI result: "Attention Required" when the model listed
+   * visible issues, otherwise "No visible issues". Never invented. */
   label: string;
+  /** The model's real `visible_issues` list. */
   observations: string[];
 }
 
-export interface VisionDetails {
-  ageEstimate: string;
-  usage: string;
-  materials: string;
-}
-
 export interface VisionAuthority {
-  organization: string;
-  department: string;
-  contact: string;
+  /** The backend AI's `authority_hint` — a hint, not a verified record. */
+  hint: string;
 }
 
 export interface VisionProjectMatch {
+  /** nirikshak_project_id (public code) of a real public_projects_view row. */
   projectId: string;
-  /** DF-16: null — the demo matcher produces no measured confidence. */
+  /** Always null — matching is sector/GPS based, no measured confidence. */
   matchConfidence: number | null;
 }
 
@@ -49,34 +46,24 @@ export interface VisionAnalysis {
   analyzedAt: string;
   imageSource: VisionImageSource;
   thumb: string | null;
+  /** Backend AI `label`. */
   infrastructureLabel: string;
   shortLabel: string;
+  /** Backend AI `infrastructure_type`. */
   infrastructureType: string;
-  /** DF-16: null — simulated analysis must not present invented percentages. */
+  /** Backend AI confidence as a percentage (0–100), or null when the model
+   * returned none — the UI renders "—", never an invented number. */
   confidence: number | null;
+  /** Model that produced this analysis (backend response `model`). */
+  model: string | null;
+  /** Backend AI `condition_summary`. */
   description: string;
-  details: VisionDetails;
   condition: VisionCondition;
   authority: VisionAuthority;
   relatedProject: VisionProjectMatch | null;
   reportCategory: IssueCategory;
   saved: boolean;
   infoSubmitted: boolean;
-}
-
-export interface VisionProfile {
-  key: string;
-  label: string;
-  shortLabel: string;
-  type: string;
-  confidence: number;
-  description: string;
-  details: VisionDetails;
-  conditionVariants: VisionCondition[] | null;
-  defaultCondition: VisionCondition;
-  authority: VisionAuthority;
-  projectMatch: string | null;
-  reportCategory: IssueCategory;
 }
 
 export interface GovernmentAlertView extends GovernmentAlert {

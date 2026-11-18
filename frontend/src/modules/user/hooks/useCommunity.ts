@@ -1,36 +1,18 @@
 import { useAsync } from "./useAsync";
-import { useAppState } from "@/app/providers/store";
-import { getCommunityFeed, getCommunityStats, confirmIssue, upvoteIssue, addComment, type CommunityFeed } from "@/services/community/communityService";
-import type { CommunityIssueView, CommunityStats } from "@/types/community";
+import { getCommunityFeed, getCommunityStats, type CommunityFeed } from "@/services/community/communityService";
+import type { CommunityIssue, CommunityStats } from "@/types/community";
 
 export interface CommunityFeedResult {
-  issues: CommunityIssueView[];
+  issues: CommunityIssue[];
   stats: CommunityStats;
 }
 
 export function useCommunityFeed(feed: CommunityFeed): ReturnType<typeof useAsync<CommunityFeedResult>> {
-  const confirmed = useAppState((s) => s.confirmed);
-  const upvoted = useAppState((s) => s.upvoted);
-  const comments = useAppState((s) => s.comments);
-
   return useAsync(
-    () =>
-      getCommunityFeed(feed).then((issues) => ({
-        issues,
-        stats: getCommunityStats()
-      })),
-    [feed, confirmed.length, upvoted.length, Object.keys(comments).length]
+    async () => {
+      const [issues, stats] = await Promise.all([getCommunityFeed(feed), getCommunityStats()]);
+      return { issues, stats };
+    },
+    [feed]
   );
-}
-
-export function useCommunityActions(): {
-  confirm: (id: string) => Promise<void>;
-  upvote: (id: string) => Promise<void>;
-  comment: (id: string, text: string) => Promise<void>;
-} {
-  return {
-    confirm: confirmIssue,
-    upvote: upvoteIssue,
-    comment: addComment
-  };
 }

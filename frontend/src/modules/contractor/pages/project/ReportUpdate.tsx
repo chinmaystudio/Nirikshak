@@ -3,7 +3,7 @@ import { FileUp, Info, Send, Save } from 'lucide-react';
 import { Card, SectionTitle, StatusBadge, Field, Select, DocumentUploader, ConfirmModal, Modal } from '../../components/ui';
 import type { UploadDoc } from '../../components/ui';
 import { useStore } from '../../lib/store';
-import type { Project } from '../../lib/data';
+import type { Project } from '../../lib/types';
 import { cls, fmtDate, timeAgo } from '../../lib/utils';
 
 export default function ReportUpdate({ project }: { project: Project }) {

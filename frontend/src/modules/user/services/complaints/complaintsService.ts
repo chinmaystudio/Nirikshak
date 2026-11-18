@@ -1,11 +1,7 @@
 import type { Complaint, EvidenceItem, NewComplaintPayload, ComplaintFeedback } from "@/types/complaint";
 import { ApiError, fetchWithTimeout } from "@/services/api/client";
-import { complaints as mockComplaints, slaFromNow } from "@/data/complaints";
-import { appStore } from "@/app/providers/store";
 import { supabase } from "@/core/supabase/client";
 import { environment } from "@/config/environment";
-
-const useMock = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -113,12 +109,6 @@ function mapDbComplaint(c: any): Complaint {
 }
 
 export async function getMyComplaints(): Promise<Complaint[]> {
-  if (useMock) {
-    return [...mockComplaints, ...appStore.getState().created].sort(
-      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-  }
-
   // DF-03: scope strictly to the signed-in user's own complaints.
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw new ApiError({ message: `Could not verify your session: ${userError.message}` });
@@ -137,12 +127,6 @@ export async function getMyComplaints(): Promise<Complaint[]> {
 }
 
 export async function getComplaintById(id: string): Promise<Complaint> {
-  if (useMock) {
-    const found = [...mockComplaints, ...appStore.getState().created].find((c) => c.id === id);
-    if (!found) throw new ApiError({ message: `Complaint ${id} was not found.`, notFound: true });
-    return found;
-  }
-
   // DF-14: query the UUID column only for UUID values, else the reference
   // column alone (a reference in an id.eq slot errors on the UUID cast).
   const query = supabase.from('complaints').select(COMPLAINT_SELECT);
@@ -169,37 +153,6 @@ async function resolveComplaintRow(id: string): Promise<{ uuid: string; status: 
 }
 
 export async function createComplaint(payload: NewComplaintPayload): Promise<Complaint> {
-  if (useMock) {
-    const totalHours = payload.priority === 'critical' ? 12 : payload.priority === 'high' ? 24 : payload.priority === 'medium' ? 48 : 72;
-    const now = new Date().toISOString();
-    const demoComplaint: Complaint = {
-      id: `CMP-DEMO-${Math.floor(100000 + Math.random() * 900000)}`,
-      title: payload.title,
-      category: payload.category,
-      categoryLabel: payload.categoryLabel || payload.category,
-      priority: payload.priority || 'medium',
-      projectId: payload.projectId,
-      ward: payload.ward || '—',
-      location: payload.location || '—',
-      description: payload.description,
-      status: 'submitted',
-      submittedAt: now,
-      updatedAt: now,
-      sla: { deadline: Date.now() + totalHours * 3600_000, totalHours },
-      department: payload.department || '—',
-      officer: null,
-      evidence: payload.evidence || [],
-      timeline: [
-        { id: 'tl-1', title: 'Complaint Submitted', description: 'Demo mode — not stored.', timestamp: now, actor: 'Citizen', status: 'completed' },
-      ],
-      officerNote: null,
-      resolution: null,
-      feedback: null,
-    };
-    appStore.setState({ created: [demoComplaint, ...appStore.getState().created] });
-    return demoComplaint;
-  }
-
   // DF-04: creation goes through the backend, which generates the NIR-CMP
   // reference, derives user_id from the Bearer token, and persists evidence
   // rows + coordinates. No client-generated references, no default project.
@@ -309,10 +262,6 @@ async function applyStatusChange(id: string, newStatus: string, notes?: string):
 }
 
 export async function submitFeedback(id: string, fb: ComplaintFeedback): Promise<Complaint> {
-  if (useMock) {
-    const current = await getComplaintById(id);
-    return { ...current, feedback: fb };
-  }
   const { uuid, status } = await resolveComplaintRow(id);
   const { data: userData } = await supabase.auth.getUser();
   const { error } = await supabase.from('complaint_updates').insert({
@@ -328,28 +277,16 @@ export async function submitFeedback(id: string, fb: ComplaintFeedback): Promise
 }
 
 export async function requestEscalation(id: string, reason?: string): Promise<Complaint> {
-  if (useMock) {
-    const current = await getComplaintById(id);
-    return { ...current, status: 'escalated' as Complaint['status'] };
-  }
   return applyStatusChange(id, 'ESCALATED', reason ? `Citizen escalation: ${reason}` : 'Citizen requested escalation');
 }
 
 export const escalateComplaint = requestEscalation;
 
 export async function reopenComplaint(id: string, reason?: string): Promise<Complaint> {
-  if (useMock) {
-    const current = await getComplaintById(id);
-    return { ...current, status: 'submitted' as Complaint['status'] };
-  }
   return applyStatusChange(id, 'SUBMITTED', reason ? `Citizen reopened: ${reason}` : 'Citizen reopened the complaint');
 }
 
 export async function addEvidence(id: string, item: EvidenceItem): Promise<Complaint> {
-  if (useMock) {
-    const current = await getComplaintById(id);
-    return { ...current, evidence: [...(current.evidence || []), item] };
-  }
   const { uuid } = await resolveComplaintRow(id);
   const { error } = await supabase.from('complaint_evidence').insert({
     complaint_id: uuid,
@@ -362,10 +299,6 @@ export async function addEvidence(id: string, item: EvidenceItem): Promise<Compl
 }
 
 export async function markResolved(id: string, note?: string): Promise<Complaint> {
-  if (useMock) {
-    const current = await getComplaintById(id);
-    return { ...current, status: 'resolved' as Complaint['status'] };
-  }
   return applyStatusChange(id, 'RESOLVED', note ? `Citizen confirmed resolution: ${note}` : 'Citizen confirmed resolution');
 }
 
@@ -376,5 +309,3 @@ export function activeComplaintCount(complaintsList: Complaint[]): number {
 export { getComplaintById as getComplaint };
 export type { EvidenceItem };
 
-// slaFromNow is re-exported for existing consumers of the demo data module.
-export { slaFromNow };

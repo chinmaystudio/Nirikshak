@@ -1,6 +1,6 @@
 import type { ReportDraft } from "@/types/report";
 
-export const REPORT_STEPS: readonly string[] = ["Issue Type", "Describe", "Location", "Evidence", "AI Check", "Review", "Done"];
+export const REPORT_STEPS: readonly string[] = ["Issue Type", "Describe", "Location", "Evidence", "Review", "Submit", "Done"];
 
 export function ReportStepper({ current }: { current: number }): JSX.Element {
   return (
@@ -34,24 +34,24 @@ export function wizardTitle(step: number): string {
     "Describe the issue",
     "Where is it located?",
     "Add evidence (photos)",
-    "AI verification",
+    "Review your report",
     "Review & submit"
   ][step] ?? "";
 }
 
 export function wizardSub(step: number): string {
   return [
-    "Pick the closest match — AI will refine it during verification.",
+    "Pick the closest match for the issue you are reporting.",
     "A clear title and description helps the department act faster.",
     "Exact location lets engineers find the spot on their first visit.",
     "Geotagged photos strengthen your case. You may also add evidence later.",
-    "Our AI cross-checks your report before routing it to officials.",
+    "Check the details you entered — title, description, category, severity from your selected priority, and any project you linked.",
     "Verify every detail — your complaint gets a tracking ID on submission."
   ][step] ?? "";
 }
 
 export function NextButtonLabel(step: number): string {
-  if (step === 3) return "Continue to AI-Assisted Review";
+  if (step === 3) return "Continue to Review";
   if (step === 5) return "Submit Complaint";
   return "Next";
 }

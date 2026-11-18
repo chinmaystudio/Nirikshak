@@ -22,11 +22,37 @@ export function useAssistantChat(): {
     const withUser: ChatMessage[] = [...history, { role: "user", text: trimmed }];
     appStore.setState({ chat: withUser });
     setThinking(true);
-    void respond(trimmed, null).then((reply) => {
-      const current = appStore.getState().chat;
-      appStore.setState({ chat: [...current, { role: "assistant", text: reply.text, actions: reply.actions, chips: reply.chips }] });
-      setThinking(false);
-    });
+    void respond(trimmed, null)
+      .then((reply) => {
+        const current = appStore.getState().chat;
+        appStore.setState({
+          chat: [
+            ...current,
+            {
+              role: "assistant",
+              text: reply.text,
+              actions: reply.actions,
+              chips: reply.chips,
+              source: reply.source ?? null,
+              model: reply.model ?? null
+            }
+          ]
+        });
+      })
+      .catch((e: Error) => {
+        const current = appStore.getState().chat;
+        appStore.setState({
+          chat: [
+            ...current,
+            {
+              role: "assistant",
+              text: `The assistant could not answer just now: ${e.message} Please try again in a moment.`,
+              error: true
+            }
+          ]
+        });
+      })
+      .finally(() => setThinking(false));
   });
 
   return { messages, send, thinking };
@@ -63,12 +89,9 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
       if (!embedded) window.dispatchEvent(new CustomEvent("nirikshan:close-assistant"));
       return;
     }
-    if (a.action === "report-location") {
-      appStore.setState({
-        locationPrefill: { address: "Kothrud, Paud Road (current location)", ward: "Ward 12 — Kothrud West", gps: "18.5089, 73.8083" }
-      });
-      navigate(ROUTES.REPORT);
-    } else if (a.action === "report-map") {
+    if (a.action === "report-location" || a.action === "report-map") {
+      // No prefilled location: the report flow asks for a real GPS fix or a
+      // manual address — never a fabricated one.
       navigate(ROUTES.REPORT);
     }
   };
@@ -82,10 +105,9 @@ export function ChatPanel({ embedded = false }: ChatPanelProps): JSX.Element {
           </span>
           <div>
             <div className={`text-headline-sm font-bold ${embedded ? "text-primary" : "text-surface-container-lowest"}`}>
-              NIRIKSHAK Civic Assistant{" "}
-              <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold uppercase tracking-wide align-middle">Demo</span>
+              NIRIKSHAK Civic Assistant
             </div>
-            <div className={`text-label-sm ${embedded ? "text-outline" : "text-surface-variant"}`}>Demo helper • Public information • Guided services • Not an official decision</div>
+            <div className={`text-label-sm ${embedded ? "text-outline" : "text-surface-variant"}`}>Answers from live project data & AI • Advisory — not an official decision</div>
           </div>
         </div>
       </div>
@@ -152,9 +174,20 @@ function MessageView({ message, onAction, onChip }: { message: ChatMessage; onAc
           </span>
           <span className="text-label-sm font-label-sm text-outline">NIRIKSHAK Assistant</span>
         </div>
-        <div className="bg-surface-container-lowest border border-outline-variant/50 rounded-xl rounded-bl-sm px-3.5 py-2.5 text-body-md text-on-surface shadow-sm whitespace-pre-line">
+        <div
+          className={`border rounded-xl rounded-bl-sm px-3.5 py-2.5 text-body-md shadow-sm whitespace-pre-line ${
+            message.error
+              ? "bg-red-50 border-red-200 text-error"
+              : "bg-surface-container-lowest border-outline-variant/50 text-on-surface"
+          }`}
+        >
           {message.text}
         </div>
+        {message.source ? (
+          <div className="text-label-sm text-outline mt-1">
+            Source: {message.source === "ai" ? `AI${message.model ? ` · ${message.model}` : ""}` : "Live project data"}
+          </div>
+        ) : null}
         {message.actions && message.actions.length > 0 ? (
           <div className="flex flex-wrap gap-2 mt-2.5">
             {message.actions.map((a, i) => (

@@ -4,7 +4,7 @@ import { PageHeader, Card, Tabs, StatusBadge, Select, SearchInput, EmptyState } 
 import { DataTable } from '../components/DataTable';
 import { Link } from '../lib/router';
 import { useStore } from '../lib/store';
-import type { Tender } from '../lib/data';
+import type { Tender } from '../lib/types';
 import { eligibilityStatus, useContractorProfile } from '../lib/eligibility';
 import { cls, cr, daysUntil, fmtDate, timeAgo } from '../lib/utils';
 import { ContractorTenderService } from '../services/tender.service';

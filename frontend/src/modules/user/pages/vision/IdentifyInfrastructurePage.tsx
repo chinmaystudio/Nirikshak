@@ -14,6 +14,7 @@ import { toast } from "@/hooks/useToast";
 import { validateImageFile, formatFileSize } from "@/utils/validation";
 import { readFileAsDataUrl } from "@/utils/download";
 import { findProject } from "@/services/projects/projectsService";
+import { currentPosition } from "@/utils/location";
 import { ROUTES } from "@/constants/routes";
 import type { VisionImageSource } from "@/types/infrastructure";
 
@@ -56,11 +57,22 @@ export function IdentifyInfrastructurePage(): JSX.Element {
     setAnalyzing(true);
     setAnalysisStep(0);
     setAnalyzeError(null);
-    const ticker = window.setInterval(() => setAnalysisStep((s) => Math.min(s + 1, 3)), 750);
-    void analyze({ thumb: null, source, preferredProjectId: preProject })
+    const ticker = window.setInterval(() => setAnalysisStep((s) => Math.min(s + 1, 2)), 750);
+    // Best-effort GPS for project matching — denial simply means no
+    // location-based match, never invented coordinates.
+    void currentPosition()
+      .catch(() => null)
+      .then((pos) =>
+        analyze({
+          imageDataUrl: dataUrl,
+          source,
+          preferredProjectId: preProject,
+          gps: pos ? { lat: pos.lat, lng: pos.lng } : null
+        })
+      )
       .then((result) => {
         window.clearInterval(ticker);
-        setAnalysisStep(4);
+        setAnalysisStep(3);
         void compressImage(dataUrl, 480, 0.6).then((thumb) => {
           saveResult({ ...result, thumb });
           navigate(`/vision/result/${result.id}`);
@@ -127,8 +139,9 @@ export function IdentifyInfrastructurePage(): JSX.Element {
           <div className="bg-surface-container-low rounded-lg p-3 text-label-sm text-on-surface-variant flex items-start gap-2">
             <Icon name="shield" className="text-[16px] text-primary flex-shrink-0" />
             <span>
-              Photos are processed on-device in this demo and stay in <strong className="text-primary">My Infrastructure Checks</strong> unless you
-              attach them to a report. Avoid capturing people or private property.
+              Your photo is sent to the NIRIKSHAK AI service for analysis; the result is kept in{" "}
+              <strong className="text-primary">My Infrastructure Checks</strong> on this device unless you attach it to a report. Avoid capturing
+              people or private property.
             </span>
           </div>
         </section>

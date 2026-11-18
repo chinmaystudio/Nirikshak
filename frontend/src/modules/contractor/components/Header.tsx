@@ -8,7 +8,6 @@ import { Link, navigate } from '../lib/router';
 import { cls } from '../lib/utils';
 import Logo from './Logo';
 import { Avatar, Dropdown } from './ui';
-import { CONTRACTOR } from '../lib/data';
 import { useAuth } from '@/core/auth/useAuth';
 import { RealtimeStatusIndicator } from '@/core/realtime/RealtimeStatusIndicator';
 
@@ -47,7 +46,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     r.push({ label: 'My Projects', sub: 'Page', to: '/projects' });
     r.push({ label: 'My Performance', sub: 'Page', to: '/performance' });
     r.push({ label: 'Tender Management', sub: 'Page', to: '/tenders' });
-    r.push({ label: 'AI Assist', sub: 'Page', to: '/ai-assist' });
+    r.push({ label: 'Bid Assistant', sub: 'Page', to: '/ai-assist' });
     r.push({ label: 'Calendar', sub: 'Page', to: '/calendar' });
     r.push({ label: 'Notifications', sub: 'Page', to: '/notifications' });
     return r

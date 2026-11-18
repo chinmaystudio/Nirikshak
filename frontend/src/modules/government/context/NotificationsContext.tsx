@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AlertItem } from '@/types'
-import { ALERTS } from '@/data/alerts'
+import { alertsApi } from '@/api'
+import { supabase } from '@/core/supabase/client'
 
 /**
  * Notification context — alerts feed powering the header bell and drawer.
- * Mock data source; wired to the alerts API surface so a real backend can
- * replace it without UI changes.
+ * Loads the signed-in user's real rows from the notifications table (via
+ * alertsApi, RLS-scoped). Starts empty; nothing is seeded or simulated.
  */
 
 interface NotificationsContextValue {
@@ -19,17 +20,60 @@ interface NotificationsContextValue {
 const NotificationsContext = createContext<NotificationsContextValue | null>(null)
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
-  const [alerts, setAlerts] = useState<AlertItem[]>(ALERTS)
+  const [alerts, setAlerts] = useState<AlertItem[]>([])
 
   useEffect(() => {
-    // Placeholder for a real subscription (websocket / polling) — mock data
-    // is static, so nothing to subscribe to yet.
+    let cancelled = false
+    const load = async () => {
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData?.user) {
+        if (!cancelled) setAlerts([])
+        return
+      }
+      try {
+        const rows = await alertsApi.list()
+        if (!cancelled) setAlerts(rows)
+      } catch (err) {
+        console.error('Failed to load notifications:', err)
+        if (!cancelled) setAlerts([])
+      }
+    }
+    void load()
+    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
+      void load()
+    })
+    return () => {
+      cancelled = true
+      subscription.subscription.unsubscribe()
+    }
   }, [])
 
-  const markRead = (id: string) =>
+  const markRead = (id: string) => {
     setAlerts((list) => list.map((a) => (a.id === id ? { ...a, read: true } : a)))
+    void supabase
+      .from('notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('read_at', null)
+      .then(({ error }) => {
+        if (error) console.error('Failed to mark notification read:', error)
+      })
+  }
 
-  const markAllRead = () => setAlerts((list) => list.map((a) => ({ ...a, read: true })))
+  const markAllRead = () => {
+    const unreadIds = alerts.filter((a) => !a.read).map((a) => a.id)
+    setAlerts((list) => list.map((a) => ({ ...a, read: true })))
+    if (unreadIds.length > 0) {
+      void supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', unreadIds)
+        .is('read_at', null)
+        .then(({ error }) => {
+          if (error) console.error('Failed to mark notifications read:', error)
+        })
+    }
+  }
 
   const unreadCount = alerts.filter((a) => !a.read).length
   const value = useMemo(

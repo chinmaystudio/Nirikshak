@@ -2,7 +2,10 @@ export function cls(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(' ');
 }
 
-export const NOW = new Date(2026, 8, 11, 10, 30); // 11 Sep 2026 10:30 IST — demo clock
+// Real clock: every "days left / overdue / time ago" label in this portal is
+// computed against the actual current date. (A pinned demo clock previously
+// froze the whole portal at 11 Sep 2026.)
+export const now = () => new Date();
 
 export function inr(n: number): string {
   return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(n);
@@ -56,9 +59,10 @@ export function fmtDateTime(d: string | Date | null | undefined): string {
 export function daysUntil(d: string | null | undefined): number {
   const dt = parseSafeDate(d);
   if (!dt) return 0;
-  const now = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate());
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const target = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
-  return Math.round((target.getTime() - now.getTime()) / 86400000);
+  return Math.round((target.getTime() - startOfToday.getTime()) / 86400000);
 }
 
 export function daysLeftLabel(d: string | null | undefined): string {
@@ -72,7 +76,7 @@ export function daysLeftLabel(d: string | null | undefined): string {
 
 export function timeAgo(d: string | Date): string {
   const dt = typeof d === 'string' ? new Date(d) : d;
-  const diff = NOW.getTime() - dt.getTime();
+  const diff = Date.now() - dt.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;

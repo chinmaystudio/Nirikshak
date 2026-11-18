@@ -81,7 +81,7 @@ interface ProjectMapProps {
   onSelect?: (id: string) => void;
 }
 
-export function ProjectMap({ projects, selectedId, userLabel = "Ward 12", pinMode = false, onPinSelect, onSelect }: ProjectMapProps): JSX.Element {
+export function ProjectMap({ projects, selectedId, userLabel = "You", pinMode = false, onPinSelect, onSelect }: ProjectMapProps): JSX.Element {
   const pinned = projects.filter((p) => p.mapPoint !== null);
   return (
     <div

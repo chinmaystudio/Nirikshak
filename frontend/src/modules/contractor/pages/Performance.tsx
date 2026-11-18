@@ -1,106 +1,80 @@
-import { Gauge, Star, History, MessageSquareQuote } from 'lucide-react';
+import { Gauge, History } from 'lucide-react';
 import { PageHeader, Card, SectionTitle, StatusBadge } from '../components/ui';
-import { ProgressRing, HBars, LineChart } from '../components/charts';
-import { PERFORMANCE } from '../lib/data';
-import { cr } from '../lib/utils';
+import { HBars } from '../components/charts';
+import { useStore } from '../lib/store';
+import { projectHealth } from '../lib/health';
+import { cr, fmtDate } from '../lib/utils';
 import { useAuth } from '@/core/auth/useAuth';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
+// ─── Performance ─────────────────────────────────────────────────────────────
+// There is no contractor-evaluation table in the database and the department
+// does not publish scores/grades/feedback to this portal, so no performance
+// score is shown — inventing one (the previous page shipped a full fake
+// scorecard) would violate the zero-fabrication rule. What IS shown: the
+// contractor's real portfolio figures, computed from assigned projects.
 
 export default function Performance() {
-  const p = PERFORMANCE;
+  const { projects } = useStore();
   const { session } = useAuth();
-  if (!DEMO_MODE) {
-    return (
-      <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-6">
-        <PageHeader title="My Performance" subtitle={session?.organization?.name || 'Organization not available'} />
-        <Card className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          No verified performance records are available yet.
-        </Card>
-      </div>
-    );
-  }
+
+  const completed = projects.filter((p) => p.status === 'Completed');
+  const active = projects.filter((p) => p.status !== 'Completed');
+  const totalValue = projects.reduce((s, p) => s + p.value, 0);
+  const avgProgress = projects.length > 0 ? Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length) : 0;
+  const behind = active.filter((p) => p.progress < p.planned).length;
+
   return (
     <div className="p-4 lg:p-6 lg:py-8 max-w-[1600px] mx-auto space-y-6">
-      <PageHeader
-        title="My Performance"
-        subtitle={`${session?.organization?.name || 'Organization not available'} • Government evaluation, quality records and citizen feedback`}
-      />
+      <PageHeader title="My Performance" subtitle={session?.organization?.name || 'Organization not available'} />
 
-      {/* Score hero */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="p-6 flex flex-col items-center justify-center text-center">
-          <ProgressRing value={p.score} size={150} label={`${p.score} / 100`} sub="Performance Score" color="var(--ch-green)" />
-          <p className="font-display font-bold text-lg text-slate-800 mt-4 dark:text-slate-100">Grade {(p.grade || '').split(/[—\-]/)[0]?.trim() || 'A'}</p>
-          <p className="text-xs text-slate-500 font-semibold mt-1 dark:text-slate-400">{(p.grade || '').split(/[—\-]/)[1]?.trim() || 'Reliable Partner'}</p>
-          <p className="text-[11px] text-slate-500 mt-3 dark:text-slate-400">{p.percentile}</p>
-        </Card>
+      <Card className="p-6">
+        <SectionTitle icon={Gauge} title="Department Evaluation" />
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          No verified performance evaluation has been published for your organization. When the department records an
+          evaluation (score, grade or rating) against your contracts, it will appear here — this portal does not
+          generate its own score.
+        </p>
+      </Card>
 
-        <Card className="p-5 lg:col-span-2">
-          <SectionTitle icon={Gauge} title="Score Breakdown" />
-          <HBars
-            items={p.breakdown.map((b, i) => ({
-              label: b.label,
-              value: b.value,
-              color: ['bg-green-600', 'bg-blue-700', 'bg-amber-500', 'bg-blue-900', 'bg-blue-400'][i],
-            }))}
-          />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
-            {p.stats.map((s) => (
-              <div key={s.label} className="rounded-lg border border-slate-200 p-3.5 dark:border-slate-700">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{s.label}</p>
-                <p className="font-display font-bold text-xl text-slate-800 mt-1 dark:text-slate-100">{s.value}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5 dark:text-slate-400">{s.sub}</p>
-              </div>
-            ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Assigned contracts', value: String(projects.length) },
+          { label: 'Completed', value: String(completed.length) },
+          { label: 'In execution', value: String(active.length) },
+          { label: 'Behind schedule', value: String(behind) },
+          { label: 'Total contract value', value: cr(totalValue) },
+          { label: 'Average progress', value: `${avgProgress}%` },
+          { label: 'Amount spent (dept. records)', value: cr(projects.reduce((s, p) => s + p.spent, 0)) },
+          { label: 'Open complaints', value: String(projects.reduce((s, p) => s + p.openComplaints, 0)) },
+        ].map((s) => (
+          <div key={s.label} className="rounded-lg border border-slate-200 bg-white p-3.5 dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{s.label}</p>
+            <p className="font-display font-bold text-xl text-slate-800 mt-1 dark:text-slate-100">{s.value}</p>
           </div>
-        </Card>
+        ))}
       </div>
 
-      {/* Trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="p-5 lg:col-span-2">
-          <SectionTitle icon={History} title="Performance Trend — FY 2026-27" right={<span className="text-[11px] text-slate-500 font-medium">Government median benchmark shown dashed</span>} />
-          <LineChart
-            labels={p.trend.labels}
-            series={[
-              { name: 'My Score', color: 'bg-blue-700', values: p.trend.values },
-              { name: 'Govt. Median', color: 'bg-slate-400', values: p.trend.benchmark, dashed: true },
-            ]}
-            yMax={100}
-            height={220}
-          />
-        </Card>
-
+      {projects.length > 0 && (
         <Card className="p-5">
-          <SectionTitle icon={Star} title="Citizen Feedback" />
-          <div className="flex flex-col gap-4">
-            {p.feedback.map((f) => (
-              <div key={f.source} className="rounded-lg border border-slate-200 p-3.5 dark:border-slate-700">
-                <div className="flex items-center gap-0.5 mb-2" aria-label={`${f.stars} out of 5 stars`}>
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Star key={i} className={`w-3.5 h-3.5 ${i <= Math.floor(f.stars) ? 'fill-amber-400 text-amber-400' : i - 0.5 === f.stars ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}`} />
-                  ))}
-                  <span className="text-[11px] font-bold text-slate-500 ml-1.5">{f.stars} / 5</span>
-                </div>
-                <div className="flex gap-2">
-                  <MessageSquareQuote className="w-4 h-4 text-slate-300 shrink-0 mt-0.5 dark:text-slate-600" />
-                  <div>
-                    <p className="text-xs text-slate-700 leading-relaxed dark:text-slate-300">“{f.quote}”</p>
-                    <p className="text-[10px] text-slate-500 font-semibold mt-1.5">{f.source}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <SectionTitle icon={Gauge} title="Computed Health by Project" />
+          <p className="text-[11px] text-slate-500 font-medium mb-3 dark:text-slate-400">
+            100 − schedule shortfall (max 60) − open-complaints load (max 20) − overdue penalty (20). A transparent calculation, not a department rating.
+          </p>
+          <HBars
+            items={projects.map((p) => {
+              const score = projectHealth(p).score;
+              return { label: p.name, value: score, num: score, color: score >= 75 ? 'bg-green-600' : score >= 50 ? 'bg-amber-500' : 'bg-red-600' };
+            })}
+            showNum
+            labelWidth="w-48 sm:w-64"
+          />
         </Card>
-      </div>
+      )}
 
-      {/* Historical performance */}
       <Card className="overflow-hidden">
         <div className="p-5 pb-4 flex items-center gap-2 text-blue-900 dark:text-blue-300">
           <History className="w-5 h-5" />
-          <h3 className="font-bold text-[15px]">Previous Project Performance</h3>
+          <h3 className="font-bold text-[15px]">Contract History (your assigned projects)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="data-table">
@@ -109,38 +83,27 @@ export default function Performance() {
                 <th>Project</th>
                 <th>Department</th>
                 <th>Value</th>
-                <th>Year</th>
-                <th>Delay</th>
-                <th>Quality Score</th>
-                <th>Government Rating</th>
+                <th>Progress</th>
+                <th>Deadline</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {p.history.map((h) => (
-                <tr key={h.name}>
-                  <td className="font-bold text-slate-800 dark:text-slate-100">{h.name}</td>
-                  <td className="text-xs font-semibold">{h.dept}</td>
-                  <td className="text-xs tabular-nums font-semibold">{cr(h.value)}</td>
-                  <td className="text-xs">{h.year}</td>
-                  <td>
-                    <span className={`text-xs font-bold ${h.delay === 0 ? 'text-green-700 dark:text-green-400' : h.delay <= 7 ? 'text-amber-700 dark:text-amber-400' : 'text-red-600'}`}>
-                      {h.delay === 0 ? 'On time' : `${h.delay} days`}
-                    </span>
-                  </td>
-                  <td className="text-xs font-bold tabular-nums">{h.quality}%</td>
-                  <td>
-                    <StatusBadge status={h.rating === 'A' ? 'Completed' : h.rating === 'A-' ? 'Approved' : 'Changes Requested'} />
-                    <span className="text-[11px] font-bold ml-1.5 text-slate-600 dark:text-slate-300">{h.rating}</span>
-                  </td>
+              {projects.map((p) => (
+                <tr key={p.id}>
+                  <td className="font-bold text-slate-800 dark:text-slate-100">{p.name}</td>
+                  <td className="text-xs font-semibold">{p.department || '—'}</td>
+                  <td className="text-xs tabular-nums font-semibold">{cr(p.value)}</td>
+                  <td className="text-xs font-bold tabular-nums">{p.progress}%</td>
+                  <td className="text-xs">{fmtDate(p.deadline)}</td>
+                  <td><StatusBadge status={p.status} /></td>
                 </tr>
               ))}
+              {projects.length === 0 && (
+                <tr><td colSpan={6} className="text-center py-8 text-sm text-slate-500">No assigned projects on record.</td></tr>
+              )}
             </tbody>
           </table>
-        </div>
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-          <p className="text-xs text-slate-500 font-medium dark:text-slate-400">
-            Ratings are compiled from department completion evaluations. Quality score reflects defect density at handover and DLP observations.
-          </p>
         </div>
       </Card>
     </div>

@@ -139,7 +139,7 @@ export function ComplaintDetailsPage(): JSX.Element {
         <div className="bg-green-50 border border-green-200 border-l-4 border-l-green-600 p-4 rounded-lg flex items-start gap-3">
           <Icon name="check_circle" className="text-[22px] text-green-700 flex-shrink-0" />
           <div className="text-body-sm text-on-surface">
-            <strong className="text-green-800">Complaint lodged successfully.</strong> AI verification is complete and the case has entered the
+            <strong className="text-green-800">Complaint lodged successfully.</strong> Your report has been submitted and the case has entered the
             departmental queue. Keep this reference handy: <span className="font-mono font-bold">{complaint.id}</span>
           </div>
         </div>

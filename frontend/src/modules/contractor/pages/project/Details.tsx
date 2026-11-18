@@ -3,25 +3,33 @@ import { Card, SectionTitle, StatusBadge, Timeline, ProgressBar, DocumentUploade
 import { Link } from '../../lib/router';
 import type { UploadDoc } from '../../components/ui';
 import { useStore } from '../../lib/store';
-import type { Project } from '../../lib/data';
+import type { Project } from '../../lib/types';
 import { useState } from 'react';
-import { cls, cr, downloadFile, fmtDate, fmtDateShort, daysUntil } from '../../lib/utils';
+import { cls, cr, fmtDate, fmtDateShort, daysUntil } from '../../lib/utils';
 
 export default function ProjectDetails({ project }: { project: Project }) {
-  const { documents, addDocument, toast } = useStore();
+  const { documents, addDocument, toast, contractorOrganization } = useStore();
   const [docs, setDocs] = useState<UploadDoc[]>([]);
   const docsList = documents[project.id] ?? [];
   const elapsedDays = Math.max(0, daysUntil(project.start) * -1);
   const totalDays = daysUntil(project.start) * -1 + daysUntil(project.deadline);
 
-  const submitDocs = () => {
+  const submitDocs = async () => {
     if (docs.length === 0) {
       toast('warn', 'No file selected');
       return;
     }
-    docs.forEach((d) => addDocument(project.id, { name: d.name, type: 'Contract Document', size: d.size }));
-    toast('success', `${docs.length} document${docs.length > 1 ? 's' : ''} uploaded`);
-    setDocs([]);
+    // addDocument writes the project_documents metadata row and throws on
+    // failure — success is reported only for rows the database accepted.
+    try {
+      for (const d of docs) {
+        await addDocument(project.id, { name: d.name, type: 'Contract Document', size: d.size });
+      }
+      toast('success', `${docs.length} document${docs.length > 1 ? 's' : ''} recorded`, 'Document metadata saved to the project record.');
+      setDocs([]);
+    } catch (err) {
+      toast('warn', 'Document not saved', err instanceof Error ? err.message : 'The document metadata could not be saved.');
+    }
   };
 
   return (
@@ -31,20 +39,20 @@ export default function ProjectDetails({ project }: { project: Project }) {
         <Card className="p-5">
           <SectionTitle icon={FileText} title="Project Information" />
           <dl className="space-y-3.5">
-            <Info k="Department" v={project.department || 'Infrastructure Works'} />
-            <Info k="Government Officer" v={`${project.officer || 'Executive Engineer'} — ${project.officerRole || 'Officer in Charge'}`} />
-            <Info k="Location" v={`${project.location || 'Pune'}, ${project.district || 'Pune'} district`} />
+            <Info k="Department" v={project.department || '—'} />
+            <Info k="Government Officer" v={project.officer ? `${project.officer} — ${project.officerRole}` : '—'} />
+            <Info k="Location" v={[project.location, project.district].filter(Boolean).join(', ') || '—'} />
             <Info k="Contract Value" v={cr(project.value || 0)} />
             <Info k="Approved Budget" v={cr(project.budgetApproved || project.value || 0)} />
             <Info k="Start Date" v={fmtDate(project.start)} />
             <Info k="Expected Completion" v={fmtDate(project.deadline)} />
-            <Info k="Contractor" v="Balaji Infraprojects Pvt. Ltd. (Class-A)" />
+            <Info k="Contractor" v={contractorOrganization?.name ?? '—'} />
             <Info k="Contract Status" v="" badge={<StatusBadge status={project.status === 'Completed' ? 'Completed' : 'Active'} />} />
-            <Info k="Work Order" v={project.workOrder || 'WO-MH-2026-001'} mono />
+            <Info k="Work Order" v={project.workOrder || '—'} mono />
           </dl>
           <div className="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
             <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500 mb-1.5">Scope of Work</p>
-            <p className="text-sm text-slate-700 leading-relaxed dark:text-slate-300">{project.scope || 'Standard engineering contract scope'}</p>
+            <p className="text-sm text-slate-700 leading-relaxed dark:text-slate-300">{project.scope || '—'}</p>
           </div>
         </Card>
 
@@ -58,10 +66,10 @@ export default function ProjectDetails({ project }: { project: Project }) {
                 <span className="font-display font-bold text-2xl text-slate-800 dark:text-slate-100">{project.progress || 0}%</span>
               </div>
               <ProgressBar value={project.progress || 0} marker={project.planned || 0} height="h-3.5" />
-              <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Vertical marker indicates planned progress ({project.planned || 0}%)</p>
+              <p className="text-[10px] text-slate-400 mt-1.5 font-medium">Vertical marker indicates schedule elapsed — the share of the planned duration already gone ({project.planned || 0}%)</p>
             </div>
             <dl className="grid grid-cols-3 gap-3">
-              <Stat k="Planned" v={`${project.planned || 0}%`} />
+              <Stat k="Schedule elapsed" v={`${project.planned || 0}%`} />
               <Stat k="Actual" v={`${project.progress || 0}%`} />
               <Stat k="Variance" v={`${(project.progress || 0) - (project.planned || 0) > 0 ? '+' : ''}${(project.progress || 0) - (project.planned || 0)}%`} tone={(project.progress || 0) - (project.planned || 0) < 0 ? 'bad' : 'good'} />
             </dl>
@@ -113,17 +121,18 @@ export default function ProjectDetails({ project }: { project: Project }) {
                 <tr key={d.id}>
                   <td className="font-bold text-slate-800 dark:text-slate-100">{d.name}</td>
                   <td><span className="text-[11px] font-bold bg-slate-100 rounded px-1.5 py-0.5 dark:bg-slate-800">{d.type}</span></td>
-                  <td className="text-xs">{d.size}</td>
+                  <td className="text-xs">{d.size || '—'}</td>
                   <td className="text-xs">{fmtDate(d.uploaded)}</td>
-                  <td className="text-xs">{d.by}</td>
+                  <td className="text-xs">{d.by || '—'}</td>
                   <td>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => downloadFile(d.name.replace(/\s+/g, '_'), `NIRIKSHAK document extract — ${d.name}\n\nThis is a demonstration file generated by the Contractor Portal for ${project.name} (${project.code}).`)}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download
-                    </button>
+                    {d.url ? (
+                      <a className="btn btn-secondary btn-sm" href={d.url} target="_blank" rel="noreferrer">
+                        <Download className="w-3.5 h-3.5" />
+                        Open
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400">Metadata only</span>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -137,6 +146,7 @@ export default function ProjectDetails({ project }: { project: Project }) {
         </div>
         <div className="p-5 pt-4 border-t border-slate-100 dark:border-slate-800">
           <DocumentUploader label="Upload additional documents" docs={docs} onChange={setDocs} />
+          <p className="text-[11px] text-slate-400 mt-2">Records the document's name and type on the project record; the file itself is not stored by this portal.</p>
           <div className="flex justify-end mt-3">
             <button className="btn btn-primary btn-sm" onClick={submitDocs}>
               <Upload className="w-3.5 h-3.5" />
@@ -147,7 +157,7 @@ export default function ProjectDetails({ project }: { project: Project }) {
       </Card>
 
       <p className="text-[11px] text-slate-400 text-center">
-        Project register entry last verified {fmtDateShort(new Date())} • Work order {project.workOrder} • Duration {totalDays} days
+        Project register entry last verified {fmtDateShort(new Date())} • Work order {project.workOrder || '—'} • Duration {totalDays} days
       </p>
       <Link to={`/projects/${project.id}/analytics`} className="link text-sm w-max mx-auto block">View detailed analytics →</Link>
     </div>

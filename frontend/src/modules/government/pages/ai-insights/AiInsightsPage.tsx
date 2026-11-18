@@ -40,8 +40,10 @@ export function AiInsightsPage() {
           <Card key={i.id} className="flex flex-col gap-3 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge descriptor={AI_CLASSIFICATION[i.classification]} size="sm" />
-              <StatusBadge descriptor={AI_CONFIDENCE[i.confidenceBand]} size="sm" />
-              <Badge tone="neutral" icon="percent">{i.confidencePct}%</Badge>
+              {i.confidenceBand && <StatusBadge descriptor={AI_CONFIDENCE[i.confidenceBand]} size="sm" />}
+              {i.confidencePct != null && (
+                <Badge tone="neutral" icon="percent">{i.confidencePct}%</Badge>
+              )}
               <Badge tone="neutral" icon="tag">{i.area}</Badge>
               <span className="ml-auto text-caption text-fg-subtle">{formatDate(i.generatedOn)}</span>
             </div>

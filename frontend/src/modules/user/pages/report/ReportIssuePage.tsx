@@ -7,13 +7,13 @@ import { ReportStepper, wizardTitle, wizardSub, SummaryRow } from "@/components/
 import { IssueCategoryGrid } from "@/components/report/IssueCategoryGrid";
 import { LocationPicker } from "@/components/report/LocationPicker";
 import { EvidenceUploader } from "@/components/report/EvidenceUploader";
-import { AIVerification } from "@/components/report/AIVerification";
+import { ReportReview } from "@/components/report/AIVerification";
 import { useNavigate } from "@/app/router";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjects } from "@/hooks/useProjects";
 import { toast } from "@/hooks/useToast";
 import { createComplaint } from "@/services/complaints/complaintsService";
-import { analyzeReport } from "@/services/reporting/reportingService";
+import { buildReportReview } from "@/services/reporting/reportingService";
 import { issueCategoryMeta } from "@/constants/issueCategories";
 import { PRIORITY_META } from "@/constants/complaintStatuses";
 import { consumeReportPrefill } from "@/features/reporting/reportFlow";
@@ -34,7 +34,6 @@ function initialDraft(projectParam: string | null): ReportDraft {
     gps: null,
     pin: null,
     evidence: [],
-    aiResult: null,
     submittedId: null,
     submitting: false
   };
@@ -48,7 +47,7 @@ export function ReportIssuePage(): JSX.Element {
   const projectParam = new URLSearchParams(window.location.search).get("project");
   const [draft, setDraft] = useState<ReportDraft>(() => {
     const d = initialDraft(projectParam);
-    d.ward = auth.user?.ward ?? "Ward 12 — Kothrud West";
+    d.ward = auth.user?.ward ?? "";
     const prefill = consumeReportPrefill();
     if (prefill) {
       d.categoryId = prefill.categoryId;
@@ -73,8 +72,6 @@ export function ReportIssuePage(): JSX.Element {
     }
     return d;
   });
-  const [aiStep, setAiStep] = useState(0);
-  const [aiRunning, setAiRunning] = useState(false);
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [locationPrefill, setLocationPrefill] = useState<{ address: string; ward: string; gps: string | null } | null>(
@@ -118,10 +115,6 @@ export function ReportIssuePage(): JSX.Element {
 
   const next = (): void => {
     if (!validate()) return;
-    if (draft.step === 4 && draft.aiResult === null) {
-      toast("Run the AI analysis before continuing — it strengthens routing accuracy.", "info");
-      return;
-    }
     if (draft.step < 6) patch({ step: draft.step + 1 });
   };
 
@@ -129,22 +122,17 @@ export function ReportIssuePage(): JSX.Element {
     if (draft.step > 0) patch({ step: draft.step - 1 });
   };
 
-  const runAI = (): void => {
-    setAiRunning(true);
-    setAiStep(0);
-    const tick = window.setInterval(() => setAiStep((s) => Math.min(s + 1, 3)), 700);
-    void analyzeReport({
-      categoryId: draft.categoryId ?? "other",
-      title: draft.title,
-      priority: draft.priority,
-      projectId: draft.projectId || null
-    }).then((result) => {
-      window.clearInterval(tick);
-      setAiStep(4);
-      setAiRunning(false);
-      patch({ aiResult: result });
-    });
-  };
+  // Honest review (U3): a pure projection of the citizen's own entries —
+  // no AI analysis, no guessed project. The linked project is only the one
+  // the citizen actually selected (resolved against the real project list).
+  const review = buildReportReview({
+    categoryId: draft.categoryId ?? "other",
+    title: draft.title,
+    description: draft.description,
+    priority: draft.priority,
+    projectId: draft.projectId || null
+  });
+  const selectedProjectName = draft.projectId ? (projects.find((p) => p.id === draft.projectId)?.name ?? null) : null;
 
   const submit = (): void => {
     if (!consent) {
@@ -172,7 +160,7 @@ export function ReportIssuePage(): JSX.Element {
       categoryLabel: cat?.label ?? "Other",
       priority: draft.priority,
       projectId: draft.projectId || null,
-      department: draft.aiResult?.department ?? cat?.department ?? "Municipal Commissioner Office",
+      department: cat?.department ?? "Municipal Commissioner Office",
       ward: draft.ward,
       location: locationText,
       latitude,
@@ -188,9 +176,9 @@ export function ReportIssuePage(): JSX.Element {
         thumb: e.thumb ?? null,
         fromVision: e.fromVision
       })),
-      aiSeverity: draft.aiResult?.severity ?? null,
-      aiConfidence: draft.aiResult?.confidence ?? null,
-      aiProjectName: draft.aiResult?.projectId ? (projects.find((p) => p.id === draft.aiResult?.projectId)?.name ?? null) : null
+      aiSeverity: review.severity,
+      aiConfidence: null,
+      aiProjectName: selectedProjectName
     })
       .then((complaint) => {
         patch({ submitting: false, submittedId: complaint.id, step: 6 });
@@ -289,7 +277,7 @@ export function ReportIssuePage(): JSX.Element {
                     </option>
                   ))}
                 </select>
-                <p className="text-label-sm text-outline mt-1">Linking helps AI match duplicates and route faster.</p>
+                <p className="text-label-sm text-outline mt-1">Linking helps officials route your report to the right project file.</p>
               </div>
             </div>
           </div>
@@ -310,7 +298,7 @@ export function ReportIssuePage(): JSX.Element {
 
         {draft.step === 3 ? <EvidenceUploader draft={draft} onChange={patch} /> : null}
 
-        {draft.step === 4 ? <AIVerification stepIndex={aiStep} running={aiRunning} result={draft.aiResult} onRun={runAI} /> : null}
+        {draft.step === 4 ? <ReportReview review={review} projectName={selectedProjectName} /> : null}
 
         {draft.step === 5 ? (
           <div className="space-y-4">
@@ -326,16 +314,14 @@ export function ReportIssuePage(): JSX.Element {
               <SummaryRow label="Ward" value={draft.ward} />
               <SummaryRow
                 label="Related project"
-                value={draft.projectId ? (projects.find((x) => x.id === draft.projectId)?.name ?? "—") : "—"}
+                value={draft.projectId ? (projects.find((x) => x.id === draft.projectId)?.name ?? "—") : "No project linked"}
               />
               <SummaryRow label="Evidence" value={`${draft.evidence.length} file(s) attached`} />
-              <SummaryRow label="Recommended department" value={draft.aiResult?.department ?? (draft.categoryId ? issueCategoryMeta(draft.categoryId).department : "Municipal Commissioner Office")} />
-              {draft.aiResult ? (
-                <SummaryRow
-                  label="AI assessment"
-                  value={`${draft.aiResult.severity} severity • ${draft.aiResult.confidence != null ? `${draft.aiResult.confidence}% confidence` : "indicative confidence (demo)"}${draft.aiResult.duplicates ? ` • ${draft.aiResult.duplicates} similar nearby` : ""}`}
-                />
-              ) : null}
+              <SummaryRow label="Recommended department" value={draft.categoryId ? issueCategoryMeta(draft.categoryId).department : "Municipal Commissioner Office"} />
+              <SummaryRow
+                label="Severity"
+                value={`${review.severity} — from your selected priority (${draft.priority})`}
+              />
             </dl>
             <label className="flex items-start gap-2 text-body-sm text-on-surface-variant">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 rounded text-primary" />
@@ -363,7 +349,7 @@ export function ReportIssuePage(): JSX.Element {
                   Submit Complaint
                 </Button>
               ) : (
-                <Button onClick={draft.step === 4 ? runAI : next}>{draft.step === 4 ? (draft.aiResult ? "Continue" : "Skip to Continue") : draft.step === 3 ? "Continue to AI-Assisted Review" : "Next"}</Button>
+                <Button onClick={next}>{draft.step === 4 ? "Continue" : draft.step === 3 ? "Continue to Review" : "Next"}</Button>
               )}
             </div>
           </div>
@@ -394,7 +380,7 @@ function ReportSuccessInline({ id }: { id: string }): JSX.Element {
             <div className="text-label-sm text-outline mt-1">An SMS confirmation has been triggered to your registered mobile.</div>
           </div>
           <ol className="space-y-2.5 text-body-sm text-on-surface-variant list-decimal list-inside">
-            <li>AI verification summary is attached to your case file.</li>
+            <li>Your report details are attached to your case file.</li>
             <li>The concerned department picks up the complaint within the SLA window.</li>
             <li>You receive an officer assignment with inspection updates on this portal and by SMS.</li>
             <li>If the SLA is breached, the case is escalated automatically — nothing for you to chase.</li>

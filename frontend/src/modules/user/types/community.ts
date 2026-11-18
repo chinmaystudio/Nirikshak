@@ -63,37 +63,34 @@ export interface CommunityIssueTimelineEntry {
   status: "completed" | "current" | "upcoming";
 }
 
+/**
+ * A community issue IS a real public complaint row (public_complaints_view)
+ * joined with its project (public_projects_view). The redacted public view
+ * deliberately carries no reporter identity, description, evidence or
+ * interaction counts — fields with no backing data are absent here rather
+ * than fabricated.
+ */
 export interface CommunityIssue {
+  /** Complaint reference number (public id). */
   id: string;
+  /** Complaint UUID. */
+  uuid: string;
   title: string;
   category: string;
+  severity: string;
+  /** Linked project's public code (nirikshak_project_id), when linked. */
   projectId: string | null;
-  ward: string;
-  location: string;
-  reportedBy: string;
-  reportedAt: string;
-  affected: number;
-  confirmations: number;
-  upvotes: number;
+  projectName: string | null;
   status: CommunityIssueStatus;
-  description: string;
-  confirmers: CommunityConfirmation[];
-  evidence: CommunityEvidenceItem[];
+  reportedAt: string;
   timeline: CommunityIssueTimelineEntry[];
-  comments: CommunityComment[];
-  govResponse: GovernmentResponse | null;
-  resolution: CommunityResolution | null;
 }
 
-export interface CommunityIssueView extends CommunityIssue {
-  confirmPct: number;
-  userConfirmed: boolean;
-  userUpvoted: boolean;
-}
+export type CommunityIssueView = CommunityIssue;
 
 export interface CommunityStats {
+  total: number;
   open: number;
   resolved: number;
-  confirmations: number;
-  citizensAffected: number;
+  linkedProjects: number;
 }

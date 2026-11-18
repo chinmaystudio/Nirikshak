@@ -1,121 +1,139 @@
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles, Send, RotateCcw, Users, Wallet, CalendarClock, Target, Gauge, TrendingUp } from 'lucide-react';
-import { Card, SectionTitle, StatusBadge, Spinner, AIRecommendation } from '../../components/ui';
+import { ClipboardList, Send, RotateCcw, Users, Wallet, CalendarClock, Gauge } from 'lucide-react';
+import { Card, SectionTitle } from '../../components/ui';
 import { Link } from '../../lib/router';
-import type { Project } from '../../lib/data';
-import { cr, fmtDate } from '../../lib/utils';
+import type { Project } from '../../lib/types';
+import { useStore } from '../../lib/store';
+import { projectHealth } from '../../lib/health';
+import { cr, fmtDate, daysLeftLabel } from '../../lib/utils';
+
+// ─── Project Guide ───────────────────────────────────────────────────────────
+// Rule-based answers computed from THIS project's live record (progress,
+// schedule elapsed, milestones, inspections, documents, department finance).
+// It is not an AI model: no invented productivity figures, no fabricated
+// recovery plans, and no simulated "reading project data…" delay.
 
 interface Msg {
-  role: 'user' | 'ai';
+  role: 'user' | 'guide';
   text?: string;
   answer?: GuideAnswer;
 }
 
 interface GuideAnswer {
   title: string;
-  recommendation?: { intro: string; actions: { label: string; impact?: string }[]; recovery?: string };
   text?: string;
   list?: { label: string; value?: string }[];
 }
 
 const QUESTIONS = [
-  'How can I complete this milestone faster?',
+  'How is this project doing?',
   'Why is my project delayed?',
-  'How can I reduce project cost?',
-  'Which resources should I increase?',
+  'What is the finance position?',
+  'What is coming up next?',
   'What should I prioritize this week?',
 ];
 
-export default function AIGuide({ project }: { project: Project }) {
+export default function ProjectGuide({ project }: { project: Project }) {
+  const { invoices, documents, financialUpdates, workers, resources } = useStore();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
-  const [thinking, setThinking] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
 
+  const health = projectHealth(project);
   const current = project.milestones.find((m) => m.state === 'current');
-  const pendingAmount = project.received < project.spent ? project.spent - project.received : 0;
+  const nextMilestone = project.milestones.find((m) => m.state !== 'done');
+  const fin = financialUpdates.find((f) => f.projectId === project.id);
+  const projectInvoices = invoices.filter((i) => i.projectId === project.id);
+  const docCount = documents[project.id]?.length ?? 0;
+  const workerCount = workers[project.id]?.length ?? 0;
+  const resourceCount = resources[project.id]?.length ?? 0;
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: 'smooth' });
-  }, [msgs, thinking]);
+  }, [msgs]);
 
   const answerFor = (q: string): GuideAnswer => {
     const l = q.toLowerCase();
-    const rec = project.forecast.actions.map((a) => ({ label: a.label, impact: a.impact }));
-    const behind = project.planned - project.progress;
+    const variance = project.progress - project.planned;
 
-    if (l.includes('faster') || l.includes('milestone')) {
+    if (l.includes('delay') || l.includes('behind') || l.includes('why')) {
       return {
-        title: `Accelerating “${current?.name ?? 'next milestone'}”`,
-        recommendation: {
-          intro: `“${current?.name ?? 'Structural work'}” is at ${current?.progress ?? project.progress}% with ${Math.max(0, Math.round(project.progress / 4))} working weeks of scope remaining. Based on current productivity (${Math.round(project.forecast.factors[2]?.value ?? 80)}/100) and resource availability, the following sequence recovers the most time:`,
-          actions: rec,
-          recovery: `Potential recovery: ${Math.abs(project.forecast.earlyDays)} days ${project.forecast.earlyDays >= 0 ? 'earlier than deadline' : 'of the projected delay'}.`,
-        },
-      };
-    }
-    if (l.includes('delay')) {
-      return {
-        title: 'Delay diagnosis',
-        text: `${project.name} is ${behind > 0 ? `${behind}% behind` : 'ahead of'} planned progress. Primary contributors from site data:`,
+        title: 'Schedule position',
+        text: variance < 0
+          ? `${project.name} is ${Math.abs(variance)}% behind: physical progress is ${project.progress}% while ${project.planned}% of the planned duration has elapsed. The portal record does not store a delay cause (the delay-events register is empty for this project), so no cause is invented here — the figures below are everything the record supports.`
+          : `${project.name} is not behind on the recorded figures: progress ${project.progress}% vs schedule elapsed ${project.planned}%.`,
         list: [
-          { label: 'Schedule score', value: `${project.health.scores.find((s) => s.label === 'Schedule')?.value ?? '—'}/100` },
-          { label: 'Last update', value: `${fmtDate(project.lastUpdate)} — ${project.lastUpdateNote}` },
-          { label: 'Resource availability', value: `${project.forecast.factors[1]?.detail ?? 'monitor crew strength'}` },
+          { label: 'Progress / schedule elapsed', value: `${project.progress}% / ${project.planned}%` },
+          { label: 'Deadline', value: `${fmtDate(project.deadline)} (${daysLeftLabel(project.deadline)})` },
+          { label: 'Current milestone', value: current ? `${current.name}${current.progress != null ? ` — ${current.progress}%` : ''}` : 'None in progress on record' },
+          { label: 'Open complaints assigned to you', value: String(project.openComplaints) },
         ],
       };
     }
-    if (l.includes('cost') || l.includes('budget')) {
+    if (l.includes('cost') || l.includes('budget') || l.includes('finance') || l.includes('spent') || l.includes('payment')) {
       return {
-        title: 'Cost reduction opportunities',
-        text: 'Budget adherence is strong. Based on the expenditure mix, the biggest levers are:',
+        title: 'Finance position (department records)',
+        text: fin
+          ? `The department's latest financial update for this project was recorded ${fmtDate(fin.date)}. This portal has no payment-receipt feed, so amounts received are not shown.`
+          : 'The department has not recorded any financial update for this project yet, so no spent/received figure can be shown.',
         list: [
-          { label: 'Materials', value: `₹ ${project.expenses[0].spent.toFixed(2)} Cr spent of ₹ ${project.expenses[0].budget.toFixed(2)} Cr — negotiate bulk rates before the final procurement cycle` },
-          { label: 'Equipment idle time', value: 'Return idle plant (survey equipment, hoists) to reduce monthly hire charges' },
-          { label: 'Re-work avoidance', value: 'Maintain layer-testing frequency — every rejected layer costs 3–4 days plus material' },
+          { label: 'Contract value', value: cr(project.value) },
+          { label: 'Amount spent (latest department record)', value: fin?.amountSpentCr != null ? cr(fin.amountSpentCr) : '—' },
+          { label: 'Budget allocation (latest record)', value: fin?.budgetAllocationCr != null ? cr(fin.budgetAllocationCr) : '—' },
+          { label: 'Cost overrun (latest record)', value: fin?.costOverrunCr != null ? cr(fin.costOverrunCr) : '—' },
+          { label: 'Your invoices for this project', value: `${projectInvoices.length} on the project record (${projectInvoices.filter((i) => i.status === 'Draft').length} draft)` },
         ],
       };
     }
-    if (l.includes('resource') || l.includes('increase')) {
+    if (l.includes('next') || l.includes('coming') || l.includes('upcoming') || l.includes('inspection')) {
       return {
-        title: 'Resource recommendations',
-        text: 'AI compares crew strength against remaining scope per zone:',
+        title: 'Coming up on this project',
         list: [
-          { label: 'Structural workforce', value: 'Increase 8–10% — directly improves weekly progress' },
-          { label: 'Equipment', value: 'Reallocate one roller/paver crew to the weakest zone' },
-          { label: 'Materials', value: 'Lock procurement for low-stock items 7 days before requirement' },
+          { label: 'Next milestone', value: nextMilestone ? `${nextMilestone.name} — ${nextMilestone.date ? fmtDate(nextMilestone.date) : 'date not recorded'}` : 'No pending milestone on record' },
+          ...project.upcoming.map((u) => ({ label: `Inspection — ${u.stage}`, value: u.date ? fmtDate(u.date) : '—' })),
+          { label: 'Contract deadline', value: `${fmtDate(project.deadline)} (${daysLeftLabel(project.deadline)})` },
         ],
       };
     }
-    if (l.includes('prioritize') || l.includes('week')) {
+    if (l.includes('prioritize') || l.includes('week') || l.includes('faster') || l.includes('milestone')) {
+      const actions: { label: string; value?: string }[] = [];
+      if (variance < 0) actions.push({ label: 'Close the schedule gap', value: `${Math.abs(variance)}% behind schedule elapsed — focus crew on ${current?.name ?? 'the current milestone'}` });
+      if (project.openComplaints > 0) actions.push({ label: 'Clear open complaints', value: `${project.openComplaints} assigned to your organization` });
+      if (project.upcoming.length > 0) actions.push({ label: 'Prepare for scheduled inspection', value: `${project.upcoming[0].stage} — ${project.upcoming[0].date ? fmtDate(project.upcoming[0].date) : 'date not recorded'}` });
+      actions.push({ label: 'Keep progress reporting current', value: 'Submit a progress update so the recorded figures stay trustworthy' });
       return {
-        title: 'This week’s priorities',
-        recommendation: {
-          intro: 'Ranked by impact on completion and compliance for the current week:',
-          actions: [
-            { label: current ? `Close out ${current.name} critical path items` : 'Start the next milestone mobilization', impact: 'highest' },
-            { label: 'Follow up pending verification of the latest RA bill', impact: 'cash flow' },
-            { label: 'Clear compliance calendar items (insurance / tests) this week', impact: 'risk' },
-            { label: 'Update progress report with site photos for officer review', impact: 'visibility' },
-          ],
-        },
+        title: 'Priorities from the recorded figures',
+        text: 'Ranked only by what the record shows — no productivity model is applied.',
+        list: actions,
+      };
+    }
+    if (l.includes('resource') || l.includes('worker')) {
+      return {
+        title: 'Resources (project record)',
+        text: 'Workers and resources are recorded on this project\'s database record and are visible to the department.',
+        list: [
+          { label: 'Workers on record', value: String(workerCount) },
+          { label: 'Resource rows on record', value: String(resourceCount) },
+        ],
       };
     }
     return {
       title: 'Project snapshot',
-      text: `${project.name} is ${project.progress}% complete (${project.status}, ${project.risk} risk) with contract value ${cr(project.value)}. Health score is ${project.health.score}/100 (${project.health.overall}). Ask me about milestones, delays, costs, resources or this week's priorities.`,
+      text: `${project.name} is ${project.progress}% complete (${project.status}) with contract value ${cr(project.value)}. Computed health is ${health.score}/100 — see the Project Health page for the formula. Ask about delay, finance, what is coming up, or this week's priorities.`,
+      list: [
+        { label: 'Progress / schedule elapsed', value: `${project.progress}% / ${project.planned}%` },
+        { label: 'Deadline', value: `${fmtDate(project.deadline)} (${daysLeftLabel(project.deadline)})` },
+        { label: 'Documents on record', value: String(docCount) },
+        { label: 'Open complaints', value: String(project.openComplaints) },
+      ],
     };
   };
 
   const ask = (q: string) => {
-    if (!q.trim() || thinking) return;
-    setMsgs((m) => [...m, { role: 'user', text: q }]);
+    if (!q.trim()) return;
+    // Computed immediately from the loaded record — no fake thinking delay.
+    setMsgs((m) => [...m, { role: 'user', text: q }, { role: 'guide', answer: answerFor(q) }]);
     setInput('');
-    setThinking(true);
-    window.setTimeout(() => {
-      setMsgs((m) => [...m, { role: 'ai', answer: answerFor(q) }]);
-      setThinking(false);
-    }, 850);
   };
 
   return (
@@ -123,40 +141,39 @@ export default function AIGuide({ project }: { project: Project }) {
       <Card className="p-5">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center shrink-0 dark:bg-blue-950 dark:border-blue-800">
-            <Sparkles className="w-4.5 h-4.5 text-blue-700 w-5 h-5" />
+            <ClipboardList className="w-5 h-5 text-blue-700 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="font-display font-bold text-lg text-slate-800 dark:text-slate-100">NIRIKSHAK AI Guide</h2>
+            <h2 className="font-display font-bold text-lg text-slate-800 dark:text-slate-100">Project Guide</h2>
             <p className="text-xs text-slate-500 font-medium dark:text-slate-400">
-              Project-aware guidance for {project.name} — progress, budget, resources, timeline, inspections &amp; compliance
+              Answers computed from {project.name}’s live record — progress, schedule, finance, inspections &amp; documents. Not an AI model.
             </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <CtxChip icon={Gauge} label={`${project.progress}% complete`} />
           <CtxChip icon={Wallet} label={`${cr(project.value)} contract`} />
-          <CtxChip icon={Users} label="resources tracked" />
+          <CtxChip icon={Users} label={`${workerCount} workers`} />
           <CtxChip icon={CalendarClock} label={`deadline ${fmtDate(project.deadline)}`} />
-          <CtxChip icon={TrendingUp} label={`health ${project.health.score}/100`} />
         </div>
       </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6 items-start">
         <div className="space-y-6">
           <Card className="p-5">
-            <SectionTitle icon={Target} title="Project Context" />
+            <SectionTitle icon={ClipboardList} title="Project Context (live)" />
             <dl className="space-y-3">
               <CtxRow k="Current milestone" v={current?.name ?? '—'} />
-              <CtxRow k="Milestone progress" v={current?.progress ? `${current.progress}%` : '—'} />
-              <CtxRow k="Planned vs actual" v={`${project.planned}% / ${project.progress}%`} />
-              <CtxRow k="Spent" v={`₹ ${project.spent.toFixed(2)} Cr`} />
-              <CtxRow k="Open risks" v={`${project.health.risks.length}`} />
-              <CtxRow k="Compliance" v={`${project.complianceScore}%`} />
+              <CtxRow k="Milestone progress" v={current?.progress != null ? `${current.progress}%` : '—'} />
+              <CtxRow k="Progress / schedule elapsed" v={`${project.progress}% / ${project.planned}%`} />
+              <CtxRow k="Spent (dept. record)" v={fin?.amountSpentCr != null ? cr(fin.amountSpentCr) : '—'} />
+              <CtxRow k="Open complaints" v={`${project.openComplaints}`} />
+              <CtxRow k="Computed health" v={`${health.score}/100`} />
             </dl>
           </Card>
 
           <Card className="p-5">
-            <SectionTitle icon={Sparkles} title="Example Questions" />
+            <SectionTitle icon={ClipboardList} title="Example Questions" />
             <div className="flex flex-col gap-2">
               {QUESTIONS.map((qq) => (
                 <button
@@ -173,7 +190,7 @@ export default function AIGuide({ project }: { project: Project }) {
 
         <Card className="flex flex-col min-h-[560px]">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Guidance Thread</p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Guide Thread</p>
             {msgs.length > 0 && (
               <button className="btn btn-ghost btn-sm" onClick={() => setMsgs([])}>
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -183,13 +200,13 @@ export default function AIGuide({ project }: { project: Project }) {
           </div>
 
           <div ref={threadRef} className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-            {msgs.length === 0 && !thinking && (
+            {msgs.length === 0 && (
               <div className="text-center pt-10 max-w-md mx-auto">
-                <Sparkles className="w-8 h-8 text-blue-300 mx-auto mb-3 dark:text-blue-700" />
+                <ClipboardList className="w-8 h-8 text-blue-300 mx-auto mb-3 dark:text-blue-700" />
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Ask a question about this project</p>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed dark:text-slate-400">
-                  The guide reads live project data — progress, bills, inspections, resource registers — and answers with
-                  specific, actionable recommendations.
+                  The guide computes answers from the live project record shown on the left — schedule position,
+                  department finance, upcoming inspections and recorded priorities.
                 </p>
               </div>
             )}
@@ -201,41 +218,24 @@ export default function AIGuide({ project }: { project: Project }) {
               ) : (
                 <div key={i} className="rounded-lg border border-blue-200 bg-white overflow-hidden dark:border-blue-900 dark:bg-slate-900">
                   <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50/70 border-b border-blue-100 dark:bg-blue-950/40 dark:border-blue-900">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
+                    <ClipboardList className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
                     <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">{m.answer!.title}</span>
                   </div>
                   <div className="p-4 space-y-4">
-                    {m.answer!.recommendation ? (
-                      <AIRecommendation
-                        intro={m.answer!.recommendation.intro}
-                        actions={m.answer!.recommendation.actions}
-                        recovery={m.answer!.recommendation.recovery}
-                        footer="AI estimate — verify with site conditions before committing resources."
-                      />
-                    ) : (
-                      <>
-                        {m.answer!.text && <p className="text-sm text-slate-700 leading-relaxed dark:text-slate-300">{m.answer!.text}</p>}
-                        {m.answer!.list && (
-                          <ul className="space-y-2.5">
-                            {m.answer!.list.map((li) => (
-                              <li key={li.label} className="border-l-2 border-slate-200 pl-3 dark:border-slate-700">
-                                <p className="text-[13px] font-bold text-slate-800 dark:text-slate-200">{li.label}</p>
-                                {li.value && <p className="text-xs text-slate-600 mt-0.5 dark:text-slate-400">{li.value}</p>}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
+                    {m.answer!.text && <p className="text-sm text-slate-700 leading-relaxed dark:text-slate-300">{m.answer!.text}</p>}
+                    {m.answer!.list && (
+                      <ul className="space-y-2.5">
+                        {m.answer!.list.map((li) => (
+                          <li key={li.label} className="border-l-2 border-slate-200 pl-3 dark:border-slate-700">
+                            <p className="text-[13px] font-bold text-slate-800 dark:text-slate-200">{li.label}</p>
+                            {li.value && <p className="text-xs text-slate-600 mt-0.5 dark:text-slate-400">{li.value}</p>}
+                          </li>
+                        ))}
+                      </ul>
                     )}
                   </div>
                 </div>
               )
-            )}
-            {thinking && (
-              <div className="flex items-center gap-2 text-slate-500">
-                <Spinner className="text-blue-700 dark:text-blue-400" />
-                <span className="text-xs font-semibold">Reading project data…</span>
-              </div>
             )}
           </div>
 
@@ -247,21 +247,20 @@ export default function AIGuide({ project }: { project: Project }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && ask(input)}
-                aria-label="Ask the AI guide"
+                aria-label="Ask the project guide"
               />
-              <button className="btn btn-primary" onClick={() => ask(input)} disabled={!input.trim() || thinking} aria-label="Send">
+              <button className="btn btn-primary" onClick={() => ask(input)} disabled={!input.trim()} aria-label="Send">
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-[10px] text-slate-400 mt-2">Guidance is AI-generated from project data — cross-check critical actions with site records.</p>
+            <p className="text-[10px] text-slate-400 mt-2">Answers are computed from the project record — cross-check critical actions with site records.</p>
           </div>
         </Card>
       </div>
 
       <div className="flex flex-wrap gap-2.5 justify-center">
-        <Link to={`/projects/${project.id}/ai-analysis`} className="btn btn-secondary btn-sm">Deep AI Project Analysis</Link>
-        <Link to={`/projects/${project.id}/ai-completion`} className="btn btn-secondary btn-sm">Completion Prediction</Link>
-        <StatusBadge status="AI Tools" />
+        <Link to={`/projects/${project.id}/ai-analysis`} className="btn btn-secondary btn-sm">Project Health (computed)</Link>
+        <Link to={`/projects/${project.id}/ai-completion`} className="btn btn-secondary btn-sm">Schedule Outlook</Link>
       </div>
     </div>
   );

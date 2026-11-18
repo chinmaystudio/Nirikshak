@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Download, Bookmark, BookmarkCheck, ArrowRight, CheckCircle2, XCircle, CircleAlert, MapPin, Landmark, IndianRupee, CalendarClock } from 'lucide-react';
-import { PageHeader, Card, Tabs, StatusBadge, AIInsight, SectionTitle, Timeline } from '../components/ui';
+import { PageHeader, Card, Tabs, StatusBadge, SectionTitle, Timeline } from '../components/ui';
 import { Link } from '../lib/router';
 import { useStore } from '../lib/store';
-import { getTender } from '../lib/data';
-import type { Tender } from '../lib/data';
+import { getCachedTender } from '../services/tender.service';
+import type { Tender } from '../lib/types';
 import { eligibilityRows, eligibilityStatus, useContractorProfile } from '../lib/eligibility';
 import { cr, downloadFile, fmtDate, money, daysLeftLabel, cls } from '../lib/utils';
 import { ContractorTenderService } from '../services/tender.service';
@@ -12,16 +12,16 @@ import { ContractorTenderService } from '../services/tender.service';
 export default function TenderDetails({ tenderId }: { tenderId: string }) {
   const { savedTenders, toggleSaveTender, toast, bids } = useStore();
   const [tab, setTab] = useState('Overview');
-  // First paint comes from the sessionStorage cache (lib/data getTender is
+  // First paint comes from the sessionStorage cache (getCachedTender is
   // cache-only now — no bundled mock fallback); the effect below then loads
   // the live record and overrides it.
-  const [tender, setTender] = useState<Tender | undefined>(() => getTender(tenderId));
+  const [tender, setTender] = useState<Tender | undefined>(() => getCachedTender(tenderId));
   const [notFound, setNotFound] = useState(false);
   const contractorProfile = useContractorProfile();
 
   useEffect(() => {
     let active = true;
-    setTender(getTender(tenderId));
+    setTender(getCachedTender(tenderId));
     setNotFound(false);
     (async () => {
       try {
@@ -38,7 +38,7 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
       } catch (error) {
         if (!active) return;
         console.error(`Unable to load tender ${tenderId}:`, error);
-        if (!getTender(tenderId)) {
+        if (!getCachedTender(tenderId)) {
           setTender(undefined);
           setNotFound(true);
         } else {
@@ -95,7 +95,7 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
       `${tender.contact.name} — ${tender.contact.role}`,
       `Phone: ${tender.contact.phone} | Email: ${tender.contact.email}`,
       ``,
-      `This is a demonstration extract. The complete tender document (Vol 1-3, BOQ, drawings) is available on the official e-procurement portal.`,
+      `Summary extract generated from the portal record above. The complete tender document (Vol 1-3, BOQ, drawings) is available on the official e-procurement portal.`,
     ].join('\n');
     downloadFile(`NIRIKSHAK_Tender_${tender.code.replace(/[\/\\]/g, '-')}.txt`, text);
     toast('success', 'Tender document downloaded', 'Summary extract saved locally.');
@@ -153,9 +153,10 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
         </div>
       </Card>
 
-      <AIInsight title="AI Tender Summary">
-        <p className="leading-relaxed">{tender.summary}</p>
-      </AIInsight>
+      <Card className="p-5">
+        <SectionTitle title="Tender Summary" />
+        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">{tender.summary}</p>
+      </Card>
 
       <Card className="overflow-hidden">
         <Tabs tabs={TABS.map((t) => ({ key: t, label: t }))} active={tab} onChange={setTab} />
@@ -281,7 +282,7 @@ export default function TenderDetails({ tenderId }: { tenderId: string }) {
                   </div>
                   <button
                     className="btn btn-secondary btn-sm"
-                    onClick={() => toast('success', 'Download started', `${d} (demo extract) saved.`)}
+                    onClick={() => toast('info', 'File not attached to the portal record', `${d} is named on the tender record, but its file is not stored in this portal. Obtain it from the official e-procurement portal.`)}
                   >
                     <Download className="w-3.5 h-3.5" />
                     Download

@@ -55,7 +55,7 @@ const STATUS_TONES: Record<string, Tone> = {
   Delayed: 'red', Rejected: 'red', High: 'red', 'Not Eligible': 'red', Overdue: 'red',
   'Defects Noted': 'red', 'Action Required': 'red',
   Draft: 'slate', 'On Leave': 'slate', Idle: 'slate', Low: 'slate', Open: 'blue', Scheduled: 'blue',
-  'Under Evaluation': 'blue', Submitted: 'blue', Sent: 'slate', 'Passed with Remarks': 'amber', Transferred: 'slate',
+  'Under Evaluation': 'blue', Submitted: 'blue', Sent: 'slate', Responded: 'blue', 'Passed with Remarks': 'amber', Transferred: 'slate',
   FAIR: 'amber', POOR: 'red', 'In Progress': 'blue',
 };
 

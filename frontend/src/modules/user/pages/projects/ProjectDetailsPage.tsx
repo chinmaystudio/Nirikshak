@@ -233,7 +233,7 @@ export function ProjectDetailsPage(): JSX.Element {
                   <a key={i.id} href={`#/community/${i.id}`} className="block p-3 rounded-lg border border-outline-variant/40 hover:border-primary/40 transition-colors">
                     <div className="text-body-sm font-semibold text-primary">{i.title}</div>
                     <div className="text-label-sm text-outline mt-0.5">
-                      {i.confirmations} confirmations • {i.affected} affected
+                      {i.category} • reported {new Date(i.reportedAt).toLocaleDateString()}
                     </div>
                   </a>
                 ))}

@@ -155,9 +155,8 @@ export interface Project {
 export interface ContractorSummaryRow {
   name: string;
   projects: number;
-  onTime: string;
-  quality: string;
-  safety: string;
+  /** Mean physical progress (%) across the contractor's projects in scope. */
+  avgProgress: number;
 }
 
 export interface WardStatistics {
@@ -174,7 +173,9 @@ export interface WardStatistics {
   complaints: number;
   resolved: number;
   resolutionRate: number;
-  avgDays: number;
+  /** Null — the public complaints view carries no resolution timestamps,
+   * so no honest average redressal time can be computed from it. */
+  avgDays: number | null;
   activeComplaints: number;
   contractors: ContractorSummaryRow[];
   statusSplit: Array<{ label: string; value: number; className: string }>;
@@ -185,5 +186,6 @@ export interface CityStatistics {
   completed: number;
   underReview: number;
   issuesResolved: number;
-  avgRedressalDays: number;
+  /** Null — not computable from the public complaints view (see WardStatistics.avgDays). */
+  avgRedressalDays: number | null;
 }

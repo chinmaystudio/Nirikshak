@@ -59,24 +59,62 @@ export interface Department {
 }
 
 export interface Contractor {
+  /** organizations.id (UUID) */
   id: string
   name: string
-  registrationNo: string
-  class: 'Class A' | 'Class B' | 'Class C'
-  empanelledSince: string // ISO date
-  districts: string[]
+  /** organizations.registration_number — null when not recorded */
+  registrationNo: string | null
+  /** organizations.verified */
+  verified?: boolean
+  /** organizations.created_at date — when the organisation record was created */
+  empanelledSince?: string | null
+  district?: string | null
+  state?: string | null
+  department?: string | null
+  /** Project UUIDs linked via contracts + project_organizations */
+  projectIds?: string[]
+  assignedProjects?: number
   activeProjects: number
   completedProjects: number
+  /** Sum of contracts.contract_value (₹ Cr) */
   totalValueCr: number
-  /** 0–100 AI-assisted composite score */
-  aiScore: number
-  scoreBand: 'excellent' | 'good' | 'average' | 'poor'
-  onTimeCompletionPct: number
-  qualityRating: number // 0–5
-  pendingDefects: number
-  litigationCount: number
-  strengths: string[]
-  risks: string[]
+  activeContracts?: number
+  /** Mean physical_progress_percent across linked projects; null when none */
+  averageProgressPct?: number | null
+  /* Legacy demo-only fields — never populated by the real API; kept optional
+     so the (still-referenced) demo dataset file type-checks until removed. */
+  class?: 'Class A' | 'Class B' | 'Class C'
+  districts?: string[]
+  aiScore?: number
+  scoreBand?: 'excellent' | 'good' | 'average' | 'poor'
+  onTimeCompletionPct?: number
+  qualityRating?: number
+  pendingDefects?: number
+  litigationCount?: number
+  strengths?: string[]
+  risks?: string[]
+}
+
+/** Real-data contractor evaluation, computed from contracts,
+ * project_organizations and projects — no model scores. */
+export interface ContractorEvaluation {
+  contractorId: string
+  assignedProjects: number
+  completedProjects: number
+  activeProjects: number
+  activeContracts: number
+  totalContractValueCr: number
+  averageProgressPct: number | null
+  /** completed / assigned × 100; null when nothing assigned */
+  completionRatePct: number | null
+  projects: {
+    id: string
+    name: string
+    status: string
+    progressPct: number
+    contractValueCr: number | null
+    contractStatus: string | null
+  }[]
 }
 
 export interface Milestone {
@@ -91,6 +129,13 @@ export interface Milestone {
   physicalProgressPct: number
   delayDays?: number
   remarks?: string
+  /** project_milestones.planned_progress (the planned % for the milestone). */
+  plannedProgressPct?: number
+  /** project_milestones.weightage, when recorded. */
+  weightage?: number | null
+  /** project_milestones.planned_cost / actual_cost (₹ Cr), null when unrecorded. */
+  plannedCostCr?: number | null
+  actualCostCr?: number | null
 }
 
 export interface ProjectFinancials {
@@ -196,7 +241,7 @@ export interface BillItem {
   contractor: string
   /** Contractor's own invoice number */
   billNo: string
-  type: 'RA Bill' | 'Final Bill' | 'Material Bill' | 'Labour Bill'
+  type: 'RA Bill' | 'Final Bill' | 'Material Bill' | 'Labour Bill' | 'Financial Update'
   amountCr: number
   submittedOn: string
   /** e-MB entry the bill claims against */
@@ -234,13 +279,16 @@ export interface Grievance {
 
 export interface FundFlow {
   id: string
-  fy: string
-  demandNo: number
+  /** Derived from the latest financial_updates observation date; null when undated */
+  fy: string | null
+  /** No demand-number column exists in financial_updates — always null */
+  demandNo: number | null
   head: string
   budgetEstimateCr: number
   revisedEstimateCr: number
   allocationCr: number
-  releasedCr: number
+  /** No released-amount column exists in financial_updates — always null */
+  releasedCr: number | null
   utilizedCr: number
   status: 'allocated' | 'released' | 'pending'
 }
@@ -284,13 +332,75 @@ export interface DocumentItem {
     | 'Financial Record'
     | 'Site Photograph'
   projectId?: string
-  uploadedOn: string
-  uploadedBy: string
-  fileSizeKb: number
-  version: number
+  /** project_documents.document_date, falling back to the row's created_at date; null when neither exists. */
+  uploadedOn: string | null
+  /** project_documents.publisher, or the uploader's profile name; null when neither is recorded. */
+  uploadedBy: string | null
+  /** project_documents has no file-size column — always null; pages render "—". */
+  fileSizeKb: number | null
+  /** project_documents has no version column — always null; pages render "—". */
+  version: number | null
+  /** Real storage reference (project_documents.storage_path), when the row has one. */
+  storagePath: string | null
+  /** Real external link (project_documents.external_url), when the row has one. */
+  externalUrl: string | null
   expiryDate?: string
   accessLevel: 'Public' | 'Internal' | 'Restricted'
   signedBy?: string
+}
+
+/**
+ * One budget head for a project, grouped from its real financial_updates
+ * rows (group key = the head named in the row's notes). Amounts are the
+ * latest recorded values in the group — financial_updates stores cumulative
+ * snapshots, so nothing is summed or derived as a fraction.
+ */
+export interface BudgetHead {
+  id: string
+  head: string
+  originalCr: number
+  revisedCr?: number
+  utilizedCr: number
+}
+
+/** One month of recorded spend: the latest cumulative amount_spent_inr_crore
+ * observed in that month, from real financial_updates rows. */
+export interface MonthlySpend {
+  month: string
+  cumulativeCr: number
+}
+
+/**
+ * A real progress_updates row for one project, with its contractor
+ * organisation, milestone name and progress_evidence summary. Geo-tag is
+ * the first evidence row that carries coordinates — null when no evidence
+ * records a location (never invented).
+ */
+export interface SiteProgressUpdate {
+  id: string
+  date: string
+  activity: string
+  location: string | null
+  progressPct: number
+  verifiedProgressPct: number | null
+  contractor: string | null
+  submittedBy: string | null
+  geoTag: { lat: number; lng: number } | null
+  photos: number
+  status: 'verified' | 'pending' | 'rejected' | 'clarification'
+  verificationNote?: string
+}
+
+/** A real audit_logs row scoped to one project (entity_id = project UUID). */
+export interface ProjectActivityEntry {
+  id: string
+  timestamp: string
+  actor: string
+  role: string
+  action: string
+  field: string
+  oldValue: string
+  newValue: string
 }
 
 export interface LitigationCase {
@@ -311,23 +421,29 @@ export interface LitigationCase {
 export interface WorkOrder {
   id: string
   projectId: string
-  contractor: string
+  /** contracts.contractor_organization_id → organizations.name; null when unreadable */
+  contractor: string | null
   issuedOn: string
   valueCr: number
-  completionPeriodDays: number
+  /** Derived from the contract's scheduled start/completion dates; null when either is absent */
+  completionPeriodDays: number | null
   status: 'issued' | 'accepted' | 'in_execution' | 'suspended' | 'closed'
-  measurementBookNo: string
-  defectLiabilityMonths: number
+  measurementBookNo: string | null
+  /** No defect-liability column exists on contracts — always null */
+  defectLiabilityMonths: number | null
 }
 
 export interface InspectionRecord {
   id: string
   projectId: string
   inspectedOn: string
-  inspector: string
+  /** profiles.full_name for inspections.inspector_id; null when no profile is recorded */
+  inspector: string | null
   type: 'Routine' | 'Surprise' | 'Quality' | 'Safety' | 'Financial'
   findings: string
-  geoTag: { lat: number; lng: number }
+  /** From inspection_findings latitude/longitude; null when no finding carries coordinates */
+  geoTag: { lat: number; lng: number } | null
+  /** Count of inspection_findings rows with an evidence_path for this inspection */
   photosCount: number
   outcome: 'satisfactory' | 'observations' | 'non_compliance'
   correctiveAction?: string
@@ -335,17 +451,29 @@ export interface InspectionRecord {
 
 export interface AiInsight {
   id: string
+  /** Raw ai_insights.insight_type as stored — never relabelled */
   area: string
   title: string
   insight: string
   supportingData: string
-  confidencePct: number
-  confidenceBand: 'low' | 'medium' | 'high'
+  /** ai_insights.confidence × 100 as stored; null when the row stores none */
+  confidencePct: number | null
+  confidenceBand: 'low' | 'medium' | 'high' | null
   recommendedAction: string
   relatedProjectIds: string[]
   generatedOn: string
   /** Distinguishes AI-generated insight from verified data / officer decision */
   classification: 'ai_insight' | 'verified_data' | 'officer_decision'
+  /** ai_insights.severity as stored (e.g. LOW / MEDIUM / HIGH / CRITICAL) */
+  severity?: string
+  /** ai_insights.risk_score as stored; null when absent */
+  riskScore?: number | null
+  /** ai_insights.evidence entries, stringified */
+  evidenceItems?: string[]
+  /** ai_insights.recommended_actions entries */
+  actionItems?: string[]
+  /** ai_insights.details breakdown (schedule / finance / environment), when stored */
+  details?: Record<string, unknown> | null
 }
 
 export interface CitizenProjectSummary {

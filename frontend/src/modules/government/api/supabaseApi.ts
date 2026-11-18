@@ -18,10 +18,15 @@ import type {
   CitizenProjectSummary,
   Officer,
   Contractor,
+  ContractorEvaluation,
+  BudgetHead,
+  MonthlySpend,
+  SiteProgressUpdate,
+  ProjectActivityEntry,
+  Milestone,
 } from '@/modules/government/types';
 import { normalizeProjectStatus } from '@/core/status/projectStatus';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || import.meta.env.VITE_USE_MOCK_API === 'true';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -518,25 +523,14 @@ export const citizenApi = {
     return { items: all.slice((page - 1) * pageSize, page * pageSize), total: all.length, page, pageSize };
   },
 
-  async submitGrievanceInput(): Promise<Grievance> {
+  async submitGrievanceInput(_input?: {
+    subject?: string;
+    description?: string;
+    projectId?: string;
+  }): Promise<Grievance> {
     throw new Error('Use the canonical /user/report flow to submit a grievance.');
   },
 };
-
-import {
-  CONTRACTORS,
-  TENDERS,
-  FUND_FLOWS,
-  BILLS,
-  AUDIT_FINDINGS,
-  DOCUMENTS,
-  LITIGATION,
-  WORK_ORDERS,
-  INSPECTIONS,
-  AI_INSIGHTS,
-  DEMO_OFFICER,
-} from '@/data/modules';
-import { ALERTS } from '@/data/alerts';
 
 function matchesQuery<T extends object>(items: T[], q?: ListQuery): T[] {
   if (!q?.search) return items;
@@ -560,23 +554,169 @@ function paginate<T>(items: T[], q?: ListQuery): Paginated<T> {
 }
 
 /* ---------- Auth ---------- */
+/**
+ * The officer is derived from the real Supabase session: profiles row for
+ * the signed-in user plus their active organization_members roles. There
+ * is no demo officer — without a session there is no officer.
+ */
+async function officerFromSession(): Promise<Officer | null> {
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return null;
+  const [{ data: profile }, { data: memberships }] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('organization_members')
+      .select('role, organizations(name, department)')
+      .eq('user_id', user.id)
+      .eq('status', 'active'),
+  ]);
+  const firstMembership: any = (memberships || [])[0];
+  return {
+    id: user.id,
+    name: profile?.full_name || user.email || 'Officer',
+    designation: firstMembership?.role || '',
+    department: firstMembership?.organizations?.department || firstMembership?.organizations?.name || '',
+    employeeNo: '',
+    roles: (memberships || []).map((m: any) => String(m.role)).filter(Boolean),
+  };
+}
+
 export const authApi = {
   async signIn(_employeeId: string, _password: string): Promise<Officer> {
-    return DEMO_OFFICER;
+    // Real sign-in happens through the core AuthService / login pages; this
+    // surface only resolves the already-authenticated officer.
+    const officer = await officerFromSession();
+    if (!officer) throw new Error('No active session. Please sign in first.');
+    return officer;
   },
   async currentOfficer(): Promise<Officer | null> {
-    return DEMO_OFFICER;
+    return officerFromSession();
   },
 };
 
 /* ---------- Contractors ---------- */
+/**
+ * Real contractor register: organizations (type='contractor') joined with
+ * contracts and project_organizations, aggregated client-side. Every field
+ * is a stored value or an aggregate of stored values — nothing invented.
+ */
+async function loadContractorData() {
+  const [{ data: orgs, error: orgError }, { data: contracts, error: contractError }, { data: links, error: linkError }] =
+    await Promise.all([
+      supabase.from('organizations').select('*').eq('type', 'contractor').order('name'),
+      supabase
+        .from('contracts')
+        .select('id, project_id, contractor_organization_id, contract_value, status')
+        .is('deleted_at', null),
+      supabase.from('project_organizations').select('project_id, organization_id, relationship'),
+    ]);
+  if (orgError) throw new Error(`Failed to load contractors: ${orgError.message}`);
+  if (contractError) throw new Error(`Failed to load contracts: ${contractError.message}`);
+  if (linkError) throw new Error(`Failed to load project organisations: ${linkError.message}`);
+
+  const projectIds = new Set<string>();
+  (contracts || []).forEach((c: any) => c.project_id && projectIds.add(c.project_id));
+  (links || []).forEach((l: any) => l.project_id && projectIds.add(l.project_id));
+
+  const projectsById = new Map<string, any>();
+  if (projectIds.size > 0) {
+    const { data: projects, error: projectError } = await supabase
+      .from('projects')
+      .select('id, nirikshak_project_id, project_name, normalized_status, physical_progress_percent')
+      .in('id', [...projectIds]);
+    if (projectError) throw new Error(`Failed to load contractor projects: ${projectError.message}`);
+    (projects || []).forEach((p: any) => projectsById.set(p.id, p));
+  }
+  return { orgs: orgs || [], contracts: contracts || [], links: links || [], projectsById };
+}
+
+function aggregateContractor(org: any, contracts: any[], links: any[], projectsById: Map<string, any>) {
+  const ownContracts = contracts.filter((c: any) => c.contractor_organization_id === org.id);
+  const projectIdSet = new Set<string>();
+  ownContracts.forEach((c: any) => c.project_id && projectIdSet.add(c.project_id));
+  links
+    .filter((l: any) => l.organization_id === org.id)
+    .forEach((l: any) => l.project_id && projectIdSet.add(l.project_id));
+
+  const projectRows = [...projectIdSet]
+    .map((pid) => ({ pid, row: projectsById.get(pid), contract: ownContracts.find((c: any) => c.project_id === pid) }))
+    .filter((x) => x.row);
+  const completed = projectRows.filter((x) => x.row.normalized_status === 'COMPLETED');
+  const active = projectRows.filter(
+    (x) => x.row.normalized_status !== 'COMPLETED' && x.row.normalized_status !== 'CANCELLED',
+  );
+  const progressValues = projectRows
+    .map((x) => Number(x.row.physical_progress_percent))
+    .filter((n) => Number.isFinite(n));
+  const averageProgressPct = progressValues.length
+    ? Math.round((progressValues.reduce((s, n) => s + n, 0) / progressValues.length) * 10) / 10
+    : null;
+
+  return { ownContracts, projectIdSet, projectRows, completed, active, averageProgressPct };
+}
+
 export const contractorsApi = {
   async all(): Promise<Contractor[]> {
-    return DEMO_MODE ? CONTRACTORS : [];
+    const { orgs, contracts, links, projectsById } = await loadContractorData();
+    return orgs.map((org: any) => {
+      const agg = aggregateContractor(org, contracts, links, projectsById);
+      return {
+        id: org.id,
+        name: org.name,
+        registrationNo: org.registration_number ?? null,
+        verified: Boolean(org.verified),
+        empanelledSince: org.created_at ? String(org.created_at).slice(0, 10) : null,
+        district: org.district ?? null,
+        state: org.state ?? null,
+        department: org.department ?? null,
+        projectIds: [...agg.projectIdSet],
+        assignedProjects: agg.projectIdSet.size,
+        activeProjects: agg.active.length,
+        completedProjects: agg.completed.length,
+        totalValueCr: agg.ownContracts.reduce((s: number, c: any) => s + numberOrZero(c.contract_value), 0),
+        activeContracts: agg.ownContracts.filter((c: any) => c.status === 'ACTIVE').length,
+        averageProgressPct: agg.averageProgressPct,
+      };
+    });
   },
   async list(q?: ListQuery): Promise<Paginated<Contractor>> {
     const all = await this.all();
     return paginate(matchesQuery(all, q), q);
+  },
+  /** Evaluation computed entirely from real portal records for one contractor. */
+  async evaluate(contractorId: string): Promise<ContractorEvaluation | undefined> {
+    const { orgs, contracts, links, projectsById } = await loadContractorData();
+    const org = orgs.find((o: any) => o.id === contractorId);
+    if (!org) return undefined;
+    const agg = aggregateContractor(org, contracts, links, projectsById);
+    const assigned = agg.projectIdSet.size;
+    return {
+      contractorId,
+      assignedProjects: assigned,
+      completedProjects: agg.completed.length,
+      activeProjects: agg.active.length,
+      activeContracts: agg.ownContracts.filter((c: any) => c.status === 'ACTIVE').length,
+      totalContractValueCr: agg.ownContracts.reduce((s: number, c: any) => s + numberOrZero(c.contract_value), 0),
+      averageProgressPct: agg.averageProgressPct,
+      completionRatePct: assigned > 0 ? Math.round((agg.completed.length / assigned) * 1000) / 10 : null,
+      projects: agg.projectRows.map((x) => ({
+        id: x.row.nirikshak_project_id || x.pid,
+        name: x.row.project_name || '',
+        status: x.row.normalized_status || '',
+        progressPct: numberOrZero(x.row.physical_progress_percent),
+        contractValueCr: x.contract ? numberOrZero(x.contract.contract_value) : null,
+        contractStatus: x.contract?.status ?? null,
+      })),
+    };
+  },
+  async create(input: { name: string; registrationNo?: string }): Promise<void> {
+    const { error } = await supabase.from('organizations').insert({
+      name: input.name,
+      type: 'contractor',
+      registration_number: input.registrationNo || null,
+    });
+    if (error) throw error;
   },
 };
 
@@ -805,38 +945,241 @@ export const tendersApi = {
   },
 };
 
+/** One submitted contractor invoice from public.contractor_invoices
+ *  (migration 037), as read by financeApi.contractorInvoices(). `status`
+ *  is the raw recorded status (SUBMITTED / UNDER_VERIFICATION / APPROVED /
+ *  REJECTED / PAID) — drafts never reach this list. */
+export interface ContractorInvoiceItem {
+  id: string;
+  /** The contractor's own invoice number, as they entered it. */
+  invoiceNumber: string;
+  contractor: string;
+  milestoneLabel: string | null;
+  amountInr: number;
+  invoiceDate: string;
+  status: string;
+  notes: string | null;
+  updatedAt: string;
+}
+
 /* ---------- Finance ---------- */
 export const financeApi = {
+  /**
+   * One fund-flow row per project, aggregated from its real
+   * financial_updates: allocation / budget / revised cost come from the
+   * latest observation that records them, utilised is the latest recorded
+   * amount_spent (a cumulative snapshot — never summed, never derived as a
+   * fraction of budget). financial_updates has no released-amount or
+   * demand-number column, so those stay null.
+   */
   async fundFlows(): Promise<FundFlow[]> {
     const { data, error } = await supabase
       .from('financial_updates')
       .select('*, projects(project_name, nirikshak_project_id)')
-      .order('observation_date', { ascending: false });
+      .order('observation_date', { ascending: false, nullsFirst: false });
     if (error) {
       throw new Error(`Failed to load fund flows: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((f: any, idx: number) => {
-        const budget = Number(f.budget_allocation_inr_crore) || Number(f.reported_cost_inr_crore) || 100;
-        const spent = Number(f.amount_spent_inr_crore) || (budget * 0.4);
-        return {
-          id: `FF-MH-2026-${(idx + 1).toString().padStart(4, '0')}`,
-          fy: '2025-26',
-          demandNo: 42,
-          head: f.projects?.project_name ? `${f.projects.project_name} Execution Head` : '5054-Capital Outlay on Roads & Bridges',
-          budgetEstimateCr: budget,
-          revisedEstimateCr: Number(f.revised_cost_inr_crore) || budget,
-          allocationCr: budget,
-          releasedCr: budget * 0.8,
-          utilizedCr: spent,
-          status: budget > 0 ? 'released' : 'allocated',
-        };
-      });
-    }
-    return DEMO_MODE ? FUND_FLOWS : [];
+    const byProject = new Map<string, any[]>();
+    (data || []).forEach((f: any) => {
+      const rows = byProject.get(f.project_id) || [];
+      rows.push(f);
+      byProject.set(f.project_id, rows);
+    });
+    return [...byProject.entries()].map(([projectId, rows]) => {
+      // Rows are newest-first: the first non-null value is the latest record.
+      const latestOf = (key: string): number | null => {
+        for (const r of rows) {
+          if (r[key] != null && Number.isFinite(Number(r[key]))) return Number(r[key]);
+        }
+        return null;
+      };
+      const allocation = latestOf('budget_allocation_inr_crore') ?? 0;
+      const budget = latestOf('original_cost_inr_crore') ?? latestOf('reported_cost_inr_crore') ?? allocation;
+      const revised = latestOf('revised_cost_inr_crore') ?? budget;
+      const utilized = latestOf('amount_spent_inr_crore') ?? 0;
+      const latestDate: string = rows.find((r: any) => r.observation_date)?.observation_date || '';
+      let fy: string | null = null;
+      if (latestDate) {
+        const d = new Date(latestDate);
+        if (Number.isFinite(d.getTime())) {
+          const startYear = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+          fy = `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`;
+        }
+      }
+      const projectName = rows[0]?.projects?.project_name;
+      return {
+        id: projectId,
+        fy,
+        demandNo: null,
+        head: projectName ? `${projectName} — financial updates` : 'Project financial updates',
+        budgetEstimateCr: budget,
+        revisedEstimateCr: revised,
+        allocationCr: allocation,
+        releasedCr: null,
+        utilizedCr: utilized,
+        status: utilized > 0 ? 'released' : allocation > 0 ? 'allocated' : 'pending',
+      } as FundFlow;
+    });
   },
+  /**
+   * Bills are shaped from real financial_updates rows (there is no separate
+   * bills table): each row is one recorded financial observation for the
+   * project, attributed to the contractor holding the project's latest
+   * contract when one exists.
+   */
   async bills(): Promise<BillItem[]> {
-    return DEMO_MODE ? BILLS : [];
+    const [{ data, error }, { data: contractData, error: contractError }] = await Promise.all([
+      supabase
+        .from('financial_updates')
+        .select('*, projects(project_name, nirikshak_project_id)')
+        .order('observation_date', { ascending: false, nullsFirst: false }),
+      supabase
+        .from('contracts')
+        .select('project_id, award_date, created_at, organizations(name)')
+        .is('deleted_at', null)
+        .order('award_date', { ascending: false, nullsFirst: false }),
+    ]);
+    if (error) {
+      throw new Error(`Failed to load bills: ${error.message}`);
+    }
+    if (contractError) console.error('Contractor lookup for bills failed:', contractError);
+    const contractorByProject = new Map<string, string>();
+    (contractData || []).forEach((c: any) => {
+      if (c.project_id && c.organizations?.name && !contractorByProject.has(c.project_id)) {
+        contractorByProject.set(c.project_id, c.organizations.name);
+      }
+    });
+    return (data || []).map((f: any) => ({
+      id: f.id,
+      projectId: f.projects?.nirikshak_project_id || f.project_id,
+      contractor: contractorByProject.get(f.project_id) || 'Not available',
+      billNo: `FU-${String(f.id).slice(0, 8).toUpperCase()}`,
+      type: 'Financial Update' as const,
+      amountCr: numberOrZero(f.amount_spent_inr_crore ?? f.reported_cost_inr_crore),
+      submittedOn: f.observation_date || (f.created_at || '').slice(0, 10),
+      mbEntry: '—',
+      status: 'submitted' as const,
+    }));
+  },
+  /**
+   * Contractor-raised invoices for one project, read from
+   * public.contractor_invoices (migration 037) — kept separate from
+   * bills() above because that list is shaped from financial_updates and
+   * its BillItem type has no honest value for a contractor invoice.
+   * Drafts are excluded: a draft has not been submitted to the department
+   * yet, so it is not part of the government's bill register. Every other
+   * row is returned with its real recorded status; verification, approval
+   * and payment move the status on this same record.
+   */
+  async contractorInvoices(projectDbId: string): Promise<ContractorInvoiceItem[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('contractor_invoices' as any)
+      .select('id, invoice_number, milestone_label, amount_inr, invoice_date, status, notes, updated_at, organizations(name)')
+      .eq('project_id', projectDbId)
+      .neq('status', 'DRAFT')
+      .order('invoice_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load contractor invoices: ${error.message}`);
+    }
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      invoiceNumber: r.invoice_number || '',
+      contractor: r.organizations?.name || 'Not available',
+      milestoneLabel: r.milestone_label || null,
+      amountInr: numberOrZero(r.amount_inr),
+      invoiceDate: r.invoice_date || '',
+      status: String(r.status || '').toUpperCase(),
+      notes: r.notes || null,
+      updatedAt: r.updated_at || '',
+    }));
+  },
+  /**
+   * Budget heads for one project, grouped from its real financial_updates
+   * rows. The group key is the head named in the row's notes (allocations
+   * recorded through createAllocation carry "head — source" there); rows
+   * without a named head form one "Financial updates" group. Amounts are
+   * the latest recorded values per group (cumulative snapshots — never
+   * summed, never derived as fractions of the sanction).
+   */
+  async budgetHeads(projectDbId: string): Promise<BudgetHead[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('financial_updates')
+      .select('*')
+      .eq('project_id', projectDbId)
+      .order('observation_date', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: true });
+    if (error) {
+      throw new Error(`Failed to load budget heads: ${error.message}`);
+    }
+    const groups = new Map<string, any[]>();
+    (data || []).forEach((f: any) => {
+      const named = typeof f.notes === 'string' ? f.notes.split('—')[0].trim() : '';
+      const key = named || 'Financial updates';
+      const rows = groups.get(key) || [];
+      rows.push(f);
+      groups.set(key, rows);
+    });
+    return [...groups.entries()].map(([head, rows]) => {
+      const latestOf = (keys: string[]): number | null => {
+        for (let i = rows.length - 1; i >= 0; i--) {
+          for (const key of keys) {
+            const v = rows[i][key];
+            if (v != null && Number.isFinite(Number(v))) return Number(v);
+          }
+        }
+        return null;
+      };
+      const original = latestOf(['original_cost_inr_crore', 'budget_allocation_inr_crore', 'reported_cost_inr_crore']) ?? 0;
+      const revised = latestOf(['revised_cost_inr_crore']);
+      return {
+        id: rows[0].id,
+        head,
+        originalCr: original,
+        revisedCr: revised != null && revised !== original ? revised : undefined,
+        utilizedCr: latestOf(['amount_spent_inr_crore']) ?? 0,
+      };
+    });
+  },
+  /**
+   * Monthly spend series for one project: for each month with a financial
+   * observation, the latest cumulative amount_spent_inr_crore recorded in
+   * that month. Months without observations do not appear — no curve is
+   * interpolated and no "planned" series is invented.
+   */
+  async monthlySpend(projectDbId: string): Promise<MonthlySpend[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('financial_updates')
+      .select('observation_date, created_at, amount_spent_inr_crore')
+      .eq('project_id', projectDbId)
+      .order('observation_date', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: true });
+    if (error) {
+      throw new Error(`Failed to load monthly spend: ${error.message}`);
+    }
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const byMonth = new Map<string, number>();
+    (data || []).forEach((f: any) => {
+      if (f.amount_spent_inr_crore == null) return;
+      const stamp = f.observation_date || f.created_at;
+      if (!stamp) return;
+      const d = new Date(stamp);
+      if (!Number.isFinite(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      // Rows arrive oldest-first, so the last write per month is the
+      // latest cumulative snapshot for that month.
+      byMonth.set(key, Number(f.amount_spent_inr_crore));
+    });
+    return [...byMonth.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, cumulativeCr]) => {
+        const [year, month] = key.split('-').map(Number);
+        return { month: `${MONTHS[month - 1]} ${String(year).slice(2)}`, cumulativeCr };
+      });
   },
   async createAllocation(projectId: string, amountCr: number, head: string, notes?: string): Promise<void> {
     // DF-07: financial_updates.project_id is a UUID column — callers must
@@ -867,22 +1210,72 @@ export const auditApi = {
     if (error) {
       throw new Error(`Failed to load audit findings: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((ins: any, idx: number) => ({
-        id: `AUD-2026-${(idx + 1).toString().padStart(4, '0')}`,
-        auditTitle: ins.summary?.slice(0, 60) || 'Field Quality & Safety Audit',
-        projectId: ins.projects?.nirikshak_project_id || ins.project_id,
-        severity: (ins.inspection_type === 'SAFETY_AUDIT' ? 'medium' : 'low') as any,
-        category: ins.inspection_type || 'Civil Quality Check',
-        observation: ins.summary || 'Periodic compliance audit conducted at project site.',
-        raisedOn: ins.inspection_date || '2026-03-01',
-        status: 'open',
-        accountableOfficer: 'Chief Quality Inspector (Pune Div)',
-        dueDate: '2026-04-15',
-        irregularityAmountCr: 0,
-      }));
+    // Findings are the completed inspections themselves, mapped 1:1 with
+    // only stored fields — inspections carry no accountable-officer or
+    // due-date columns, so those stay empty rather than invented.
+    return (data || []).map((ins: any) => ({
+      id: ins.id,
+      auditTitle: ins.summary?.slice(0, 60) || ins.inspection_type || 'Inspection',
+      projectId: ins.projects?.nirikshak_project_id || ins.project_id,
+      severity: (ins.inspection_type === 'SAFETY_AUDIT' ? 'medium' : 'low') as any,
+      category: ins.inspection_type || '',
+      observation: ins.summary || '',
+      raisedOn: ins.inspection_date || ins.scheduled_date || '',
+      status: 'open',
+      accountableOfficer: '',
+      dueDate: '',
+      irregularityAmountCr: 0,
+    }));
+  },
+  /**
+   * Real audit_logs activity for one project (rows whose entity_id is the
+   * project's UUID — project lifecycle, tender and review actions recorded
+   * by the database functions). Actor names resolve through profiles;
+   * old/new values are the stored JSONB, summarised for display.
+   */
+  async activityForProject(projectDbId: string): Promise<ProjectActivityEntry[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('entity_id', projectDbId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) {
+      throw new Error(`Failed to load project activity: ${error.message}`);
     }
-    return DEMO_MODE ? AUDIT_FINDINGS : [];
+    const rows = data || [];
+    if (rows.length === 0) return [];
+    const actorIds = [...new Set(rows.map((r: any) => r.actor_id).filter(Boolean))];
+    const orgIds = [...new Set(rows.map((r: any) => r.actor_organization_id).filter(Boolean))];
+    const [{ data: profiles }, { data: orgs }] = await Promise.all([
+      actorIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', actorIds)
+        : Promise.resolve({ data: [] as any[] }),
+      orgIds.length
+        ? supabase.from('organizations').select('id, name').in('id', orgIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const nameByActor = new Map<string, string>();
+    (profiles || []).forEach((p: any) => p?.id && nameByActor.set(p.id, p.full_name));
+    const nameByOrg = new Map<string, string>();
+    (orgs || []).forEach((o: any) => o?.id && nameByOrg.set(o.id, o.name));
+    const summarise = (value: unknown): string => {
+      if (value == null) return '—';
+      if (typeof value === 'string') return value;
+      const text = JSON.stringify(value);
+      return text.length > 120 ? `${text.slice(0, 117)}…` : text;
+    };
+    return rows.map((r: any) => ({
+      id: r.id,
+      timestamp: r.created_at || '',
+      actor: (r.actor_id && nameByActor.get(r.actor_id)) || (r.actor_organization_id && nameByOrg.get(r.actor_organization_id)) || 'System',
+      role: (r.actor_organization_id && nameByOrg.get(r.actor_organization_id)) || '',
+      action: r.action || '',
+      field: r.entity_type || '',
+      oldValue: summarise(r.old_value),
+      newValue: summarise(r.new_value),
+    }));
   },
 };
 
@@ -909,42 +1302,67 @@ export const alertsApi = {
         sourceModule: 'Government Oversight & Monitoring',
       }));
     }
-    return DEMO_MODE ? ALERTS : [];
+    return [];
   },
 };
 
 /* ---------- Documents ---------- */
+/**
+ * The file a document record actually points at: its external_url when
+ * recorded, else its storage_path when that is itself a URL. Returns null
+ * when the record carries no reachable file — callers render an honest
+ * "no file attached" state instead of a fake download.
+ */
+export function documentFileUrl(doc: DocumentItem): string | null {
+  if (doc.externalUrl) return doc.externalUrl;
+  if (doc.storagePath && /^https?:\/\//i.test(doc.storagePath)) return doc.storagePath;
+  return null;
+}
+
 export const documentsApi = {
   async all(): Promise<DocumentItem[]> {
     const { data, error } = await supabase
       .from('project_documents')
-      .select('*')
+      .select('*, projects(nirikshak_project_id)')
       .order('document_date', { ascending: false });
     if (error) {
       throw new Error(`Failed to load documents: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((d: any) => {
-        let category: DocumentItem['category'] = 'Work Order';
-        if (d.document_type === 'DPR') category = 'Administrative Approval';
-        else if (d.document_type === 'EIA') category = 'Technical Approval';
-        else if (d.document_type === 'CONTRACT') category = 'Contract Agreement';
-        else if (d.document_type === 'INSPECTION') category = 'Inspection Report';
+    const rows = data || [];
+    if (rows.length === 0) return [];
 
-        return {
-          id: d.id,
-          name: d.title || 'Project Document',
-          category,
-          projectId: d.project_id,
-          uploadedOn: d.document_date || '2025-01-01',
-          uploadedBy: d.publisher || 'Department Engineer',
-          fileSizeKb: 2450,
-          version: 1,
-          accessLevel: d.is_public ? 'Public' : 'Internal',
-        };
-      });
-    }
-    return DEMO_MODE ? DOCUMENTS : [];
+    // Uploader names: publisher text wins; otherwise resolve the
+    // uploaded_by UUID through profiles (same pattern as inspections).
+    const uploaderIds = [...new Set(rows.map((d: any) => d.uploaded_by).filter(Boolean))];
+    const { data: profiles } = uploaderIds.length
+      ? await supabase.from('profiles').select('id, full_name').in('id', uploaderIds)
+      : { data: [] as any[] };
+    const nameByUploader = new Map<string, string>();
+    (profiles || []).forEach((p: any) => p?.id && nameByUploader.set(p.id, p.full_name));
+
+    return rows.map((d: any) => {
+      let category: DocumentItem['category'] = 'Work Order';
+      if (d.document_type === 'DPR') category = 'Administrative Approval';
+      else if (d.document_type === 'EIA') category = 'Technical Approval';
+      else if (d.document_type === 'CONTRACT') category = 'Contract Agreement';
+      else if (d.document_type === 'INSPECTION') category = 'Inspection Report';
+
+      return {
+        id: d.id,
+        name: d.title || 'Project Document',
+        category,
+        projectId: d.projects?.nirikshak_project_id || d.project_id,
+        // Real columns only: project_documents has no size or version
+        // column, so both stay null and pages render "—".
+        uploadedOn: d.document_date || (d.created_at ? String(d.created_at).slice(0, 10) : null),
+        uploadedBy: d.publisher || (d.uploaded_by ? nameByUploader.get(d.uploaded_by) ?? null : null),
+        fileSizeKb: null,
+        version: null,
+        storagePath: d.storage_path ?? null,
+        externalUrl: d.external_url ?? null,
+        accessLevel: d.is_public ? 'Public' : 'Internal',
+      };
+    });
   },
   async list(q?: ListQuery): Promise<Paginated<DocumentItem>> {
     const all = await this.all();
@@ -955,7 +1373,10 @@ export const documentsApi = {
 /* ---------- Litigation ---------- */
 export const litigationApi = {
   async all(): Promise<LitigationCase[]> {
-    return DEMO_MODE ? LITIGATION : [];
+    // No litigation/cases table exists in the migration lineage
+    // (001–036), so there is no real source to read. Returns an empty
+    // list; consumers render their honest "no records" state.
+    return [];
   },
 };
 
@@ -964,25 +1385,34 @@ export const workApi = {
   async workOrders(): Promise<WorkOrder[]> {
     const { data, error } = await supabase
       .from('contracts')
-      .select('*, projects(nirikshak_project_id)')
+      .select('*, projects(nirikshak_project_id), organizations(name)')
       .order('created_at', { ascending: false });
     if (error) {
       throw new Error(`Failed to load work orders: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((c: any) => ({
+    return (data || []).map((c: any) => {
+      // Completion period is derived only from the contract's own stored
+      // scheduled dates; contracts carry no defect-liability or MB number.
+      let completionPeriodDays: number | null = null;
+      if (c.scheduled_start_date && c.scheduled_completion_date) {
+        const diff = Math.round(
+          (new Date(c.scheduled_completion_date).getTime() - new Date(c.scheduled_start_date).getTime()) / 86_400_000,
+        );
+        if (Number.isFinite(diff) && diff >= 0) completionPeriodDays = diff;
+      }
+      const statusRaw = String(c.status || 'ACTIVE').toUpperCase();
+      return {
         id: c.contract_number || c.official_contract_id || c.id,
         projectId: c.projects?.nirikshak_project_id || c.project_id,
-        contractor: 'L&T - Tata Projects Consortium',
-        issuedOn: c.scheduled_start_date || '2023-01-15',
-        valueCr: Number(c.contract_value) || 2450,
-        completionPeriodDays: 1095,
-        status: (c.status || 'ACTIVE').toLowerCase() === 'active' ? 'in_execution' : 'issued',
-        measurementBookNo: `eMB-2026-${(c.contract_number || '01').slice(-3)}`,
-        defectLiabilityMonths: 36,
-      }));
-    }
-    return DEMO_MODE ? WORK_ORDERS : [];
+        contractor: c.organizations?.name ?? null,
+        issuedOn: c.award_date || c.scheduled_start_date || (c.created_at || '').slice(0, 10),
+        valueCr: numberOrZero(c.contract_value),
+        completionPeriodDays,
+        status: (statusRaw === 'ACTIVE' ? 'in_execution' : statusRaw === 'COMPLETED' ? 'closed' : 'issued') as WorkOrder['status'],
+        measurementBookNo: null,
+        defectLiabilityMonths: null,
+      };
+    });
   },
   async inspections(): Promise<InspectionRecord[]> {
     const { data, error } = await supabase
@@ -992,21 +1422,209 @@ export const workApi = {
     if (error) {
       throw new Error(`Failed to load inspections: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((i: any) => ({
+    const rows = data || [];
+    if (rows.length === 0) return [];
+
+    // Real stored detail lives on inspection_findings (geo + evidence) and
+    // profiles (inspector name). Anything absent stays null/0 — never a
+    // fixed officer, fixed geo-tag or fixed photo count.
+    const inspectionIds = rows.map((i: any) => i.id);
+    const inspectorIds = [...new Set(rows.map((i: any) => i.inspector_id).filter(Boolean))];
+    const [{ data: findings }, { data: profiles }] = await Promise.all([
+      supabase
+        .from('inspection_findings')
+        .select('inspection_id, latitude, longitude, evidence_path, required_action')
+        .in('inspection_id', inspectionIds),
+      inspectorIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', inspectorIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const findingsByInspection = new Map<string, any[]>();
+    (findings || []).forEach((f: any) => {
+      const list = findingsByInspection.get(f.inspection_id) || [];
+      list.push(f);
+      findingsByInspection.set(f.inspection_id, list);
+    });
+    const nameByInspector = new Map<string, string>();
+    (profiles || []).forEach((p: any) => p?.id && nameByInspector.set(p.id, p.full_name));
+
+    return rows.map((i: any) => {
+      const own = findingsByInspection.get(i.id) || [];
+      const geo = own.find((f: any) => f.latitude != null && f.longitude != null);
+      const corrective = own.find((f: any) => f.required_action)?.required_action;
+      return {
         id: i.id,
         projectId: i.projects?.nirikshak_project_id || i.project_id,
-        inspectedOn: i.inspection_date || i.scheduled_date || '2026-03-01',
-        inspector: 'Er. R. K. Shinde (SE Pune)',
+        inspectedOn: i.inspection_date || i.scheduled_date || '',
+        inspector: i.inspector_id ? nameByInspector.get(i.inspector_id) ?? null : null,
         type: (i.inspection_type === 'SAFETY_AUDIT' ? 'Safety' : i.inspection_type === 'QUALITY_CHECK' ? 'Quality' : 'Routine') as any,
-        findings: i.summary || 'Site inspection completed as per protocol.',
-        geoTag: { lat: 18.5204, lng: 73.8567 },
-        photosCount: 4,
+        findings: i.summary || '',
+        geoTag: geo ? { lat: Number(geo.latitude), lng: Number(geo.longitude) } : null,
+        photosCount: own.filter((f: any) => f.evidence_path).length,
         outcome: i.status === 'COMPLETED' ? 'satisfactory' : 'observations',
-        correctiveAction: i.status !== 'COMPLETED' ? 'Action item assigned to contractor' : undefined,
-      }));
+        correctiveAction: corrective || undefined,
+      };
+    });
+  },
+  /**
+   * Real progress_updates for one project, with the contractor
+   * organisation, milestone name, submitter name and the update's
+   * progress_evidence (photo count + first recorded geo-tag). No field is
+   * synthesised: an update without evidence has geoTag null and 0 photos.
+   */
+  async progressUpdates(projectDbId: string): Promise<SiteProgressUpdate[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('progress_updates')
+      .select('*, organizations(name), project_milestones(milestone_name)')
+      .eq('project_id', projectDbId)
+      .is('deleted_at', null)
+      .order('submitted_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load progress updates: ${error.message}`);
     }
-    return DEMO_MODE ? INSPECTIONS : [];
+    const rows = data || [];
+    if (rows.length === 0) return [];
+    const updateIds = rows.map((u: any) => u.id);
+    const submitterIds = [...new Set(rows.map((u: any) => u.submitted_by).filter(Boolean))];
+    const [{ data: evidence }, { data: profiles }] = await Promise.all([
+      supabase
+        .from('progress_evidence')
+        .select('progress_update_id, evidence_type, latitude, longitude')
+        .in('progress_update_id', updateIds),
+      submitterIds.length
+        ? supabase.from('profiles').select('id, full_name').in('id', submitterIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const evidenceByUpdate = new Map<string, any[]>();
+    (evidence || []).forEach((e: any) => {
+      const list = evidenceByUpdate.get(e.progress_update_id) || [];
+      list.push(e);
+      evidenceByUpdate.set(e.progress_update_id, list);
+    });
+    const nameBySubmitter = new Map<string, string>();
+    (profiles || []).forEach((p: any) => p?.id && nameBySubmitter.set(p.id, p.full_name));
+    return rows.map((u: any) => {
+      const own = evidenceByUpdate.get(u.id) || [];
+      const geo = own.find((e: any) => e.latitude != null && e.longitude != null);
+      const statusRaw = String(u.verification_status || 'SUBMITTED').toUpperCase();
+      return {
+        id: u.id,
+        date: (u.submitted_at || u.created_at || '').slice(0, 10),
+        activity: u.description || 'Progress update',
+        location: u.project_milestones?.milestone_name ?? null,
+        progressPct: numberOrZero(u.reported_progress),
+        verifiedProgressPct: u.verified_progress == null ? null : Number(u.verified_progress),
+        contractor: u.organizations?.name ?? null,
+        submittedBy: u.submitted_by ? nameBySubmitter.get(u.submitted_by) ?? null : null,
+        geoTag: geo ? { lat: Number(geo.latitude), lng: Number(geo.longitude) } : null,
+        photos: own.filter((e: any) => e.evidence_type === 'photo').length,
+        status: (statusRaw === 'APPROVED'
+          ? 'verified'
+          : statusRaw === 'REJECTED'
+            ? 'rejected'
+            : statusRaw === 'REQUEST_CLARIFICATION'
+              ? 'clarification'
+              : 'pending') as SiteProgressUpdate['status'],
+        verificationNote: u.review_notes || undefined,
+      };
+    });
+  },
+  /**
+   * Record a progress update from the government console. The row is
+   * attributed to the contractor holding the project's latest contract
+   * (progress_updates.contractor_organization_id is required by the
+   * schema lineage) and starts SUBMITTED, like any field submission.
+   * No geo-tag or evidence is attached here — geo-tagged evidence is
+   * captured by the field app. Insert errors surface to the caller.
+   */
+  async createProgressUpdate(
+    projectDbId: string,
+    input: { activity: string; location?: string; progressPct: number },
+  ): Promise<void> {
+    if (!isUuid(projectDbId)) {
+      throw new Error('Progress updates require the project database id (UUID).');
+    }
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData?.user?.id;
+    if (!userId) throw new Error('Your session has expired. Please sign in again.');
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select('contractor_organization_id')
+      .eq('project_id', projectDbId)
+      .is('deleted_at', null)
+      .order('award_date', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (contractError) throw contractError;
+    if (!contract?.contractor_organization_id) {
+      throw new Error('No contractor is assigned to this project yet, so a progress update cannot be recorded against it.');
+    }
+    const description = input.location ? `${input.activity} — ${input.location}` : input.activity;
+    const { error } = await supabase.from('progress_updates').insert({
+      project_id: projectDbId,
+      contractor_organization_id: contract.contractor_organization_id,
+      reported_progress: input.progressPct,
+      description,
+      submitted_by: userId,
+      verification_status: 'SUBMITTED',
+    });
+    if (error) throw error;
+  },
+  /** Real project_milestones for one project, mapped 1:1 from stored fields. */
+  async milestones(projectDbId: string): Promise<Milestone[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('project_milestones')
+      .select('*, projects(nirikshak_project_id)')
+      .eq('project_id', projectDbId)
+      .is('deleted_at', null)
+      .order('display_order', { ascending: true });
+    if (error) {
+      throw new Error(`Failed to load milestones: ${error.message}`);
+    }
+    return (data || []).map((m: any) => {
+      const statusRaw = String(m.status || 'PENDING').toUpperCase();
+      let delayDays: number | undefined;
+      if (m.planned_end_date && m.revised_end_date) {
+        const diff = Math.round(
+          (new Date(m.revised_end_date).getTime() - new Date(m.planned_end_date).getTime()) / 86_400_000,
+        );
+        if (Number.isFinite(diff) && diff > 0) delayDays = diff;
+      }
+      return {
+        id: m.id,
+        projectId: m.projects?.nirikshak_project_id || m.project_id,
+        title: m.milestone_name || '',
+        status: (statusRaw === 'COMPLETED'
+          ? 'completed'
+          : statusRaw === 'IN_PROGRESS'
+            ? 'in_progress'
+            : statusRaw === 'DELAYED'
+              ? 'delayed'
+              : 'upcoming') as Milestone['status'],
+        plannedStart: m.planned_start_date || '',
+        plannedEnd: m.planned_end_date || '',
+        actualStart: m.actual_start_date || undefined,
+        actualEnd: m.actual_end_date || undefined,
+        physicalProgressPct: numberOrZero(m.verified_progress),
+        plannedProgressPct: numberOrZero(m.planned_progress),
+        weightage: m.weightage == null ? null : Number(m.weightage),
+        plannedCostCr: m.planned_cost == null ? null : Number(m.planned_cost),
+        actualCostCr: m.actual_cost == null ? null : Number(m.actual_cost),
+        delayDays,
+        remarks: m.description || undefined,
+      };
+    });
+  },
+  /** Persist a verified-progress correction on a milestone row. */
+  async updateMilestoneProgress(milestoneId: string, verifiedProgressPct: number): Promise<void> {
+    const status = verifiedProgressPct >= 100 ? 'COMPLETED' : verifiedProgressPct > 0 ? 'IN_PROGRESS' : 'PENDING';
+    const { error } = await supabase
+      .from('project_milestones')
+      .update({ verified_progress: verifiedProgressPct, status })
+      .eq('id', milestoneId);
+    if (error) throw error;
   },
 };
 
@@ -1039,52 +1657,63 @@ export const insightsApi = {
     if (error) {
       throw new Error(`Failed to load AI insights: ${error.message}`);
     }
-    if (data && data.length > 0) {
-      return data.map((item: any) => ({
-        id: item.id,
-        area: item.insight_type === 'schedule_risk' ? 'Schedule & Delay Prediction' : item.insight_type === 'complaint_cluster' ? 'Public Grievance Correlation' : 'Cost & Material Anomaly',
-        title: item.title,
-        insight: item.summary,
-        supportingData: Array.isArray(item.evidence) ? item.evidence.join('; ') : (item.evidence || ''),
-        confidencePct: Math.round((Number(item.confidence) || 0.85) * 100),
-        confidenceBand: (Number(item.confidence) >= 0.85 ? 'high' : Number(item.confidence) >= 0.65 ? 'medium' : 'low') as any,
-        recommendedAction: Array.isArray(item.recommended_actions) ? item.recommended_actions.join('; ') : (item.recommended_actions || ''),
-        relatedProjectIds: item.project_id ? [item.project_id] : [],
-        generatedOn: (item.created_at || '').slice(0, 10) || '2026-02-20',
-        classification: 'ai_insight' as const,
-      }));
-    }
-    return DEMO_MODE ? AI_INSIGHTS : [];
+    return (data || []).map(mapAiInsight);
   },
-  async evaluateContractor(id: string): Promise<{
-    contractorId: string;
-    score: number;
-    factors: { name: string; weight: number; score: number; evidence: string }[];
-    strengths: string[];
-    risks: string[];
-    disclaimer: string;
-  } | undefined> {
-    if (!DEMO_MODE) return undefined;
-    const c = CONTRACTORS.find((x) => x.id === id);
-    if (!c) return undefined;
-    return {
-      contractorId: id,
-      score: c.aiScore,
-      factors: [
-        { name: 'On-time completion', weight: 20, score: Math.round(c.onTimeCompletionPct * 0.9), evidence: `${c.onTimeCompletionPct}% of milestones met across last 3 years.` },
-        { name: 'Quality (NABL test pass rate)', weight: 18, score: Math.round(c.qualityRating * 20), evidence: `Quality rating ${c.qualityRating.toFixed(1)}/5 from ${c.completedProjects} completed works.` },
-        { name: 'Pending defect liability', weight: 12, score: Math.max(0, 100 - c.pendingDefects * 12), evidence: `${c.pendingDefects} open defects across DL period.` },
-        { name: 'Litigation exposure', weight: 12, score: Math.max(0, 100 - c.litigationCount * 30), evidence: `${c.litigationCount} active case(s).` },
-        { name: 'Financial turnover trend', weight: 10, score: 78, evidence: 'Turnover consistent with Class registration.' },
-        { name: 'Plant & machinery availability', weight: 8, score: 82, evidence: 'Regional plant census, last quarter.' },
-        { name: 'Safety record', weight: 8, score: 88, evidence: 'No fatal incidents; minor LTI rate 0.9 per lakh man-hours.' },
-        { name: 'Manpower & key personnel', weight: 6, score: 74, evidence: 'Site-engineer ratio 1:2.3 (norm 1:3.0).' },
-        { name: 'Past e-MB accuracy', weight: 6, score: 81, evidence: 'Measurement variance within ±2% on test check.' },
-      ],
-      strengths: c.strengths,
-      risks: c.risks,
-      disclaimer: 'AI-assisted evaluation. Final decision remains with the authorized officer.',
-    };
+  /** Stored insights for one project (by its database UUID). */
+  async byProject(projectDbId: string): Promise<AiInsight[]> {
+    if (!isUuid(projectDbId)) return [];
+    const { data, error } = await supabase
+      .from('ai_insights')
+      .select('*')
+      .eq('project_id', projectDbId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw new Error(`Failed to load AI insights: ${error.message}`);
+    }
+    return (data || []).map(mapAiInsight);
   },
 };
+
+/**
+ * Map a stored ai_insights row 1:1. Confidence is passed through exactly
+ * as stored — null stays null (rendered "—"), never defaulted to 85%.
+ * The insight_type is shown raw, never relabelled.
+ */
+function mapAiInsight(item: any): AiInsight {
+  const toStrings = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value.map((v) => (typeof v === 'string' ? v : JSON.stringify(v)));
+    }
+    if (value == null || value === '') return [];
+    return [typeof value === 'string' ? value : JSON.stringify(value)];
+  };
+  const evidenceItems = toStrings(item.evidence);
+  const actionItems = toStrings(item.recommended_actions);
+  const confidence = item.confidence == null ? null : Number(item.confidence);
+  return {
+    id: item.id,
+    area: item.insight_type || '',
+    title: item.title,
+    insight: item.summary,
+    supportingData: evidenceItems.join('; '),
+    confidencePct: confidence == null || !Number.isFinite(confidence) ? null : Math.round(confidence * 100),
+    confidenceBand:
+      confidence == null || !Number.isFinite(confidence)
+        ? null
+        : confidence >= 0.85
+          ? 'high'
+          : confidence >= 0.65
+            ? 'medium'
+            : 'low',
+    recommendedAction: actionItems.join('; '),
+    relatedProjectIds: item.project_id ? [item.project_id] : [],
+    generatedOn: (item.created_at || '').slice(0, 10),
+    classification: 'ai_insight' as const,
+    severity: item.severity || '',
+    riskScore: item.risk_score == null ? null : Number(item.risk_score),
+    evidenceItems,
+    actionItems,
+    details: item.details && typeof item.details === 'object' ? item.details : null,
+  };
+}
 

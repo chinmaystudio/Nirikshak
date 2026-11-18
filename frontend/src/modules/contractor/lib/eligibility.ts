@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/core/supabase/client';
-import type { Tender } from './data';
+import type { Tender } from './types';
 
 export interface EligRow {
   label: string;

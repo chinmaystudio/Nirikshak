@@ -9,7 +9,7 @@ import { DataTable } from '@/components/tables/DataTable'
 import { formatDate, formatFileSizeKb } from '@/utils/format'
 import { ACCESS_LEVEL } from '@/utils/status'
 import type { DocumentItem } from '@/types'
-import { documentsApi } from '@/api'
+import { documentsApi, documentFileUrl } from '@/api'
 import { useApiData, useDebounced } from '@/hooks/useApiData'
 import { DOCUMENT_CATEGORIES } from '@/constants'
 
@@ -26,7 +26,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 /**
  * DocumentsPage — Documents & Archives: the spec's 8 categories with
- * access-level gating (Public / Internal / Restricted) and version tracking.
+ * access levels (Public / Internal). The register stores no file size or
+ * version, so those columns render "—"; download uses the record's real
+ * attached file reference when one exists.
  */
 export function DocumentsPage() {
   const { t } = useI18n()
@@ -52,7 +54,7 @@ export function DocumentsPage() {
       <div>
         <h1 className="text-heading-1 text-fg">{t('nav.documents')}</h1>
         <p className="mt-1 text-body-small text-fg-muted">
-          Central archive across {DOCUMENT_CATEGORIES.length} categories with signed copies and access control (mock data).
+          Central archive across {DOCUMENT_CATEGORIES.length} categories with access control, read from the project document register.
         </p>
       </div>
 
@@ -96,21 +98,29 @@ export function DocumentsPage() {
               { key: 'category', header: t('common.category'), render: (d) => <Badge tone="neutral">{d.category}</Badge> },
               { key: 'access', header: 'Access', render: (d) => <StatusBadge descriptor={ACCESS_LEVEL[d.accessLevel]} size="sm" /> },
               { key: 'project', header: t('common.project'), render: (d) => d.projectId ? <span className="nk-mono-id text-fg-muted">{d.projectId}</span> : '—' },
-              { key: 'version', header: 'Ver.', cellClassName: 'tabular-nums', render: (d) => `v${d.version}` },
-              { key: 'size', header: 'Size', cellClassName: 'tabular-nums', render: (d) => formatFileSizeKb(d.fileSizeKb) },
+              { key: 'version', header: 'Ver.', cellClassName: 'tabular-nums', render: (d) => (d.version != null ? `v${d.version}` : '—') },
+              { key: 'size', header: 'Size', cellClassName: 'tabular-nums', render: (d) => (d.fileSizeKb != null ? formatFileSizeKb(d.fileSizeKb) : '—') },
               { key: 'uploaded', header: 'Uploaded', cellClassName: 'tabular-nums', render: (d) => formatDate(d.uploadedOn) },
               { key: 'signed', header: 'Signed By', render: (d) => (d.signedBy ? <span className="text-caption">{d.signedBy}</span> : '—') },
             ]}
-            rowActions={() => (
-              <Button variant="outline" size="sm" icon="download" aria-label="Demo download — file is mock data">
-                Demo
-              </Button>
-            )}
+            rowActions={(d) => {
+              const url = documentFileUrl(d)
+              return url ? (
+                <Button variant="outline" size="sm" icon="download" onClick={() => window.open(url, '_blank', 'noopener')}>
+                  Download
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" icon="download" disabled title="No file is attached to this record">
+                  No file
+                </Button>
+              )
+            }}
           />
         )}
       </Panel>
       <p className="text-caption text-fg-subtle">
-        {t('common.mockDataNote')} Downloads are disabled in this demonstration build.
+        Download opens the file attached to the document record. Records without an attached file show
+        "No file" and cannot be downloaded.
       </p>
     </div>
   )

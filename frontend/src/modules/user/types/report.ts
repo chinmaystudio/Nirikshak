@@ -11,16 +11,31 @@ export interface EvidenceDraftItem {
   fromVision?: boolean;
 }
 
-export interface ReportAIResult {
-  detected: string;
-  severity: "high" | "medium" | "low";
+/**
+ * Honest review of a citizen's own report entries (U3 fix).
+ * Every field is copied or deterministically derived from what the
+ * citizen themselves entered — there is no AI analysis, no confidence
+ * score, no duplicate check, and no guessed project link.
+ */
+export interface ReportReview {
+  /** The citizen's own title, exactly as entered. */
+  title: string;
+  /** The citizen's own description, exactly as entered. */
+  description: string;
+  /** Label of the category the citizen selected. */
   category: string;
-  /** DF-16: null — the on-device heuristic produces no measured confidence. */
-  confidence: number | null;
+  categoryId: IssueCategory;
+  /** The priority the citizen selected in the report form. */
+  priority: string;
+  /** Derived directly from `priority` — labelled as such in the UI. */
+  severity: "critical" | "high" | "medium" | "low";
+  /** Department for the category the citizen selected. */
   department: string;
+  /**
+   * Only the project the citizen actually selected in the report form
+   * (or arrived with via a real project link). Never guessed.
+   */
   projectId: string | null;
-  /** DF-16: null — duplicates are not actually checked by the heuristic. */
-  duplicates: number | null;
 }
 
 export interface ReportPin {
@@ -42,7 +57,6 @@ export interface ReportDraft {
   gps: string | null;
   pin: ReportPin | null;
   evidence: EvidenceDraftItem[];
-  aiResult: ReportAIResult | null;
   submittedId: string | null;
   submitting: boolean;
 }

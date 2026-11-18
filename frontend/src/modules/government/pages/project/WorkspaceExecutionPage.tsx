@@ -2,18 +2,19 @@ import { useMemo, useState } from 'react'
 import { useI18n } from '@/context/I18nContext'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
 import { useToast } from '@/context/ToastContext'
+import { approvalsApi, auditApi, workApi } from '@/api'
+import { useApiData } from '@/hooks/useApiData'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Drawer, Modal } from '@/components/modals/Modal'
-import { TextField, Select, TextArea } from '@/components/ui/Fields'
+import { TextField } from '@/components/ui/Fields'
 import { PageHeader, KpiRow, FilterBar, ConfirmDialog, DetailField, KpiCard } from '@/components/blocks/Page'
 import { DualProgress } from '@/components/ui/Progress'
 import { formatCr, formatDate } from '@/utils/format'
-import { AI_CLASSIFICATION, AI_CONFIDENCE, INSPECTION_OUTCOME, LITIGATION_STATUS, WORK_ORDER_STATUS } from '@/utils/status'
-import { HEARINGS, PROGRESS_UPDATES, MIGRATIONS, SETTLEMENTS, ACTIVITY_LOG, type ProgressUpdate } from '@/data/workspace'
+import { AI_CLASSIFICATION, AI_CONFIDENCE, INSPECTION_OUTCOME, LITIGATION_STATUS } from '@/utils/status'
 import type { LitigationCase } from '@/types'
 
 const CONTRACT_STAGES = [
@@ -25,62 +26,106 @@ const CONTRACT_STAGES = [
   { label: 'Completion', icon: 'flag', dateKey: 'expectedCompletion' as const },
 ]
 
+const UPDATE_STATUS_BADGE = {
+  verified: { key: 'status.approved', tone: 'success', icon: 'verified' },
+  pending: { key: 'status.pending', tone: 'warning', icon: 'hourglass_top' },
+  rejected: { key: 'status.rejected', tone: 'danger', icon: 'cancel' },
+  clarification: { key: 'status.pending', tone: 'warning', icon: 'help' },
+} as const
+
 /** Project workspace — Work & Contract Management: the contract-control center
- * with execution tracking, site updates, settlements, litigation and AI
- * monitoring — all scoped to the open project. */
+ * with execution tracking, real site progress updates, litigation and AI
+ * monitoring — all scoped to the open project. Progress updates and the
+ * activity log are read from progress_updates / audit_logs; sections whose
+ * domains have no backing table (settlements, migration, hearings) are not
+ * shown at all rather than filled with fixture rows. */
 export function WorkspaceExecutionPage() {
   const { t } = useI18n()
   const { showToast } = useToast()
-  const { project, workOrder, inspections, litigation, insights, bills } = useProjectWorkspace()
-  const [updates, setUpdates] = useState<ProgressUpdate[]>(() => PROGRESS_UPDATES.filter((u) => u.projectId === project?.id))
+  const { project, workOrder, inspections, litigation, insights } = useProjectWorkspace()
+  const [refresh, setRefresh] = useState(0)
+  const projectDbId = project?.dbId ?? ''
+  const { data: loadedUpdates } = useApiData(() => workApi.progressUpdates(projectDbId), [projectDbId, refresh])
+  const { data: loadedActivity } = useApiData(() => auditApi.activityForProject(projectDbId), [projectDbId, refresh])
+  const { data: loadedMilestones } = useApiData(() => workApi.milestones(projectDbId), [projectDbId])
   const [updateSearch, setUpdateSearch] = useState('')
   const [updateFilter, setUpdateFilter] = useState('')
   const [caseDrawer, setCaseDrawer] = useState<LitigationCase | null>(null)
-  const [addCaseOpen, setAddCaseOpen] = useState(false)
-  const [newCase, setNewCase] = useState({ title: '', court: 'Bombay High Court', claim: '' })
   const [addUpdateOpen, setAddUpdateOpen] = useState(false)
   const [newUpdate, setNewUpdate] = useState({ location: '', activity: '', progress: '' })
+  const [submitting, setSubmitting] = useState(false)
   const [confirm, setConfirm] = useState<{ title: string; message: string; run: () => void } | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
 
-  const peopleBills = useMemo(() => bills.filter((b) => b.type === 'Labour Bill'), [bills])
-  const projectUpdates = updates
-  const projectMigrations = MIGRATIONS.filter((m) => m.projectId === project?.id)
-  const projectSettlements = SETTLEMENTS.filter((s) => s.projectId === project?.id)
-  const projectActivity = useMemo(() => ACTIVITY_LOG.filter((a) => a.projectId === project?.id), [project?.id])
+  const projectUpdates = loadedUpdates ?? []
+  const projectActivity = loadedActivity ?? []
+  const milestones = loadedMilestones ?? []
+
+  const filteredUpdates = useMemo(
+    () =>
+      projectUpdates.filter(
+        (u) =>
+          (!updateFilter || u.status === updateFilter) &&
+          (!updateSearch ||
+            `${u.activity} ${u.location ?? ''} ${u.submittedBy ?? ''} ${u.contractor ?? ''}`.toLowerCase().includes(updateSearch.toLowerCase())),
+      ),
+    [projectUpdates, updateFilter, updateSearch],
+  )
 
   if (!project) return null
 
-  const plannedNow = Math.min(100, project.physicalProgressPct + (project.delayDays > 0 ? 8 : 2))
-  const scheduleVariance = project.physicalProgressPct - plannedNow
-  const verifyUpdate = (id: string, verdict: 'verified' | 'rejected') => {
-    setUpdates((list) =>
-      list.map((u) =>
-        u.id === id
-          ? {
-              ...u,
-              status: verdict,
-              verificationNote:
-                verdict === 'verified'
-                  ? 'Verified by Executive Engineer this session (demo).'
-                  : 'Rejected — re-submission requested with corrected geo-tag (demo).',
-            }
-          : u,
-      ),
-    )
+  const completedMilestones = milestones.filter((m) => m.status === 'completed').length
+  const delayedMilestones = milestones.filter((m) => m.status === 'delayed')
+  const pendingUpdates = projectUpdates.filter((u) => u.status === 'pending').length
+
+  /** Verification is a real write: the approve_progress_update RPC via
+   * approvalsApi. The list reloads from the database afterwards. */
+  const verifyUpdate = async (id: string, verdict: 'verified' | 'rejected') => {
+    try {
+      if (verdict === 'verified') await approvalsApi.approve(id, 'Verified from the project workspace.')
+      else await approvalsApi.reject(id, 'Rejected from the project workspace — re-submission requested.')
+    } catch (err: any) {
+      showToast(err?.message || 'The verification could not be recorded. Please try again.', 'danger')
+      return
+    }
     showToast(
       verdict === 'verified'
-        ? `Progress update ${id} verified and posted to the register.`
-        : `Progress update ${id} rejected — contractor notified for correction.`,
+        ? 'Progress update verified and posted to the register.'
+        : 'Progress update rejected — the contractor can re-submit with corrections.',
       verdict === 'verified' ? 'success' : 'warning',
     )
+    setRefresh((k) => k + 1)
+  }
+
+  const downloadReport = () => {
+    const lines = [
+      `Progress & Monitoring Summary — ${project.name} (${project.id})`,
+      `Generated ${new Date().toISOString().slice(0, 10)} from the project's recorded data.`,
+      '',
+      `Physical progress: ${project.physicalProgressPct}%`,
+      `Financial progress: ${project.financialProgressPct}%`,
+      `Delay against original completion: ${project.delayDays} day(s)`,
+      `Milestones: ${completedMilestones}/${milestones.length} completed, ${delayedMilestones.length} delayed`,
+      `Progress updates: ${projectUpdates.length} on record, ${pendingUpdates} awaiting verification`,
+      '',
+      'Stored monitoring insights:',
+      ...(insights.length
+        ? insights.map((i) => `- ${i.title}: ${i.insight}`)
+        : ['- None generated for this project yet.']),
+    ]
+    const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `progress-summary-${project.id}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title="Work & Contract Management"
-        description="Contract control center — work order, execution tracking, site updates, settlements, litigation and AI-based monitoring for this project."
+        description="Contract control center — work order, execution tracking, site updates, litigation and AI-based monitoring for this project."
         actions={
           <>
             <Button variant="outline" size="sm" icon="description" onClick={() => setReportOpen(true)}>
@@ -98,8 +143,8 @@ export function WorkspaceExecutionPage() {
         <KpiRow>
           <KpiCard label="Contract Value" value={workOrder ? formatCr(workOrder.valueCr) : '—'} icon="payments" />
           <KpiCard label="Work Order" value={workOrder?.id ?? project.workOrderNo ?? 'Pending'} icon="receipt_long" iconTone="neutral" />
-          <KpiCard label="Defect Liability" value={workOrder ? `${workOrder.defectLiabilityMonths} mo` : '—'} icon="build_circle" iconTone="neutral" />
-          <KpiCard label="Retention / Security" value={workOrder ? `${formatCr(Math.round(workOrder.valueCr * 0.05 * 10) / 10)} / ${formatCr(Math.round(workOrder.valueCr * 0.1 * 10) / 10)}` : '—'} icon="shield" iconTone="neutral" delta="5% retention • 10% performance" />
+          <KpiCard label="Defect Liability" value={workOrder?.defectLiabilityMonths != null ? `${workOrder.defectLiabilityMonths} mo` : '—'} icon="build_circle" iconTone="neutral" />
+          <KpiCard label="Completion Period" value={workOrder?.completionPeriodDays != null ? `${workOrder.completionPeriodDays} ${t('common.days')}` : '—'} icon="schedule" iconTone="neutral" delta={workOrder ? `From ${formatDate(workOrder.issuedOn)}` : undefined} />
         </KpiRow>
 
         <Panel title="Contract Timeline" icon="timeline">
@@ -125,17 +170,6 @@ export function WorkspaceExecutionPage() {
               )
             })}
           </ol>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" icon="gavel" onClick={() => showToast('Amendment request drafted — routed to SE (Technical) for concurrence (demo).', 'info')}>
-              Amend Contract
-            </Button>
-            <Button variant="outline" size="sm" icon="schedule" onClick={() => showToast('Extension of Time request initiated — attach delay analysis before submission (demo).', 'info')}>
-              Request Extension
-            </Button>
-            <Button variant="outline" size="sm" icon="upload_file" onClick={() => showToast('Document upload opens in Document Management with contract tagging (demo).', 'info')}>
-              Upload Document
-            </Button>
-          </div>
         </Panel>
       </section>
 
@@ -144,29 +178,29 @@ export function WorkspaceExecutionPage() {
         <KpiRow>
           <KpiCard label="Physical Progress" value={`${project.physicalProgressPct}%`} icon="construction" iconTone="primary" />
           <KpiCard label="Financial Progress" value={`${project.financialProgressPct}%`} icon="payments" iconTone="success" />
-          <KpiCard label="Planned (this date)" value={`${plannedNow}%`} icon="event_available" iconTone="neutral" />
+          <KpiCard label="Milestones Completed" value={milestones.length ? `${completedMilestones} / ${milestones.length}` : '—'} icon="fact_check" iconTone="neutral" />
           <KpiCard
-            label="Schedule Variance"
-            value={`${scheduleVariance > 0 ? '+' : ''}${scheduleVariance} pts`}
-            icon={scheduleVariance < 0 ? 'timer_off' : 'check_circle'}
-            iconTone={scheduleVariance < 0 ? 'danger' : 'success'}
+            label="Updates Awaiting Verification"
+            value={pendingUpdates}
+            icon="hourglass_top"
+            iconTone={pendingUpdates ? 'warning' : 'neutral'}
             delta={project.delayDays > 0 ? `${project.delayDays} days delayed` : 'On schedule'}
             deltaTone={project.delayDays > 0 ? 'danger' : 'success'}
           />
         </KpiRow>
 
-        <Panel title="Planned vs Actual Progress" icon="speed">
+        <Panel title="Physical vs Financial Progress" icon="speed">
           <DualProgress physical={project.physicalProgressPct} financial={project.financialProgressPct} />
           <p className="mt-3 text-caption text-fg-subtle">
-            Execution runs {scheduleVariance < 0 ? `${Math.abs(scheduleVariance)} points behind` : 'ahead of'} the monthly plan curve; recovery
-            options are tracked on the milestone register.
+            Both figures are the project's recorded progress values. No planned-to-date curve is shown — the
+            register does not store a time-phased plan for this project.
           </p>
         </Panel>
 
         <FilterBar
           search={updateSearch}
           onSearch={setUpdateSearch}
-          searchPlaceholder="Search activity, chainage, officer…"
+          searchPlaceholder="Search activity, milestone, submitter…"
           selects={[
             {
               label: 'Verification',
@@ -177,6 +211,7 @@ export function WorkspaceExecutionPage() {
                 { value: 'verified', label: 'Verified' },
                 { value: 'pending', label: 'Pending' },
                 { value: 'rejected', label: 'Rejected' },
+                { value: 'clarification', label: 'Clarification requested' },
               ],
             },
           ]}
@@ -186,77 +221,57 @@ export function WorkspaceExecutionPage() {
           }}
         />
 
-        <Panel title={`Site Progress Updates (${projectUpdates.length})`} icon="travel_explore" subtitle="Geo-tagged, time-stamped updates with photo evidence — verify or reject before they post to the register.">
+        <Panel title={`Site Progress Updates (${projectUpdates.length})`} icon="travel_explore" subtitle="Updates recorded in the progress register — verify or reject before they post.">
           <ul className="flex flex-col gap-3 p-4">
-            {projectUpdates
-              .filter(
-                (u) =>
-                  (!updateFilter || u.status === updateFilter) &&
-                  (!updateSearch || `${u.activity} ${u.location} ${u.officer}`.toLowerCase().includes(updateSearch.toLowerCase())),
-              )
-              .map((u) => (
-                <li key={u.id}>
-                  <Card className="p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-label text-fg">{u.activity}</p>
-                        <p className="mt-0.5 text-caption text-fg-muted">
-                          {u.location} • {formatDate(u.date)} • {u.officer} • {u.contractor}
-                        </p>
-                        <p className="mt-0.5 text-caption text-fg-subtle">
-                          Geo-tag {u.geoTag.lat.toFixed(3)}, {u.geoTag.lng.toFixed(3)} • {u.photos} time-stamped photos
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge tone="neutral" icon="speed">{u.progressPct}%</Badge>
-                        <StatusBadge
-                          descriptor={
-                            u.status === 'verified'
-                              ? { key: 'status.approved', tone: 'success', icon: 'verified' }
-                              : u.status === 'pending'
-                                ? { key: 'status.pending', tone: 'warning', icon: 'hourglass_top' }
-                                : { key: 'status.rejected', tone: 'danger', icon: 'cancel' }
-                          }
-                          size="sm"
-                        />
-                      </div>
+            {filteredUpdates.map((u) => (
+              <li key={u.id}>
+                <Card className="p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-label text-fg">{u.activity}</p>
+                      <p className="mt-0.5 text-caption text-fg-muted">
+                        {u.location ? `${u.location} • ` : ''}{formatDate(u.date)}
+                        {u.submittedBy ? ` • ${u.submittedBy}` : ''}
+                        {u.contractor ? ` • ${u.contractor}` : ''}
+                      </p>
+                      <p className="mt-0.5 text-caption text-fg-subtle">
+                        {u.geoTag ? `Geo-tag ${u.geoTag.lat.toFixed(3)}, ${u.geoTag.lng.toFixed(3)}` : 'No geo-tag recorded'}
+                        {u.photos > 0 ? ` • ${u.photos} time-stamped photo(s)` : ''}
+                      </p>
                     </div>
-                    {u.verificationNote && <p className="mt-1.5 text-caption text-fg-subtle">{u.verificationNote}</p>}
-                    {u.status === 'pending' && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Button variant="primary" size="sm" icon="verified" onClick={() => verifyUpdate(u.id, 'verified')}>
-                          {t('common.verify')}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon="u_turn_left"
-                          onClick={() => setConfirm({ title: `Reject update ${u.id}?`, message: 'The contractor will be notified to re-submit with corrections. This action is recorded in the audit trail.', run: () => verifyUpdate(u.id, 'rejected') })}
-                        >
-                          Reject
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon="edit"
-                          onClick={() => showToast(`Correction request sent for ${u.id} (demo).`, 'info')}
-                        >
-                          Request Correction
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                </li>
-              ))}
-            {projectUpdates.filter((u) => (!updateFilter || u.status === updateFilter) && (!updateSearch || `${u.activity} ${u.location} ${u.officer}`.toLowerCase().includes(updateSearch.toLowerCase()))).length === 0 && (
+                    <div className="flex items-center gap-2">
+                      <Badge tone="neutral" icon="speed">{u.progressPct}%</Badge>
+                      <StatusBadge descriptor={UPDATE_STATUS_BADGE[u.status]} size="sm" />
+                    </div>
+                  </div>
+                  {u.verificationNote && <p className="mt-1.5 text-caption text-fg-subtle">{u.verificationNote}</p>}
+                  {u.status === 'pending' && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button variant="primary" size="sm" icon="verified" onClick={() => void verifyUpdate(u.id, 'verified')}>
+                        {t('common.verify')}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon="u_turn_left"
+                        onClick={() => setConfirm({ title: 'Reject this progress update?', message: 'The contractor will be able to re-submit with corrections. This action is recorded in the audit trail.', run: () => void verifyUpdate(u.id, 'rejected') })}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              </li>
+            ))}
+            {filteredUpdates.length === 0 && (
               <li className="py-6 text-center text-body-small text-fg-muted">
-                No progress updates match the current filters. Updates appear here as the field team submits from site.
+                No progress updates match the current filters. Updates appear here as the field team submits them.
               </li>
             )}
           </ul>
         </Panel>
 
-        <Panel title="Before / After — Site Evidence" icon="photo_library" subtitle="Latest geo-tagged photographs per active front (placeholder tiles in demo build).">
+        <Panel title="Site Evidence" icon="photo_library" subtitle="Photo evidence attached to verified updates, from the updates' evidence records.">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {projectUpdates
               .filter((u) => u.status === 'verified' && u.photos > 0)
@@ -264,7 +279,7 @@ export function WorkspaceExecutionPage() {
               .map((u) => (
                 <div key={u.id} className="nk-card flex aspect-[4/3] flex-col items-center justify-center gap-1 p-3 text-center">
                   <span className="material-symbols-outlined text-[28px] text-fg-subtle" aria-hidden="true">image</span>
-                  <p className="text-caption text-fg-muted">{u.location}</p>
+                  <p className="text-caption text-fg-muted">{u.location ?? u.activity}</p>
                   <p className="text-caption text-fg-subtle">{formatDate(u.date)} • {u.photos} photos</p>
                 </div>
               ))}
@@ -285,9 +300,9 @@ export function WorkspaceExecutionPage() {
               { key: 'id', header: 'Ref', render: (i) => <span className="nk-mono-id text-fg-muted">{i.id}</span> },
               { key: 'date', header: 'Date', cellClassName: 'tabular-nums', sortable: true, sortValue: (i) => i.inspectedOn, render: (i) => formatDate(i.inspectedOn) },
               { key: 'type', header: 'Type', render: (i) => <Badge tone="neutral">{i.type}</Badge> },
-              { key: 'inspector', header: 'Inspector', render: (i) => i.inspector },
+              { key: 'inspector', header: 'Inspector', render: (i) => i.inspector ?? '—' },
               { key: 'outcome', header: 'Outcome', render: (i) => <StatusBadge descriptor={INSPECTION_OUTCOME[i.outcome]} size="sm" /> },
-              { key: 'geo', header: 'Geo-Tag', cellClassName: 'tabular-nums', render: (i) => `${i.geoTag.lat.toFixed(3)}, ${i.geoTag.lng.toFixed(3)}` },
+              { key: 'geo', header: 'Geo-Tag', cellClassName: 'tabular-nums', render: (i) => (i.geoTag ? `${i.geoTag.lat.toFixed(3)}, ${i.geoTag.lng.toFixed(3)}` : '—') },
               { key: 'photos', header: 'Photos', cellClassName: 'tabular-nums', render: (i) => i.photosCount },
             ]}
             emptyState={<div className="p-8 text-center text-body-small text-fg-muted">No inspections recorded for this project yet.</div>}
@@ -295,106 +310,8 @@ export function WorkspaceExecutionPage() {
         </Panel>
       </section>
 
-      {/* People / Migration Settlement */}
-      <section id="people" className="scroll-mt-24 flex flex-col gap-4">
-        <KpiRow>
-          <KpiCard label="Affected Persons" value={projectSettlements.length} icon="groups" />
-          <KpiCard label="Entitlement" value={formatCr(projectSettlements.reduce((s, x) => s + x.entitlementCr, 0))} icon="account_balance_wallet" />
-          <KpiCard label="Paid" value={formatCr(projectSettlements.reduce((s, x) => s + x.paidCr, 0))} icon="task_alt" iconTone="success" />
-          <KpiCard
-            label="Disputed / Pending"
-            value={projectSettlements.filter((s) => s.status === 'disputed' || s.status === 'pending').length}
-            icon="report_problem"
-            iconTone={projectSettlements.some((s) => s.status === 'disputed') ? 'danger' : 'warning'}
-          />
-        </KpiRow>
-
-        <Panel title="People Settlement Register" icon="groups" subtitle="Land, structure and livelihood entitlements on this project." bodyClassName="p-0">
-          <DataTable
-            minWidth={980}
-            rows={projectSettlements}
-            rowKey={(s) => s.id}
-            columns={[
-              { key: 'id', header: 'Ref', render: (s) => <span className="nk-mono-id text-fg-muted">{s.id}</span> },
-              { key: 'beneficiary', header: 'Beneficiary', isRowHeader: true, render: (s) => s.beneficiary },
-              { key: 'category', header: 'Category', render: (s) => <Badge tone="neutral">{s.category}</Badge> },
-              { key: 'location', header: t('common.location'), render: (s) => <span className="text-caption">{s.location}</span> },
-              { key: 'entitlement', header: 'Entitlement', cellClassName: 'tabular-nums', render: (s) => formatCr(s.entitlementCr) },
-              { key: 'paid', header: 'Paid', cellClassName: 'tabular-nums', render: (s) => formatCr(s.paidCr) },
-              {
-                key: 'status',
-                header: t('common.status'),
-                render: (s) => (
-                  <StatusBadge
-                    descriptor={
-                      s.status === 'paid'
-                        ? { key: 'status.paid', tone: 'success', icon: 'task_alt' }
-                        : s.status === 'part_paid'
-                          ? { key: 'status.pending', tone: 'warning', icon: 'pending_actions' }
-                          : s.status === 'disputed'
-                            ? { key: 'status.rejected', tone: 'danger', icon: 'gavel' }
-                            : { key: 'status.pending', tone: 'info', icon: 'hourglass_top' }
-                    }
-                    size="sm"
-                  />
-                ),
-              },
-            ]}
-            emptyState={
-              <div className="p-8 text-center text-body-small text-fg-muted">
-                No settlement records are linked to this project — the PAP register opens after social-impact survey approval.
-              </div>
-            }
-          />
-          {peopleBills.length > 0 && (
-            <div className="border-t border-border p-4">
-              <p className="nk-label">Wage / labour settlement bills</p>
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {peopleBills.map((b) => (
-                  <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 text-body-small">
-                    <span className="nk-mono-id text-fg">{b.billNo}</span>
-                    <span className="flex items-center gap-2">
-                      <span className="tabular-nums">{formatCr(b.amountCr)}</span>
-                      <StatusBadge descriptor={b.status === 'paid' || b.status === 'approved' ? { key: 'bill.status.paid', tone: 'success', icon: 'payments' } : { key: 'bill.status.submitted', tone: 'info', icon: 'schedule_send' }} size="sm" />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Migration Settlement" icon="swap_horiz" subtitle="Relocation and rehabilitation tracking for displaced households." bodyClassName="p-0">
-          {projectMigrations.length > 0 ? (
-            <DataTable
-              minWidth={980}
-              rows={projectMigrations}
-              rowKey={(m) => m.id}
-              columns={[
-                { key: 'person', header: 'Affected Person', isRowHeader: true, render: (m) => m.person },
-                { key: 'from', header: 'Original Location', render: (m) => <span className="text-caption">{m.originalLocation}</span> },
-                { key: 'to', header: 'New Location', render: (m) => <span className="text-caption">{m.newLocation}</span> },
-                {
-                  key: 'status',
-                  header: 'Relocation Status',
-                  render: (m) => (
-                    <Badge tone={m.relocationStatus === 'completed' ? 'success' : m.relocationStatus === 'in_progress' ? 'warning' : 'neutral'} dot>
-                      {m.relocationStatus.replace('_', ' ')}
-                    </Badge>
-                  ),
-                },
-                { key: 'comp', header: 'Compensation', cellClassName: 'tabular-nums', render: (m) => formatCr(m.compensationCr) },
-                { key: 'rehab', header: 'Rehabilitation', render: (m) => <span className="text-caption">{m.rehabilitation}</span> },
-                { key: 'pending', header: 'Pending Action', render: (m) => <span className="text-caption text-warning-strong">{m.pendingAction}</span> },
-              ]}
-            />
-          ) : (
-            <p className="p-4 text-body-small text-fg-muted">No migration/relocation cases on this project.</p>
-          )}
-        </Panel>
-      </section>
-
-      {/* Litigation Management */}
+      {/* Litigation Management — litigationApi reads no table (none exists in
+          the schema), so this section renders its honest empty state. */}
       <section id="litigation" className="scroll-mt-24 flex flex-col gap-4">
         <KpiRow>
           <KpiCard label="Active Cases" value={litigation.filter((c) => !['decided', 'withdrawn'].includes(c.status)).length} icon="policy" />
@@ -403,13 +320,7 @@ export function WorkspaceExecutionPage() {
           <KpiCard label="Resolved" value={litigation.filter((c) => ['decided', 'withdrawn'].includes(c.status)).length} icon="verified" iconTone="success" />
         </KpiRow>
 
-        <Panel title="Litigation Management" icon="policy" bodyClassName="p-0"
-          actions={
-            <Button variant="outline" size="sm" icon="add" onClick={() => setAddCaseOpen(true)}>
-              Add Case
-            </Button>
-          }
-        >
+        <Panel title="Litigation Management" icon="policy" bodyClassName="p-0">
           <DataTable
             minWidth={960}
             rows={litigation}
@@ -430,9 +341,6 @@ export function WorkspaceExecutionPage() {
             emptyState={
               <div className="p-8 text-center">
                 <p className="text-body-small text-fg-muted">No litigation is linked to this project.</p>
-                <Button variant="outline" size="sm" icon="add" className="mt-3" onClick={() => setAddCaseOpen(true)}>
-                  Add Case
-                </Button>
               </div>
             }
           />
@@ -448,7 +356,7 @@ export function WorkspaceExecutionPage() {
           bodyClassName="p-0"
           actions={
             <Button variant="primary" size="sm" icon="auto_awesome" onClick={() => setReportOpen(true)}>
-              Generate AI Report
+              Generate Report
             </Button>
           }
         >
@@ -457,8 +365,8 @@ export function WorkspaceExecutionPage() {
               <Card key={i.id} className="p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge descriptor={AI_CLASSIFICATION[i.classification]} size="sm" />
-                  <StatusBadge descriptor={AI_CONFIDENCE[i.confidenceBand]} size="sm" />
-                  <span className="text-caption tabular-nums text-fg-subtle">{i.confidencePct}% • {formatDate(i.generatedOn)}</span>
+                  {i.confidenceBand && <StatusBadge descriptor={AI_CONFIDENCE[i.confidenceBand]} size="sm" />}
+                  <span className="text-caption tabular-nums text-fg-subtle">{i.confidencePct != null ? `${i.confidencePct}% • ` : ''}{formatDate(i.generatedOn)}</span>
                 </div>
                 <h3 className="mt-2 text-heading-3 text-fg">{i.title}</h3>
                 <p className="mt-1 text-body-small text-fg-muted">{i.insight}</p>
@@ -478,56 +386,25 @@ export function WorkspaceExecutionPage() {
             rowKey={(a) => a.id}
             columns={[
               { key: 'when', header: 'When', cellClassName: 'tabular-nums', render: (a) => <span className="text-caption">{formatDate(a.timestamp)}</span> },
-              { key: 'who', header: 'WHO', isRowHeader: true, render: (a) => `${a.actor} (${a.role})` },
+              { key: 'who', header: 'WHO', isRowHeader: true, render: (a) => (a.role ? `${a.actor} (${a.role})` : a.actor) },
               { key: 'what', header: 'WHAT', render: (a) => a.action },
               { key: 'field', header: 'Field', render: (a) => <span className="nk-mono-id text-fg-muted">{a.field}</span> },
               { key: 'old', header: 'Old Value', render: (a) => <span className="text-caption text-fg-muted">{a.oldValue}</span> },
               { key: 'new', header: 'New Value', render: (a) => <span className="text-caption text-fg">{a.newValue}</span> },
             ]}
+            emptyState={<div className="p-8 text-center text-body-small text-fg-muted">No audit-log activity is recorded against this project yet.</div>}
           />
         </Panel>
       </section>
-
-      <Card className="p-3 text-caption text-fg-subtle">{t('common.mockDataNote')}</Card>
 
       {/* Litigation case drawer */}
       <Drawer open={caseDrawer !== null} onClose={() => setCaseDrawer(null)} title={caseDrawer?.id ?? ''} titleIcon="policy" width="max-w-xl">
         {caseDrawer && <CaseDrawer caseItem={caseDrawer} />}
       </Drawer>
 
-      {/* Add case */}
-      <Modal
-        open={addCaseOpen}
-        onClose={() => setAddCaseOpen(false)}
-        title="Add Litigation Case"
-        titleIcon="gavel"
-        size="md"
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setAddCaseOpen(false)}>{t('common.cancel')}</Button>
-            <Button
-              variant="primary"
-              disabled={!newCase.title.trim()}
-              onClick={() => {
-                showToast(`Case "${newCase.title.trim()}" registered and shared with the Law Officer (demo).`, 'success')
-                setNewCase({ title: '', court: 'Bombay High Court', claim: '' })
-                setAddCaseOpen(false)
-              }}
-            >
-              {t('common.submit')}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <TextField label="Case title" required value={newCase.title} onChange={(e) => setNewCase((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Claim for extra items — Ch 43+800" />
-          <Select label="Court / Authority" value={newCase.court} onChange={(e) => setNewCase((f) => ({ ...f, court: e.target.value }))} options={['Bombay High Court', 'District Court, Pune', 'Arbitration Tribunal', 'MSHCAT'].map((c) => ({ value: c, label: c }))} />
-          <TextField label="Claim amount (₹ Cr)" type="number" min={0} step={0.01} value={newCase.claim} onChange={(e) => setNewCase((f) => ({ ...f, claim: e.target.value }))} />
-          <TextArea label="Officer notes" rows={2} placeholder="Brief brief-facts for the law officer…" />
-        </div>
-      </Modal>
-
-      {/* Add progress update */}
+      {/* Add progress update — a real insert into progress_updates against
+          the project's assigned contractor. No geo-tag is attached from
+          this console; geo-tagged evidence is captured by the field app. */}
       <Modal
         open={addUpdateOpen}
         onClose={() => setAddUpdateOpen(false)}
@@ -539,48 +416,49 @@ export function WorkspaceExecutionPage() {
             <Button variant="outline" onClick={() => setAddUpdateOpen(false)}>{t('common.cancel')}</Button>
             <Button
               variant="primary"
-              disabled={!newUpdate.activity.trim() || !newUpdate.location.trim() || !(Number(newUpdate.progress) >= 0)}
-              onClick={() => {
-                const id = `PU-2026-${String(200 + updates.length).padStart(4, '0')}`
-                setUpdates((list) => [
-                  {
-                    id,
-                    projectId: project.id,
-                    date: new Date().toISOString().slice(0, 10),
-                    location: newUpdate.location.trim(),
+              disabled={!newUpdate.activity.trim() || !(Number(newUpdate.progress) >= 0 && Number(newUpdate.progress) <= 100) || submitting}
+              onClick={async () => {
+                setSubmitting(true)
+                try {
+                  await workApi.createProgressUpdate(projectDbId, {
                     activity: newUpdate.activity.trim(),
+                    location: newUpdate.location.trim() || undefined,
                     progressPct: Number(newUpdate.progress),
-                    officer: 'Er. S. D. Kulkarni (session)',
-                    contractor: project.contractor ?? '—',
-                    geoTag: { lat: 18.372 + Math.random() * 0.01, lng: 74.812 + Math.random() * 0.01 },
-                    photos: 0,
-                    status: 'pending',
-                  },
-                  ...list,
-                ])
-                showToast(`Progress update ${id} submitted for verification (demo).`, 'success')
+                  })
+                } catch (err: any) {
+                  showToast(err?.message || 'The progress update could not be recorded. Please try again.', 'danger')
+                  setSubmitting(false)
+                  return
+                }
+                setSubmitting(false)
+                showToast('Progress update recorded in the register — awaiting verification.', 'success')
                 setNewUpdate({ location: '', activity: '', progress: '' })
                 setAddUpdateOpen(false)
+                setRefresh((k) => k + 1)
               }}
             >
-              {t('common.submit')}
+              {submitting ? 'Saving…' : t('common.submit')}
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-3">
-          <TextField label="Location / chainage" required value={newUpdate.location} onChange={(e) => setNewUpdate((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Ch 44+320" />
+          <TextField label="Location / chainage" value={newUpdate.location} onChange={(e) => setNewUpdate((f) => ({ ...f, location: e.target.value }))} placeholder="e.g. Ch 44+320" />
           <TextField label="Activity" required value={newUpdate.activity} onChange={(e) => setNewUpdate((f) => ({ ...f, activity: e.target.value }))} placeholder="e.g. WMM laying — 240 m" />
           <TextField label="Progress at location (%)" required type="number" min={0} max={100} value={newUpdate.progress} onChange={(e) => setNewUpdate((f) => ({ ...f, progress: e.target.value }))} />
-          <p className="text-caption text-fg-subtle">Geo-tag and photos attach from the field app; submissions are verified by the Executive Engineer before posting.</p>
+          <p className="text-caption text-fg-subtle">
+            The update is recorded against the contractor holding this project's contract and starts as
+            awaiting verification. No geo-tag is attached from this console — geo-tagged photo evidence is
+            captured by the field app.
+          </p>
         </div>
       </Modal>
 
-      {/* AI report modal */}
-      <Modal open={reportOpen} onClose={() => setReportOpen(false)} title="AI Progress & Monitoring Report" titleIcon="smart_toy" size="lg"
+      {/* Progress & monitoring summary — composed only from recorded data */}
+      <Modal open={reportOpen} onClose={() => setReportOpen(false)} title="Progress & Monitoring Summary" titleIcon="monitoring" size="lg"
         footer={
           <>
-            <Button variant="outline" onClick={() => { showToast('Report exported as PDF (demo file).', 'info'); setReportOpen(false) }}>
+            <Button variant="outline" onClick={downloadReport}>
               {t('common.export')}
             </Button>
             <Button variant="primary" onClick={() => setReportOpen(false)}>{t('common.close')}</Button>
@@ -589,46 +467,39 @@ export function WorkspaceExecutionPage() {
       >
         <div className="flex flex-col gap-3 text-body-small">
           <div>
-            <p className="nk-label">Executive Summary</p>
+            <p className="nk-label">Summary</p>
             <p className="mt-1 text-fg">
               {project.name} stands at {project.physicalProgressPct}% physical and {project.financialProgressPct}% financial
-              progress against a plan of ~{plannedNow}%. {project.delayDays > 0 ? `The works run ${project.delayDays} days behind, concentrated at the ${project.milestones.find((m) => (m.delayDays ?? 0) > 0)?.title ?? 'critical milestone'}.` : 'Execution is broadly on schedule.'}
+              progress. {project.delayDays > 0 ? `The recorded completion dates put the works ${project.delayDays} days behind the original completion date.` : 'No delay is recorded against the original completion date.'}
             </p>
           </div>
           <div>
-            <p className="nk-label">Key Risks</p>
+            <p className="nk-label">Milestones</p>
+            <p className="mt-1 text-fg-muted">
+              {milestones.length === 0
+                ? 'No milestones are recorded for this project.'
+                : `${completedMilestones} of ${milestones.length} milestones completed; ${delayedMilestones.length} delayed${delayedMilestones.length ? ` (${delayedMilestones.map((m) => m.title).join('; ')})` : ''}.`}
+            </p>
+          </div>
+          <div>
+            <p className="nk-label">Progress Updates</p>
+            <p className="mt-1 text-fg-muted">
+              {projectUpdates.length} update(s) on record — {projectUpdates.filter((u) => u.status === 'verified').length} verified,{' '}
+              {pendingUpdates} awaiting verification, {projectUpdates.filter((u) => u.status === 'rejected').length} rejected.
+            </p>
+          </div>
+          <div>
+            <p className="nk-label">Stored Monitoring Insights</p>
             <ul className="mt-1 list-disc pl-5 text-fg-muted">
               {insights.slice(0, 3).map((i) => (
                 <li key={i.id}>{i.title} — {i.insight.split('.')[0]}.</li>
               ))}
-              {insights.length === 0 && <li>No elevated risks detected in the current data window.</li>}
+              {insights.length === 0 && <li>No monitoring insights have been generated for this project yet.</li>}
             </ul>
           </div>
-          <div>
-            <p className="nk-label">Predicted Completion</p>
-            <p className="mt-1 text-fg">
-              Trend extrapolation places completion around {project.delayDays > 0 ? `${project.delayDays + 14} days after target` : 'the target date'} ({formatDate(project.expectedCompletion)})
-              assuming the current run-rate holds.
-            </p>
-          </div>
-          <div>
-            <p className="nk-label">Recommended Actions</p>
-            <ul className="mt-1 list-disc pl-5 text-fg-muted">
-              <li>Verify the {updates.filter((u) => u.status === 'pending').length} pending site update(s) and re-request the rejected one.</li>
-              <li>Track the flagged bill(s) in Budget & Finance before the next RA cycle.</li>
-              <li>Review the delayed milestone's recovery schedule with the contractor.</li>
-            </ul>
-          </div>
-          <div>
-            <p className="nk-label">Milestone Watch</p>
-            <p className="mt-1 text-fg-muted">
-              {project.milestones.filter((m) => (m.delayDays ?? 0) > 0).length} milestone(s) carry delay; the critical one is
-              {' '}{project.milestones.find((m) => (m.delayDays ?? 0) > 0)?.title ?? 'none'}.
-            </p>
-          </div>
-          <p className="rounded-control bg-surface-2 p-2 text-caption text-warning-strong">
-            <span className="material-symbols-outlined mr-1 align-middle text-[14px]" aria-hidden="true">smart_toy</span>
-            AI-generated draft for officer review — not an automatic decision or statutory report.
+          <p className="rounded-control bg-surface-2 p-2 text-caption text-fg-muted">
+            This summary is composed from the project's recorded progress, milestone, update and insight
+            data only. It contains no forecast or prediction.
           </p>
         </div>
       </Modal>
@@ -646,7 +517,6 @@ export function WorkspaceExecutionPage() {
 }
 
 function CaseDrawer({ caseItem }: { caseItem: LitigationCase }) {
-  const hearings = HEARINGS.filter((h) => h.caseId === caseItem.id)
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -673,19 +543,10 @@ function CaseDrawer({ caseItem }: { caseItem: LitigationCase }) {
           </div>
         </dl>
       </Panel>
-      <Panel title="Hearings & Orders" icon="event" bodyClassName="p-0">
-        <ol className="divide-y divide-border">
-          {hearings.map((h, i) => (
-            <li key={i} className="p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-label text-fg">{h.purpose}</p>
-                <span className="tabular-nums text-caption text-fg-subtle">{formatDate(h.date)}</span>
-              </div>
-              <p className="mt-1 text-caption text-fg-muted">{h.outcome}</p>
-            </li>
-          ))}
-          {hearings.length === 0 && <li className="p-4 text-body-small text-fg-muted">No hearings recorded for this case.</li>}
-        </ol>
+      <Panel title="Hearings & Orders" icon="event">
+        <p className="text-body-small text-fg-muted">
+          No hearings are recorded for this case — the portal has no hearings register.
+        </p>
       </Panel>
       <Panel title="Financial Exposure" icon="payments">
         <p className="text-body-small text-fg">

@@ -20,8 +20,8 @@ const ROLE_MATRIX = [
 
 /**
  * SettingsPage — Settings & Roles: display language, accessibility, theme,
- * demo session, and the role-permission matrix. No user administration is
- * performed here (demo build has no backend).
+ * the signed-in officer's session, and the role-permission matrix. No user
+ * administration is performed here.
  */
 export function SettingsPage() {
   const { t, locale, setLocale } = useI18n()
@@ -33,7 +33,7 @@ export function SettingsPage() {
       <div>
         <h1 className="text-heading-1 text-fg">{t('nav.settings')}</h1>
         <p className="mt-1 text-body-small text-fg-muted">
-          Preferences and role information for this demonstration session (mock data).
+          Preferences and role information for the signed-in officer.
         </p>
       </div>
 
@@ -66,7 +66,7 @@ export function SettingsPage() {
         <AccessibilityMenuContent />
       </Panel>
 
-      <Panel title="Session" icon="badge" subtitle="Demo authentication — no real government identity provider is connected.">
+      <Panel title="Session" icon="badge" subtitle="The signed-in officer, resolved from the current session.">
         <dl className="grid grid-cols-1 gap-2 text-body-small sm:grid-cols-2">
           <div><dt className="text-fg-subtle">Officer</dt><dd className="text-fg">{officer?.name ?? '—'}</dd></div>
           <div><dt className="text-fg-subtle">Designation</dt><dd className="text-fg">{officer?.designation ?? '—'}</dd></div>
@@ -114,11 +114,11 @@ export function SettingsPage() {
         <ul className="flex flex-col gap-2 text-body-small text-fg">
           <li className="flex items-start gap-2">
             <StatusBadge descriptor={PRIORITY.medium} size="sm" />
-            All records in this build are demo data; nothing is persisted to a backend.
+            Records across the portal are read from the project database, and changes made in the portal are persisted there.
           </li>
           <li className="flex items-start gap-2">
             <StatusBadge descriptor={PRIORITY.low} size="sm" />
-            No real authentication (NIC / Parichay / SSO) is integrated — the sign-in flow is illustrative only.
+            Sign-in uses the portal's registered accounts; NIC / Parichay single sign-on is not integrated.
           </li>
           <li className="flex items-start gap-2">
             <StatusBadge descriptor={PRIORITY.low} size="sm" />
@@ -126,15 +126,28 @@ export function SettingsPage() {
           </li>
         </ul>
         <p className="mt-3 text-caption text-fg-subtle">
-          Demo session storage keys: <span className="nk-mono-id">nirikshak.session</span>, <span className="nk-mono-id">nirikshak.locale</span>,{' '}
+          Session storage keys: <span className="nk-mono-id">nirikshak.session</span>, <span className="nk-mono-id">nirikshak.locale</span>,{' '}
           <span className="nk-mono-id">nirikshak.theme</span>. Clear browser site data to reset.
         </p>
       </Panel>
 
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-        <p className="text-body-small text-fg-muted">Version 2.4.1 — demonstration build for review.</p>
-        <Button variant="outline" size="sm" icon="download" onClick={() => undefined}>
-          Export my preferences (demo)
+        <p className="text-body-small text-fg-muted">Version 2.4.1</p>
+        <Button
+          variant="outline"
+          size="sm"
+          icon="download"
+          onClick={() => {
+            const prefs = { locale, theme, officer: officer ? { name: officer.name, designation: officer.designation, department: officer.department, roles: officer.roles } : null }
+            const url = URL.createObjectURL(new Blob([JSON.stringify(prefs, null, 2)], { type: 'application/json' }))
+            const a = document.createElement('a')
+            a.href = url
+            a.download = 'nirikshak-preferences.json'
+            a.click()
+            URL.revokeObjectURL(url)
+          }}
+        >
+          Export my preferences
         </Button>
       </Card>
     </div>

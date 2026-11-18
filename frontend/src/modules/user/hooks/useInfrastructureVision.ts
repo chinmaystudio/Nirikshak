@@ -4,16 +4,17 @@ import { analyzeWithSteps, getVisionResult, markInfoSubmitted } from "@/services
 import type { VisionAnalysis, VisionImageSource } from "@/types/infrastructure";
 
 export const ANALYSIS_STEPS: readonly string[] = [
-  "Reading image",
-  "Identifying infrastructure",
-  "Checking public project database",
-  "Finding responsible authority"
+  "Preparing photo",
+  "Analyzing photo with AI",
+  "Matching public project records"
 ];
 
 export interface AnalyzeInput {
-  thumb: string | null;
+  imageDataUrl: string;
   source: VisionImageSource;
   preferredProjectId?: string | null;
+  gps?: { lat: number; lng: number } | null;
+  hint?: string;
 }
 
 export interface UseInfrastructureVisionResult {

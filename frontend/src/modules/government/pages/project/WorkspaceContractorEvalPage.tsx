@@ -1,207 +1,214 @@
-import { useMemo, useState } from 'react'
-import { useI18n } from '@/context/I18nContext'
+import { useMemo } from 'react'
 import { useProjectWorkspace } from '@/context/ProjectWorkspaceContext'
-import { useToast } from '@/context/ToastContext'
 import { Panel, Card } from '@/components/ui/Card'
 import { DataTable } from '@/components/tables/DataTable'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Badge } from '@/components/ui/Badge'
 import { Progress } from '@/components/ui/Progress'
-import { Button } from '@/components/ui/Button'
 import { LoadingBlock } from '@/components/feedback/Feedback'
-import { PageHeader } from '@/components/blocks/Page'
+import { PageHeader, KpiRow, KpiCard } from '@/components/blocks/Page'
+import { formatCr } from '@/utils/format'
+import { contractorsApi } from '@/api'
 import { useApiData } from '@/hooks/useApiData'
-import { insightsApi } from '@/api'
-import { CONTRACTORS } from '@/data/modules'
-import { SCORE_BAND } from '@/utils/status'
-import type { Contractor } from '@/types'
+import type { Contractor, ContractorEvaluation } from '@/types'
 
-/** Risk stance derived from the AI score band — assists, never decides. */
-function recommendationFor(band: Contractor['scoreBand']): { label: string; tone: 'success' | 'warning' | 'danger' } {
-  if (band === 'excellent' || band === 'good') return { label: 'Recommended', tone: 'success' }
-  if (band === 'average') return { label: 'Conditional', tone: 'warning' }
-  return { label: 'Not Recommended', tone: 'danger' }
-}
+type EvaluationProject = ContractorEvaluation['projects'][number]
 
-/** Project workspace — AI Contractor Evaluation: score system, comparison and
- * recommendation rationale. AI assists; the officer's award decision is final. */
+/**
+ * Project workspace — Contractor Evaluation. The evaluation is computed
+ * from this contractor's real portal records: assigned projects (contracts
+ * + project_organizations), completed projects, average recorded progress
+ * and active contracts. There is no model score and no invented factor
+ * breakdown — the officer judges from the record itself.
+ */
 export function WorkspaceContractorEvalPage() {
-  const { t } = useI18n()
-  const { showToast } = useToast()
   const { project } = useProjectWorkspace()
-  const [expanded, setExpanded] = useState<string | null>(null)
 
-  const assigned = CONTRACTORS.find((c) => c.name === project?.contractor)
+  const { data: contractors, loading: loadingContractors } = useApiData(() => contractorsApi.all(), [])
+
+  const assigned: Contractor | undefined = useMemo(() => {
+    const list = contractors ?? []
+    if (project?.dbId) {
+      const byLink = list.find((c) => c.projectIds?.includes(project.dbId!))
+      if (byLink) return byLink
+    }
+    if (project?.contractor) return list.find((c) => c.name === project.contractor)
+    return undefined
+  }, [contractors, project?.dbId, project?.contractor])
+
   const evaluation = useApiData(
-    () => (assigned ? insightsApi.evaluateContractor(assigned.id) : Promise.resolve(undefined)),
+    () => (assigned ? contractorsApi.evaluate(assigned.id) : Promise.resolve(undefined)),
     [assigned?.id],
   )
-  const ranked = useMemo(() => [...CONTRACTORS].sort((a, b) => b.aiScore - a.aiScore), [])
+
+  const ranked = useMemo(
+    () =>
+      [...(contractors ?? [])].sort(
+        (a, b) =>
+          b.completedProjects - a.completedProjects ||
+          (b.averageProgressPct ?? -1) - (a.averageProgressPct ?? -1),
+      ),
+    [contractors],
+  )
 
   if (!project) return null
-  if (assigned && evaluation.loading) return <LoadingBlock />
+  if (loadingContractors) return <LoadingBlock />
 
   if (!assigned) {
     return (
       <div className="flex flex-col gap-4">
         <PageHeader
-          title="AI Contractor Evaluation"
-          description="AI decision-support for contractor capability and risk. Evaluation becomes available after tender award."
+          title="Contractor Evaluation"
+          description="Evaluation from the contractor's recorded work history. It becomes available after tender award links a contractor to this project."
         />
         <Panel title="No contractor appointed yet" icon="person_search">
           <p className="text-body-small text-fg-muted">
-            This project is at the pre-tender stage. Once a tender is awarded and the work order is issued, the AI
-            evaluation runs against the awarded contractor's record.
+            No contractor organisation is linked to this project through a contract or project assignment, so there
+            is no record to evaluate.
           </p>
-          <p className="mt-2 text-caption text-fg-subtle">{t('common.mockDataNote')}</p>
         </Panel>
       </div>
     )
   }
 
-  const factors = evaluation.data?.factors ?? []
-  const rec = recommendationFor(assigned.scoreBand)
+  const ev = evaluation.data
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
-        title="AI Contractor Evaluation"
-        description={`AI-assisted capability and risk analysis for ${assigned.name} — the contractor executing this project. Decision support only; the award decision always remains with the authorized officer.`}
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            icon="download"
-            onClick={() => showToast('Contractor evaluation report generated (demo file).', 'info')}
-          >
-            {t('common.export')}
-          </Button>
-        }
+        title="Contractor Evaluation"
+        description={`Record-based evaluation for ${assigned.name} — computed from contracts, project assignments and recorded progress in this portal. The award decision always remains with the authorized officer.`}
       />
 
-      {/* Score hero */}
-      <Panel title="Overall Contractor Score" icon="smart_toy">
-        <div className="flex flex-wrap items-center gap-6">
-          <span className="text-display tabular-nums text-fg">
-            {assigned.aiScore}
-            <span className="text-body-small text-fg-subtle">/100 composite</span>
-          </span>
-          <StatusBadge descriptor={SCORE_BAND[assigned.scoreBand]} />
-          <Badge tone={rec.tone} icon={rec.tone === 'success' ? 'thumb_up' : rec.tone === 'warning' ? 'front_hand' : 'block'}>
-            {rec.label}
-          </Badge>
-          <span className="ml-auto text-caption text-fg-subtle">
-            AI confidence: <strong className="text-fg">{evaluation.data ? '74% (medium)' : '—'}</strong> · evaluated {evaluation.data ? 'this session' : '—'}
-          </span>
-        </div>
-      </Panel>
+      {evaluation.loading ? (
+        <LoadingBlock />
+      ) : evaluation.error ? (
+        <Panel title="Evaluation unavailable" icon="error">
+          <p className="text-body-small text-danger-strong">Failed to compute the evaluation: {evaluation.error.message}</p>
+        </Panel>
+      ) : ev ? (
+        <>
+          <KpiRow>
+            <KpiCard label="Assigned Projects" value={ev.assignedProjects} icon="assignment" />
+            <KpiCard label="Completed Projects" value={ev.completedProjects} icon="task_alt" iconTone="success" />
+            <KpiCard
+              label="Completion Rate"
+              value={ev.completionRatePct != null ? `${ev.completionRatePct}%` : '—'}
+              icon="percent"
+              iconTone="primary"
+            />
+            <KpiCard label="Active Contracts" value={ev.activeContracts} icon="contract" iconTone="neutral" />
+          </KpiRow>
 
-      {/* Factor cards */}
-      <Panel title="Score Breakdown — Why this score?" icon="analytics" subtitle="Weighted factors with per-factor evidence.">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {factors.map((f) => (
-            <Card key={f.name} className="p-3">
-              <button
-                type="button"
-                onClick={() => setExpanded(expanded === f.name ? null : f.name)}
-                className="flex w-full items-center justify-between gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                aria-expanded={expanded === f.name}
-              >
-                <span className="text-label text-fg">{f.name}</span>
-                <span className="flex items-center gap-2">
-                  <span className="text-caption text-fg-subtle">weight {f.weight}%</span>
-                  <span className="tabular-nums text-label text-primary-strong">{f.score}</span>
-                  <span className="material-symbols-outlined text-[18px] text-fg-subtle" aria-hidden="true">
-                    {expanded === f.name ? 'expand_less' : 'help'}
-                  </span>
-                </span>
-              </button>
-              <Progress value={f.score} label={`${f.name} score`} size="sm" className="mt-2" showValue={false} />
-              {expanded === f.name && (
-                <p className="mt-2 rounded-control bg-surface-2 p-2 text-caption text-fg-muted">
-                  <strong className="text-fg">Why this score?</strong> {f.evidence}
-                </p>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Panel title="Average Recorded Progress" icon="stacked_line_chart">
+              {ev.averageProgressPct != null ? (
+                <>
+                  <p className="text-display tabular-nums text-fg">
+                    {ev.averageProgressPct}
+                    <span className="text-body-small text-fg-subtle">% mean physical progress across assigned projects</span>
+                  </p>
+                  <Progress value={ev.averageProgressPct} label="Average progress" size="sm" className="mt-3" showValue={false} />
+                </>
+              ) : (
+                <p className="text-body-small text-fg-muted">No progress has been recorded for this contractor's projects yet.</p>
               )}
-            </Card>
-          ))}
-        </div>
-      </Panel>
+            </Panel>
+            <Panel title="Contract Exposure" icon="payments">
+              <dl className="grid grid-cols-2 gap-3 text-body-small">
+                <div>
+                  <dt className="text-fg-subtle">Total contract value</dt>
+                  <dd className="tabular-nums text-fg">{formatCr(ev.totalContractValueCr)}</dd>
+                </div>
+                <div>
+                  <dt className="text-fg-subtle">Active projects</dt>
+                  <dd className="tabular-nums text-fg">{ev.activeProjects}</dd>
+                </div>
+                <div>
+                  <dt className="text-fg-subtle">Organisation verified</dt>
+                  <dd className="text-fg">{assigned.verified ? 'Yes' : 'Not recorded'}</dd>
+                </div>
+                <div>
+                  <dt className="text-fg-subtle">Registration no.</dt>
+                  <dd className="nk-mono-id text-fg">{assigned.registrationNo ?? '—'}</dd>
+                </div>
+              </dl>
+            </Panel>
+          </div>
 
-      {/* Comparison table */}
-      <Panel title="Contractor Comparison" icon="compare_arrows" subtitle="All empanelled contractors ranked by composite AI score for this class of work." bodyClassName="p-0">
+          <Panel title="Assigned Project Record" icon="folder_open" bodyClassName="p-0">
+            <DataTable
+              minWidth={820}
+              rows={ev.projects}
+              rowKey={(p: EvaluationProject) => p.id}
+              emptyState={
+                <div className="p-8 text-center text-body-small text-fg-muted">
+                  No projects are linked to this contractor yet.
+                </div>
+              }
+              columns={[
+                { key: 'name', header: 'Project', isRowHeader: true, render: (p: EvaluationProject) => p.name },
+                { key: 'status', header: 'Status', render: (p: EvaluationProject) => <Badge tone="neutral">{p.status || '—'}</Badge> },
+                { key: 'progress', header: 'Progress', cellClassName: 'tabular-nums', render: (p: EvaluationProject) => `${p.progressPct}%` },
+                {
+                  key: 'value',
+                  header: 'Contract Value',
+                  cellClassName: 'tabular-nums',
+                  render: (p: EvaluationProject) => (p.contractValueCr != null ? formatCr(p.contractValueCr) : '—'),
+                },
+                { key: 'contractStatus', header: 'Contract Status', render: (p: EvaluationProject) => p.contractStatus ?? '—' },
+              ]}
+            />
+          </Panel>
+        </>
+      ) : null}
+
+      {/* Comparison across the real register */}
+      <Panel
+        title="Contractor Comparison"
+        icon="compare_arrows"
+        subtitle="All contractor organisations on record, ordered by completed projects, then average progress."
+        bodyClassName="p-0"
+      >
         <DataTable
           minWidth={880}
           rows={ranked}
           rowKey={(c) => c.id}
-          initialSort={{ key: 'score', dir: 'desc' }}
+          emptyState={
+            <div className="p-8 text-center text-body-small text-fg-muted">No contractor organisations are recorded yet.</div>
+          }
           columns={[
             { key: 'name', header: 'Contractor', isRowHeader: true, render: (c) => (
               <span className={c.id === assigned.id ? 'font-semibold text-primary-strong' : ''}>
                 {c.name}{c.id === assigned.id ? ' (assigned here)' : ''}
               </span>
             ) },
-            { key: 'class', header: 'Class', render: (c) => <Badge tone="neutral">{c.class}</Badge> },
-            { key: 'score', header: 'AI Score', cellClassName: 'tabular-nums', sortable: true, sortValue: (c) => c.aiScore, render: (c) => c.aiScore },
-            { key: 'ontime', header: 'On-time %', cellClassName: 'tabular-nums', sortable: true, sortValue: (c) => c.onTimeCompletionPct, render: (c) => `${c.onTimeCompletionPct}%` },
-            { key: 'quality', header: 'Quality', cellClassName: 'tabular-nums', render: (c) => `${c.qualityRating.toFixed(1)}/5` },
-            { key: 'risk', header: 'Risk', render: (c) => <StatusBadge descriptor={SCORE_BAND[c.scoreBand]} size="sm" /> },
+            { key: 'assigned', header: 'Assigned', cellClassName: 'tabular-nums', render: (c) => c.assignedProjects ?? 0 },
+            { key: 'completed', header: 'Completed', cellClassName: 'tabular-nums', render: (c) => c.completedProjects },
             {
-              key: 'rec',
-              header: 'Recommendation',
-              render: (c) => {
-                const r = recommendationFor(c.scoreBand)
-                return <Badge tone={r.tone} icon={r.tone === 'success' ? 'thumb_up' : r.tone === 'warning' ? 'front_hand' : 'block'}>{r.label}</Badge>
-              },
+              key: 'rate',
+              header: 'Completion Rate',
+              cellClassName: 'tabular-nums',
+              render: (c) =>
+                (c.assignedProjects ?? 0) > 0
+                  ? `${Math.round((c.completedProjects / (c.assignedProjects ?? 1)) * 1000) / 10}%`
+                  : '—',
             },
+            {
+              key: 'progress',
+              header: 'Avg Progress',
+              cellClassName: 'tabular-nums',
+              render: (c) => (c.averageProgressPct != null ? `${c.averageProgressPct}%` : '—'),
+            },
+            { key: 'contracts', header: 'Active Contracts', cellClassName: 'tabular-nums', render: (c) => c.activeContracts ?? 0 },
+            { key: 'value', header: 'Contract Value', cellClassName: 'tabular-nums', render: (c) => formatCr(c.totalValueCr) },
           ]}
         />
       </Panel>
 
-      {/* AI recommendation + factors */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Panel title="AI Recommendation" icon="auto_awesome">
-          <p className="rounded-control border border-primary-border bg-primary-soft p-3 text-body-small text-fg">
-            <strong>{rec.label}:</strong> {assigned.name} scores {assigned.aiScore}/100 with a {assigned.onTimeCompletionPct}% on-time
-            completion record, {assigned.qualityRating.toFixed(1)}/5 quality rating across {assigned.completedProjects} completed
-            government works, and {assigned.litigationCount === 0 ? 'no active litigation' : `${assigned.litigationCount} active litigation case(s)`}.
-          </p>
-          <p className="mt-3 text-caption text-fg-subtle">Factors supporting this recommendation: on-time completion (20%), quality (18%), defect liability (12%) and litigation exposure (12%) carry the largest weights.</p>
-        </Panel>
-        <Panel title="Risk & Positive Factors" icon="balance">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p className="nk-label">Positive factors</p>
-              <ul className="mt-2 flex flex-col gap-1">
-                {assigned.strengths.map((s) => (
-                  <li key={s} className="flex items-start gap-1.5 text-body-small text-fg">
-                    <span className="material-symbols-outlined text-[16px] text-success-strong" aria-hidden="true">check_circle</span>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="nk-label">Risk factors</p>
-              <ul className="mt-2 flex flex-col gap-1">
-                {assigned.risks.map((s) => (
-                  <li key={s} className="flex items-start gap-1.5 text-body-small text-fg">
-                    <span className="material-symbols-outlined text-[16px] text-warning-strong" aria-hidden="true">warning</span>
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-          <p className="mt-3 border-t border-border pt-2 text-caption text-fg-subtle">
-            Missing information: audited turnover for FY 2025-26 (filed with the next renewal) and safety statistics for
-            subcontracted crews.
-          </p>
-        </Panel>
-      </div>
-
-      <Card className="p-3 text-caption text-warning-strong">
-        <span className="material-symbols-outlined mr-1 align-middle text-[16px]" aria-hidden="true">smart_toy</span>
-        {t('common.aiDisclaimerEvaluation')}
+      <Card className="p-3 text-caption text-fg-subtle">
+        This evaluation is arithmetic over the contractor's recorded contracts, assignments and progress in this
+        portal. It is not a model score, and it does not replace the officer's judgement or any statutory
+        qualification criteria.
       </Card>
     </div>
   )
