@@ -127,8 +127,56 @@ aiRouter.post(
           acc[k] = (acc[k] ?? 0) + 1;
           return acc;
         }, {});
+      // Deterministic signals computed from the project record itself.
+      // These exist for every project (unlike the operational feeds below,
+      // which are empty until officers/contractors record data), so the
+      // model always has concrete, project-specific facts to reason from:
+      // how far the schedule has elapsed vs how far the work has actually
+      // progressed, budget utilisation, milestone completion, and whether
+      // the original completion date has already passed.
+      const now = new Date();
+      const startDate = project.planned_start_date ? new Date(project.planned_start_date) : null;
+      const endDate = project.original_completion_date ? new Date(project.original_completion_date) : null;
+      let scheduleElapsed: number | null = null;
+      if (startDate && endDate && endDate.getTime() > startDate.getTime()) {
+        scheduleElapsed =
+          Math.min(100, Math.max(0, ((now.getTime() - startDate.getTime()) / (endDate.getTime() - startDate.getTime())) * 100));
+      }
+      const physical =
+        typeof project.physical_progress_percent === 'number' ? project.physical_progress_percent : null;
+      const milestoneRows: any[] = (project as any).project_milestones ?? [];
+      const milestonesDone = milestoneRows.filter((m: any) =>
+        ['COMPLETED', 'VERIFIED', 'APPROVED'].includes(String(m?.status ?? '').toUpperCase())
+      ).length;
+      const latestCumulativeSpent =
+        (finRes.data ?? []).find((f: any) => typeof f.cumulative_spent_inr_crore === 'number')
+          ?.cumulative_spent_inr_crore ?? null;
+      const totalCost =
+        typeof project.total_cost_inr_crore === 'number' ? project.total_cost_inr_crore : null;
+      const round1 = (n: number) => Math.round(n * 10) / 10;
+      const computedSignals = {
+        as_of: now.toISOString().slice(0, 10),
+        schedule_elapsed_percent: scheduleElapsed !== null ? round1(scheduleElapsed) : null,
+        physical_progress_percent: physical,
+        progress_variance_points:
+          scheduleElapsed !== null && physical !== null ? round1(physical - scheduleElapsed) : null,
+        days_until_original_completion: endDate
+          ? Math.round((endDate.getTime() - now.getTime()) / 86400000)
+          : null,
+        is_past_original_completion: endDate ? now.getTime() > endDate.getTime() : null,
+        total_cost_inr_crore: totalCost,
+        latest_cumulative_spent_inr_crore: latestCumulativeSpent,
+        budget_utilization_percent:
+          totalCost && latestCumulativeSpent != null ? round1((latestCumulativeSpent / totalCost) * 100) : null,
+        milestones_total: milestoneRows.length,
+        milestones_completed: milestonesDone,
+        milestone_completion_percent:
+          milestoneRows.length > 0 ? round1((milestonesDone / milestoneRows.length) * 100) : null,
+      };
+
       const enrichedContext = {
         project,
+        computed_signals: computedSignals,
         finance: {
           recent_updates: finRes.data ?? [],
           total_updates: (finRes.data ?? []).length,
@@ -151,9 +199,19 @@ aiRouter.post(
       };
 
       const provider = getLLMProvider();
-      const prompt = `Conduct an exhaustive multidimensional infrastructure audit for ${project.project_name}. Identify schedule slippage, financial variances, and risk indicators. Base every claim on the supplied project, finance, inspection, progress, complaint and contract data; where a data source is empty, say the evidence is insufficient instead of speculating.`;
+      const prompt = `Conduct an exhaustive multidimensional infrastructure audit for ${project.project_name}. Identify schedule slippage, financial variances, and risk indicators. Base every claim on the supplied data. The context includes computed_signals — deterministic figures computed from the project record (schedule elapsed vs physical progress variance, budget utilisation, milestone completion, days to/past the original completion date): lead the summary with the most significant concrete findings from computed_signals and the operational data, citing the actual numbers. Where an operational feed (finance, inspections, complaints, contracts) is empty, treat that as a data-recording gap to list under recommended_actions — do not make missing data the headline of the summary when computed_signals support concrete findings.`;
 
-      const analysis = await provider.analyzeProject(prompt, enrichedContext as any);
+      const rawAnalysis = await provider.analyzeProject(prompt, enrichedContext as any);
+
+      // Single source of truth for risk: the level is DERIVED from the
+      // score with fixed bands, server-side. Previously the model's
+      // free-text level was stored in severity/title while the risk_level
+      // column took its database default (MEDIUM), so one insight could
+      // read "LOW Risk" in the title and "MEDIUM" on the badge — the
+      // contradiction users saw as random predictions.
+      const bandFor = (score: number): string =>
+        score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : score >= 25 ? 'MEDIUM' : 'LOW';
+      const analysis = { ...rawAnalysis, risk_level: bandFor(rawAnalysis.risk_score) as typeof rawAnalysis.risk_level };
 
       // Record the run (AI_ARCHITECTURE.md: insights are linked to ai_runs).
       const runMeta = (provider as any).lastRun as
@@ -197,6 +255,7 @@ aiRouter.post(
         title: `${analysis.risk_level} Risk: ${project.project_name}`,
         summary: analysis.summary,
         severity: analysis.risk_level,
+        risk_level: analysis.risk_level,
         confidence: null,
         evidence: analysis.evidence,
         recommended_actions: analysis.recommended_actions,
